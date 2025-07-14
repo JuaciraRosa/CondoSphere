@@ -1,0 +1,39 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35931.197 d17.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CondoSphere", "CondoSphere\CondoSphere.csproj", "{7A2A22F1-937F-455E-A5A6-9E5461416178}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CondoSphereMobile", "CondoSphereMobile\CondoSphereMobile.csproj", "{E8EE9321-0819-42D0-AEDA-100D1725433E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CondoSphereWinForms", "CondoSphereWinForms\CondoSphereWinForms.csproj", "{CEC69539-A4A4-43A0-A50C-144368E3FC35}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7A2A22F1-937F-455E-A5A6-9E5461416178}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A2A22F1-937F-455E-A5A6-9E5461416178}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A2A22F1-937F-455E-A5A6-9E5461416178}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A2A22F1-937F-455E-A5A6-9E5461416178}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E8EE9321-0819-42D0-AEDA-100D1725433E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E8EE9321-0819-42D0-AEDA-100D1725433E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E8EE9321-0819-42D0-AEDA-100D1725433E}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{E8EE9321-0819-42D0-AEDA-100D1725433E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E8EE9321-0819-42D0-AEDA-100D1725433E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E8EE9321-0819-42D0-AEDA-100D1725433E}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{CEC69539-A4A4-43A0-A50C-144368E3FC35}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEC69539-A4A4-43A0-A50C-144368E3FC35}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CEC69539-A4A4-43A0-A50C-144368E3FC35}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CEC69539-A4A4-43A0-A50C-144368E3FC35}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {909EA360-D119-4271-8C12-54E0E4FD05DF}
+	EndGlobalSection
+EndGlobal
