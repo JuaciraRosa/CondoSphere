@@ -1,7 +1,19 @@
+using CondoSphere.Data;
+using CondoSphere.Data.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddControllersWithViews();
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddRepositories();
+
+
+    // Add services to the container.
+    builder.Services.AddControllersWithViews();
+
 
 var app = builder.Build();
 
@@ -15,6 +27,7 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
 
 app.UseRouting();
 
