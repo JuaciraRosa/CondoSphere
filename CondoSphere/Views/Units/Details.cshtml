@@ -1,42 +1,39 @@
 ﻿@model CondoSphere.Models.Unit
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Unit Details";
 }
 
-<h1>Details</h1>
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h4 class="mb-0"><i class="bi bi-info-circle"></i> Unit Details</h4>
+    </div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Number)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(m => m.Number)</dd>
 
-<div>
-    <h4>Unit</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Number)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Number)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Area)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Area)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Condominium)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Condominium.Id)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Owner)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Owner.Id)
-        </dd>
-    </dl>
+            <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Area)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(m => m.Area)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Condominium)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(m => m.Condominium.Id)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Owner)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(m => m.Owner.Id)</dd>
+        </dl>
+    </div>
+    <div class="card-footer text-end">
+        <a asp-action="Edit" asp-route-id="@Model?.Id" class="btn btn-primary">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
 </div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
-</div>
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

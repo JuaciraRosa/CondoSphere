@@ -1,89 +1,153 @@
-﻿﻿@using Microsoft.AspNetCore.Http
+﻿﻿@using System.Security.Claims
+@using Microsoft.AspNetCore.Http
 @inject IHttpContextAccessor HttpContextAccessor
 
 @{
     var user = HttpContextAccessor.HttpContext?.User;
-    var role = user?.FindFirst("role")?.Value; // "Administrator", "Manager", etc.
+    var isAuth = user?.Identity?.IsAuthenticated == true;
+    var role = user?.FindFirst(ClaimTypes.Role)?.Value
+               ?? user?.FindFirst("role")?.Value;
 }
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@ViewData["Title"] - CondoSphere</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/CondoSphere.styles.css" asp-append-version="true" />
+
+    <!-- Favicons -->
+    <link rel="icon" href="~/assets/img/favicon.png" asp-append-version="true" />
+    <link rel="apple-touch-icon" href="~/assets/img/apple-touch-icon.png" asp-append-version="true" />
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Nunito:wght@400;600;700&family=Raleway:wght@600;700;800&display=swap" rel="stylesheet" />
+
+    <!-- Vendor CSS -->
+    <link href="~/assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet" asp-append-version="true" />
+    <link href="~/assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet" asp-append-version="true" />
+    <link href="~/assets/vendor/aos/aos.css" rel="stylesheet" asp-append-version="true" />
+    <link href="~/assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet" asp-append-version="true" />
+    <link href="~/assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet" asp-append-version="true" />
+
+    <!-- Main CSS -->
+    <link href="~/assets/css/main.css" rel="stylesheet" asp-append-version="true" />
 </head>
-<body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">CondoSphere</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        @if (user?.Identity?.IsAuthenticated == true)
+<body class="index-page">
+
+    <!-- Header -->
+    <header id="header" class="header d-flex align-items-center sticky-top">
+        <div class="container position-relative d-flex align-items-center justify-content-between">
+            <a asp-controller="Home" asp-action="Index" class="logo d-flex align-items-center me-auto me-lg-0 text-decoration-none">
+                <h1 class="sitename m-0">CondoSphere</h1>
+            </a>
+
+            <nav id="navmenu" class="navmenu">
+                <ul>
+                    @if (isAuth)
+                    {
+                        <li><a asp-controller="Dashboard" asp-action="Index">Dashboard</a></li>
+
+                        @* Administrator *@
+                        @if (role == "Administrator")
                         {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
-                            </li>
-
-                            @if (role == "Administrator")
-                            {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Users" asp-action="Index">Users</a></li>
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Companies" asp-action="Index">Companies</a></li>
-                            }
-
-                            @if (role == "Administrator" || role == "Manager")
-                            {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Condominiums" asp-action="Index">Condominiums</a></li>
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Meetings" asp-action="Index">Meetings</a></li>
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Expenses" asp-action="Index">Expenses</a></li>
-                            }
-
-                            @if (role == "Resident")
-                            {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Units" asp-action="Index">My Unit</a></li>
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Payments" asp-action="Index">Payments</a></li>
-                            }
-
-                            <li class="nav-item">
-                                <form method="post" asp-controller="Auth" asp-action="Logout">
-                                    <button type="submit" class="btn btn-link nav-link text-dark" style="padding: 0;">Logout</button>
-                                </form>
-                            </li>
+                            <li><a asp-controller="Users" asp-action="Index">Users</a></li>
+                            <li><a asp-controller="Companies" asp-action="Index">Companies</a></li>
                         }
-                        else
+
+                        @* Administrator or Manager *@
+                        @if (role == "Administrator" || role == "Manager")
                         {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Auth" asp-action="Login">Login</a>
-                            </li>
+                            <li><a asp-controller="Condominiums" asp-action="Index">Condominiums</a></li>
+                            <li><a asp-controller="Meetings" asp-action="Index">Meetings</a></li>
+                            <li><a asp-controller="Expenses" asp-action="Index">Expenses</a></li>
+                            <li><a asp-controller="Quotas" asp-action="Index">Quotas</a></li>
+                            <li><a asp-controller="Payments" asp-action="Index">Payments</a></li>
+                            <li><a asp-controller="Notifications" asp-action="Index">Notifications</a></li>
                         }
-                    </ul>
 
-                </div>
+                        @* Resident *@
+                        @if (role == "Resident")
+                        {
+                            <li><a asp-controller="Units" asp-action="Index">My Unit</a></li>
+                            <li><a asp-controller="Payments" asp-action="Index">Payments</a></li>
+                        }
+
+                        @* Account dropdown *@
+                        <li class="dropdown">
+                            <a href="#"><span>@(user?.Identity?.Name ?? "Account")</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
+                            <ul>
+                                <li><a asp-controller="Account" asp-action="Profile">Profile</a></li>
+                                <li><a asp-controller="Account" asp-action="ChangePassword">Change Password</a></li>
+                            </ul>
+                        </li>
+                    }
+                </ul>
+                <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
+            </nav>
+
+            <div class="d-flex align-items-center gap-2">
+                @if (isAuth)
+                {
+                    <form method="post" asp-controller="Auth" asp-action="Logout" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-outline-danger btn-sm">Logout</button>
+                    </form>
+                }
+                else
+                {
+                    @* FORÇA MVC: evita confundir com a API *@
+                    <a class="btn btn-primary btn-sm" href="@Url.Action("Login","Auth")">Login</a>
+                }
             </div>
-        </nav>
+        </div>
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2025 - CondoSphere - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+    @* Page title/breadcrumbs opcional *@
+    @RenderSection("PageHeader", required: false)
+
+    <main class="py-4">
+        <div class="container" data-aos="fade-up">
+            @if (TempData["Success"] is string ok && !string.IsNullOrEmpty(ok))
+            {
+                <div class="alert alert-success">@ok</div>
+            }
+            @if (TempData["Error"] is string err && !string.IsNullOrEmpty(err))
+            {
+                <div class="alert alert-danger">@err</div>
+            }
+
+            @RenderBody()
+        </div>
+    </main>
+
+    <footer id="footer" class="footer">
+        <div class="container d-flex justify-content-between small">
+            <span>&copy; @DateTime.UtcNow.Year - CondoSphere</span>
+            <a asp-controller="Home" asp-action="Privacy" class="text-decoration-none">Privacy</a>
         </div>
     </footer>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)
+
+    <!-- Scroll Top & Preloader -->
+    <a href="#" id="scroll-top" class="scroll-top d-flex align-items-center justify-content-center">
+        <i class="bi bi-arrow-up-short"></i>
+    </a>
+    <div id="preloader"></div>
+
+    <!-- Vendor JS -->
+    <script src="~/assets/vendor/bootstrap/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
+    <script src="~/assets/vendor/php-email-form/validate.js" asp-append-version="true"></script>
+    <script src="~/assets/vendor/aos/aos.js" asp-append-version="true"></script>
+    <script src="~/assets/vendor/glightbox/js/glightbox.min.js" asp-append-version="true"></script>
+    <script src="~/assets/vendor/imagesloaded/imagesloaded.pkgd.min.js" asp-append-version="true"></script>
+    <script src="~/assets/vendor/isotope-layout/isotope.pkgd.min.js" asp-append-version="true"></script>
+    <script src="~/assets/vendor/waypoints/noframework.waypoints.js" asp-append-version="true"></script>
+    <script src="~/assets/vendor/swiper/swiper-bundle.min.js" asp-append-version="true"></script>
+
+    <!-- Main JS -->
+    <script src="~/assets/js/main.js" asp-append-version="true"></script>
+
+    @RenderSection("Scripts", required: false)
 </body>
 </html>

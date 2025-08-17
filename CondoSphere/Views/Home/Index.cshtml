@@ -1,8 +1,62 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿﻿@{
+    ViewData["Title"] = "Home";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<section id="hero" class="hero">
+    <div id="heroCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="5000">
+        <div class="carousel-inner">
+
+            <div class="carousel-item active">
+                <img src="~/assets/img/hero-carousel/hero-carousel-1.jpg" alt="CondoSphere">
+                <div class="container" data-aos="fade-up">
+                    <h2>Gestão de Condomínios sem Dor de Cabeça</h2>
+                    <p>Administre unidades, quotas, pagamentos e reuniões num painel moderno.</p>
+                    <a class="btn-get-started" asp-controller="Auth" asp-action="Login">Começar</a>
+                </div>
+            </div>
+
+        </div>
+
+        <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Anterior</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Próximo</span>
+        </button>
+
+        <ol class="carousel-indicators"></ol>
+    </div>
+</section>
+
+<section id="features" class="section features">
+    <div class="container">
+        <div class="row gy-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="features-item">
+                    <i class="bi bi-building"></i>
+                    <h3><a href="#">Condomínios</a></h3>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="features-item">
+                    <i class="bi bi-wallet2"></i>
+                    <h3><a href="#">Quotas & Pagamentos</a></h3>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="features-item">
+                    <i class="bi bi-people"></i>
+                    <h3><a href="#">Reuniões</a></h3>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="features-item">
+                    <i class="bi bi-bell"></i>
+                    <h3><a href="#">Notificações</a></h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
