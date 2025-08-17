@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CondoSphere.API
 {
-    [Route("api/[controller]")]
+    [Route("api/notifications")]
     [ApiController]
     public class NotificationsApiController : ControllerBase
     {

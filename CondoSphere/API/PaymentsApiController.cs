@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace CondoSphere.API
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/payments")]
     public class PaymentsApiController : ControllerBase
     {
         private readonly IPaymentRepository _repository;

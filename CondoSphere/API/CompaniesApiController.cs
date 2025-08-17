@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CondoSphere.API
 {
-    [Route("api/[controller]")]
+    [Route("api/companies")]
     [ApiController]
     public class CompaniesApiController : ControllerBase
     {

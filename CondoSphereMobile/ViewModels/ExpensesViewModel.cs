@@ -10,21 +10,21 @@ using System.Windows.Input;
 
 namespace CondoSphereMobile.ViewModels
 {
-    public class UsersViewModel : BindableObject
+    public class ExpensesViewModel : BindableObject
     {
         private readonly ApiService _apiService;
 
-        public ObservableCollection<User> Users { get; set; } = new ObservableCollection<User>();
+        public ObservableCollection<Expense> Expenses { get; set; } = new();
 
-        public ICommand LoadUsersCommand { get; }
+        public ICommand LoadExpensesCommand { get; }
 
-        public UsersViewModel()
+        public ExpensesViewModel()
         {
             _apiService = new ApiService();
-            LoadUsersCommand = new Command(async () => await LoadUsersAsync());
+            LoadExpensesCommand = new Command(async () => await LoadExpensesAsync());
         }
 
-        private async Task LoadUsersAsync()
+        private async Task LoadExpensesAsync()
         {
             try
             {
@@ -32,14 +32,10 @@ namespace CondoSphereMobile.ViewModels
                 if (!string.IsNullOrEmpty(token))
                     _apiService.SetAuthToken(token);
 
-                var users = await _apiService.GetAsync<List<User>>("users");
-
-
-                Users.Clear();
-                foreach (var user in users)
-                {
-                    Users.Add(user);
-                }
+                var expenses = await _apiService.GetAsync<List<Expense>>("expenses");
+                Expenses.Clear();
+                foreach (var expense in expenses)
+                    Expenses.Add(expense);
             }
             catch (Exception ex)
             {
