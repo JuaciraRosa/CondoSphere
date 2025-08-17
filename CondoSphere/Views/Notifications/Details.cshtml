@@ -1,36 +1,36 @@
 ﻿@model CondoSphere.Models.Notification
-
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Notification Details";
 }
 
-<h1>Details</h1>
+<div class="page-body">
+    <div class="container-xl">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Notification Details</h3>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Message)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(m => m.Message)</dd>
 
-<div>
-    <h4>Notification</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Message)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Message)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.SentAt)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.SentAt)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Condominium)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Condominium.Id)
-        </dd>
-    </dl>
+                    <dt class="col-sm-3">@Html.DisplayNameFor(m => m.SentAt)</dt>
+                    <dd class="col-sm-9">@Model.SentAt.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Condominium)</dt>
+                    <dd class="col-sm-9">@Model.Condominium?.Id</dd>
+                </dl>
+            </div>
+            <div class="card-footer">
+                <a asp-action="Edit" asp-route-id="@Model?.Id" class="btn btn-warning">Edit</a>
+                <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+            </div>
+        </div>
+    </div>
 </div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
-</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

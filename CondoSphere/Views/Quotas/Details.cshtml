@@ -1,42 +1,51 @@
 ﻿@model CondoSphere.Models.Quota
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Quota Details";
 }
 
-<h1>Details</h1>
+<section class="section">
+    <div class="container">
+        <div class="card shadow-sm p-4">
+            <h4 class="mb-4"><i class="bi bi-info-circle"></i> Quota Details</h4>
 
-<div>
-    <h4>Quota</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Unit)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Unit.Id)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Amount)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Amount)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.DueDate)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.DueDate)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.IsPaid)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.IsPaid)
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
-</div>
+            <div class="row gy-3">
+                <div class="col-md-4">
+                    <div class="fw-semibold text-muted">Unit</div>
+                    <div>@(Model?.Unit?.Number ?? $"#{Model.UnitId}")</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fw-semibold text-muted">Amount</div>
+                    <div>@Model.Amount.ToString("C")</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fw-semibold text-muted">Due date</div>
+                    <div>@Model.DueDate.ToString("yyyy-MM-dd")</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fw-semibold text-muted">Status</div>
+                    <div>
+                        @if (Model.IsPaid)
+                        {
+                            <span class="badge bg-success">Paid</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-warning text-dark">Pending</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <a class="btn btn-outline-secondary" asp-action="Index"><i class="bi bi-arrow-left"></i> Back</a>
+                <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model.Id"><i class="bi bi-pencil"></i> Edit</a>
+            </div>
+        </div>
+    </div>
+</section>
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
