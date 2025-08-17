@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CondoSphereMobile.Views.DashboardPage"
+              Title="Dashboard">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="15">
+            <Label Text="Bem-vindo(a)!"
+                   FontSize="24"
+                   HorizontalOptions="Center" />
+
+            <Label x:Name="lblUserName"
+                   FontSize="18"
+                   HorizontalOptions="Center" />
+
+            <Label x:Name="lblRole"
+                   FontSize="14"
+                   HorizontalOptions="Center"
+                   TextColor="Gray" />
+
+            <BoxView HeightRequest="1" Color="LightGray" />
+
+            <VerticalStackLayout x:Name="menuContainer" Spacing="10" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

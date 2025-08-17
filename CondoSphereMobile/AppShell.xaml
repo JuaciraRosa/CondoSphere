@@ -12,4 +12,8 @@
         ContentTemplate="{DataTemplate local:MainPage}"
         Route="MainPage" />
 
+
+    <ShellContent Route="LoginPage" ContentTemplate="{DataTemplate views:LoginPage}" />
+    <ShellContent Route="DashboardPage" ContentTemplate="{DataTemplate views:DashboardPage}" />
+
 </Shell>
