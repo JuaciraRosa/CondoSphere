@@ -4,6 +4,19 @@
     ViewData["Title"] = "Users";
 }
 
+@section PageHeader {
+    <section class="page-title">
+        <div class="container">
+            <h1>Users</h1>
+            <div class="breadcrumbs">
+                <ol>
+                    <li><a asp-controller="Home" asp-action="Index">Home</a></li>
+                    <li>Users</li>
+                </ol>
+            </div>
+        </div>
+    </section>
+}
 <section class="section">
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-3">
