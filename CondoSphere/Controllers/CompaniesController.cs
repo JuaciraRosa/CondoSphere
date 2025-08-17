@@ -21,6 +21,17 @@ namespace CondoSphere.Controllers
             return View(companies);
         }
 
+        // GET: Companies/Details/5
+        public async Task<IActionResult> Details(int id)
+        {
+            var company = await _companyRepository.GetByIdAsync(id);
+            if (company == null)
+                return NotFound();
+
+            return View(company);
+        }
+
+
         // GET: Companies/Create
         public IActionResult Create()
         {

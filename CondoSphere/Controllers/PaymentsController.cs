@@ -13,17 +13,27 @@ namespace CondoSphere.Controllers
 {
     public class PaymentsController : Controller
     {
-        private readonly IPaymentRepository _paymentRepo;
+        private readonly IPaymentRepository _paymentRepository;
 
-        public PaymentsController(IPaymentRepository paymentRepo)
+        public PaymentsController(IPaymentRepository paymentRepository)
         {
-            _paymentRepo = paymentRepo;
+            _paymentRepository = paymentRepository;
         }
 
         public async Task<IActionResult> Index()
         {
-            var payments = await _paymentRepo.GetAllAsync();
+            var payments = await _paymentRepository.GetAllAsync();
             return View(payments);
+        }
+
+        // GET: Payments/Details/5
+        public async Task<IActionResult> Details(int id)
+        {
+            var payment = await _paymentRepository.GetByIdAsync(id);
+            if (payment == null)
+                return NotFound();
+
+            return View(payment);
         }
 
         public IActionResult Create() => View();
@@ -33,7 +43,7 @@ namespace CondoSphere.Controllers
         {
             if (ModelState.IsValid)
             {
-                await _paymentRepo.AddAsync(payment);
+                await _paymentRepository.AddAsync(payment);
                 return RedirectToAction(nameof(Index));
             }
             return View(payment);
@@ -41,7 +51,7 @@ namespace CondoSphere.Controllers
 
         public async Task<IActionResult> Edit(int id)
         {
-            var payment = await _paymentRepo.GetByIdAsync(id);
+            var payment = await _paymentRepository.GetByIdAsync(id);
             if (payment == null) return NotFound();
             return View(payment);
         }
@@ -52,7 +62,8 @@ namespace CondoSphere.Controllers
             if (id != payment.Id) return NotFound();
             if (ModelState.IsValid)
             {
-                _paymentRepo.Update(payment);
+                _paymentRepository.Update(payment);
+                await _paymentRepository.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(payment);
@@ -60,7 +71,7 @@ namespace CondoSphere.Controllers
 
         public async Task<IActionResult> Delete(int id)
         {
-            var payment = await _paymentRepo.GetByIdAsync(id);
+            var payment = await _paymentRepository.GetByIdAsync(id);
             if (payment == null) return NotFound();
             return View(payment);
         }
@@ -68,7 +79,7 @@ namespace CondoSphere.Controllers
         [HttpPost, ActionName("Delete")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            await _paymentRepo.DeleteAsync(id);
+            await _paymentRepository.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
         }
     }

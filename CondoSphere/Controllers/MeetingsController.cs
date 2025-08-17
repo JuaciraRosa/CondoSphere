@@ -13,17 +13,27 @@ namespace CondoSphere.Controllers
 {
     public class MeetingsController : Controller
     {
-        private readonly IMeetingRepository _meetingRepo;
+        private readonly IMeetingRepository _repository;
 
-        public MeetingsController(IMeetingRepository meetingRepo)
+        public MeetingsController(IMeetingRepository repository)
         {
-            _meetingRepo = meetingRepo;
+            _repository = repository;
         }
 
         public async Task<IActionResult> Index()
         {
-            var meetings = await _meetingRepo.GetAllAsync();
+            var meetings = await _repository.GetAllAsync();
             return View(meetings);
+        }
+
+        // GET: Meetings/Details/5
+        public async Task<IActionResult> Details(int id)
+        {
+            var meeting = await _repository.GetByIdAsync(id);
+            if (meeting == null)
+                return NotFound();
+
+            return View(meeting);
         }
 
         public IActionResult Create() => View();
@@ -33,7 +43,7 @@ namespace CondoSphere.Controllers
         {
             if (ModelState.IsValid)
             {
-                await _meetingRepo.AddAsync(meeting);
+                await _repository.AddAsync(meeting);
                 return RedirectToAction(nameof(Index));
             }
             return View(meeting);
@@ -41,7 +51,7 @@ namespace CondoSphere.Controllers
 
         public async Task<IActionResult> Edit(int id)
         {
-            var meeting = await _meetingRepo.GetByIdAsync(id);
+            var meeting = await _repository.GetByIdAsync(id);
             if (meeting == null) return NotFound();
             return View(meeting);
         }
@@ -52,7 +62,8 @@ namespace CondoSphere.Controllers
             if (id != meeting.Id) return NotFound();
             if (ModelState.IsValid)
             {
-                _meetingRepo.Update(meeting);
+                _repository.Update(meeting);
+                await _repository.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(meeting);
@@ -60,7 +71,7 @@ namespace CondoSphere.Controllers
 
         public async Task<IActionResult> Delete(int id)
         {
-            var meeting = await _meetingRepo.GetByIdAsync(id);
+            var meeting = await _repository.GetByIdAsync(id);
             if (meeting == null) return NotFound();
             return View(meeting);
         }
@@ -68,7 +79,7 @@ namespace CondoSphere.Controllers
         [HttpPost, ActionName("Delete")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            await _meetingRepo.DeleteAsync(id);
+            await _repository.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
         }
     }

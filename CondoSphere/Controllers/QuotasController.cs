@@ -13,18 +13,29 @@ namespace CondoSphere.Controllers
 {
     public class QuotasController : Controller
     {
-        private readonly IQuotaRepository _quotaRepo;
+        private readonly IQuotaRepository _quotaRepository;
 
-        public QuotasController(IQuotaRepository quotaRepo)
+        public QuotasController(IQuotaRepository quotaRepository)
         {
-            _quotaRepo = quotaRepo;
+            _quotaRepository = quotaRepository;
         }
 
         public async Task<IActionResult> Index()
         {
-            var quotas = await _quotaRepo.GetAllAsync();
+            var quotas = await _quotaRepository.GetAllAsync();
             return View(quotas);
         }
+
+        // GET: Quotas/Details/5
+        public async Task<IActionResult> Details(int id)
+        {
+            var quota = await _quotaRepository.GetByIdAsync(id);
+            if (quota == null)
+                return NotFound();
+
+            return View(quota);
+        }
+
 
         public IActionResult Create() => View();
 
@@ -33,7 +44,7 @@ namespace CondoSphere.Controllers
         {
             if (ModelState.IsValid)
             {
-                await _quotaRepo.AddAsync(quota);
+                await _quotaRepository.AddAsync(quota);
                 return RedirectToAction(nameof(Index));
             }
             return View(quota);
@@ -41,7 +52,7 @@ namespace CondoSphere.Controllers
 
         public async Task<IActionResult> Edit(int id)
         {
-            var quota = await _quotaRepo.GetByIdAsync(id);
+            var quota = await _quotaRepository.GetByIdAsync(id);
             if (quota == null) return NotFound();
             return View(quota);
         }
@@ -52,7 +63,8 @@ namespace CondoSphere.Controllers
             if (id != quota.Id) return NotFound();
             if (ModelState.IsValid)
             {
-                _quotaRepo.Update(quota);
+                _quotaRepository.Update(quota);
+                await _quotaRepository.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(quota);
@@ -60,7 +72,7 @@ namespace CondoSphere.Controllers
 
         public async Task<IActionResult> Delete(int id)
         {
-            var quota = await _quotaRepo.GetByIdAsync(id);
+            var quota = await _quotaRepository.GetByIdAsync(id);
             if (quota == null) return NotFound();
             return View(quota);
         }
@@ -68,7 +80,7 @@ namespace CondoSphere.Controllers
         [HttpPost, ActionName("Delete")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            await _quotaRepo.DeleteAsync(id);
+            await _quotaRepository.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
         }
     }

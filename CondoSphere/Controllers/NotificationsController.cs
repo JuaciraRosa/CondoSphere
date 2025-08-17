@@ -13,18 +13,28 @@ namespace CondoSphere.Controllers
 {
     public class NotificationsController : Controller
     {
-        private readonly INotificationRepository _notificationRepo;
+        private readonly INotificationRepository _repository;
 
-        public NotificationsController(INotificationRepository notificationRepo)
+        public NotificationsController(INotificationRepository repository)
         {
-            _notificationRepo = notificationRepo;
+            _repository = repository;
         }
 
         public async Task<IActionResult> Index()
         {
-            var notifications = await _notificationRepo.GetAllAsync();
+            var notifications = await _repository.GetAllAsync();
             return View(notifications);
         }
+        // GET: Notifications/Details/5
+        public async Task<IActionResult> Details(int id)
+        {
+            var notification = await _repository.GetByIdAsync(id);
+            if (notification == null)
+                return NotFound();
+
+            return View(notification);
+        }
+
 
         public IActionResult Create() => View();
 
@@ -33,7 +43,7 @@ namespace CondoSphere.Controllers
         {
             if (ModelState.IsValid)
             {
-                await _notificationRepo.AddAsync(notification);
+                await _repository.AddAsync(notification);
                 return RedirectToAction(nameof(Index));
             }
             return View(notification);
@@ -41,7 +51,7 @@ namespace CondoSphere.Controllers
 
         public async Task<IActionResult> Edit(int id)
         {
-            var notification = await _notificationRepo.GetByIdAsync(id);
+            var notification = await _repository.GetByIdAsync(id);
             if (notification == null) return NotFound();
             return View(notification);
         }
@@ -52,7 +62,8 @@ namespace CondoSphere.Controllers
             if (id != notification.Id) return NotFound();
             if (ModelState.IsValid)
             {
-                _notificationRepo.Update(notification);
+                _repository.Update(notification);
+                await _repository.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(notification);
@@ -60,7 +71,7 @@ namespace CondoSphere.Controllers
 
         public async Task<IActionResult> Delete(int id)
         {
-            var notification = await _notificationRepo.GetByIdAsync(id);
+            var notification = await _repository.GetByIdAsync(id);
             if (notification == null) return NotFound();
             return View(notification);
         }
@@ -68,7 +79,7 @@ namespace CondoSphere.Controllers
         [HttpPost, ActionName("Delete")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            await _notificationRepo.DeleteAsync(id);
+            await _repository.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
         }
     }
