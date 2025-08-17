@@ -1,42 +1,41 @@
 ﻿@model CondoSphere.Models.Payment
 
-@{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Payment Details";
 }
 
-<h1>Details</h1>
+<section class="section">
+    <div class="container">
+        <div class="card shadow-sm p-4">
+            <h4 class="mb-4"><i class="bi bi-info-circle"></i> Payment Details</h4>
 
-<div>
-    <h4>Payment</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Quota)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Quota.Id)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PaymentDate)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PaymentDate)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PaymentMethod)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PaymentMethod)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.ReceiptNumber)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.ReceiptNumber)
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
-</div>
+            <div class="row gy-3">
+                <div class="col-md-4">
+                    <div class="fw-semibold text-muted">Quota</div>
+                    <div>@(Model?.Quota != null ? $"Quota #{Model.Quota.Id}" : $"#{Model.QuotaId}")</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fw-semibold text-muted">Payment date</div>
+                    <div>@Model.PaymentDate.ToString("yyyy-MM-dd")</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fw-semibold text-muted">Method</div>
+                    <div>@Model.PaymentMethod</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fw-semibold text-muted">Receipt #</div>
+                    <div>@Model.ReceiptNumber</div>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <a class="btn btn-outline-secondary" asp-action="Index"><i class="bi bi-arrow-left"></i> Back</a>
+                <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model.Id"><i class="bi bi-pencil"></i> Edit</a>
+            </div>
+        </div>
+    </div>
+</section>
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
