@@ -52,6 +52,13 @@ namespace CondoSphere.Data
             .Property(p => p.Amount)
             .HasPrecision(18, 2);
 
+            modelBuilder.Entity<Quota>()
+           .HasOne(q => q.Payment)
+           .WithOne(p => p.Quota)
+           .HasForeignKey<Payment>(p => p.QuotaId)
+           .OnDelete(DeleteBehavior.Restrict);
+
+
         }
 
 

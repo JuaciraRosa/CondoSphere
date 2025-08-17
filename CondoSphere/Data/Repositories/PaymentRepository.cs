@@ -24,10 +24,24 @@ namespace CondoSphere.Data.Repositories
             await _context.Payments
                 .FirstOrDefaultAsync(p => p.ProviderPaymentId == providerPaymentId);
 
-        public Task<Payment> GetByReceiptNumberAsync(string receiptNumber)
+        public async Task MarkSucceededAsync(string providerPaymentId, string? receiptUrl)
         {
-            throw new NotImplementedException();
+            var p = await _context.Payments.Include(x => x.Quota)
+                    .FirstOrDefaultAsync(x => x.ProviderPaymentId == providerPaymentId);
+            if (p == null) return;
+
+            p.Status = PaymentStatusType.Succeeded;
+            p.PaidAt = DateTime.UtcNow;
+            p.ReceiptUrl = receiptUrl;
+            if (p.Quota != null) p.Quota.IsPaid = true;
+
+            await _context.SaveChangesAsync();
         }
+
+        public async Task<Payment?> GetByQuotaIdAsync(int quotaId) =>
+    await _context.Payments
+        .Include(p => p.Quota)
+        .FirstOrDefaultAsync(p => p.QuotaId == quotaId);
     }
 
 }

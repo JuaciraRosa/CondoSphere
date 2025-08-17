@@ -27,11 +27,25 @@ namespace CondoSphere.Services
             var quota = await _db.Quotas
                 .Include(q => q.Unit).ThenInclude(u => u.Condominium)
                 .FirstOrDefaultAsync(q => q.Id == quotaId);
-
             if (quota == null) throw new Exception("Quota not found.");
+            if (quota.IsPaid) throw new Exception("Quota already paid.");
 
+            // 1) Já existe payment para esta quota?
+            var existing = await _db.Payments.FirstOrDefaultAsync(p => p.QuotaId == quotaId);
+
+            // 2) Se existir e estiver pendente com PaymentIntent válido, reusa-o
+            if (existing != null && existing.Status != PaymentStatusType.Succeeded &&
+                !string.IsNullOrEmpty(existing.ProviderPaymentId))
+            {
+                var piService = new PaymentIntentService();
+                var pi = await piService.GetAsync(existing.ProviderPaymentId);
+                if (pi != null && !string.Equals(pi.Status, "canceled", StringComparison.OrdinalIgnoreCase))
+                    return (pi.ClientSecret, pi.Id);
+                // se foi cancelado, vamos criar outro e atualizar a mesma linha
+            }
+
+            // 3) Criar/atualizar PaymentIntent
             var amountCents = (long)(quota.Amount * 100m);
-
             var options = new PaymentIntentCreateOptions
             {
                 Amount = amountCents,
@@ -41,56 +55,43 @@ namespace CondoSphere.Services
                 Metadata = new Dictionary<string, string> { ["quota_id"] = quotaId.ToString() }
             };
 
-            var piService = new PaymentIntentService();
-            var intent = await piService.CreateAsync(options);
+            var piServiceNew = new PaymentIntentService();
+            var intent = await piServiceNew.CreateAsync(
+                options,
+                // chave de idempotência extra: evita duplicar intents no Stripe em cliques repetidos
+                new RequestOptions { IdempotencyKey = $"quota-{quotaId}-card" }
+            );
 
-            _db.Payments.Add(new Payment
+            if (existing == null)
             {
-                QuotaId = quotaId,
-                Amount = quota.Amount,
-                Method = PaymentMethodType.Card,
-                Status = PaymentStatusType.Pending,
-                Provider = "stripe",
-                ProviderPaymentId = intent.Id
-            });
-            await _db.SaveChangesAsync();
+                _db.Payments.Add(new Payment
+                {
+                    QuotaId = quotaId,
+                    Amount = quota.Amount,
+                    Method = PaymentMethodType.Card,
+                    Status = PaymentStatusType.Pending,
+                    Provider = "stripe",
+                    ProviderPaymentId = intent.Id,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                // Atualiza a MESMA linha para não bater no índice único
+                existing.Amount = quota.Amount;
+                existing.Method = PaymentMethodType.Card;
+                existing.Status = PaymentStatusType.Pending;
+                existing.Provider = "stripe";
+                existing.ProviderPaymentId = intent.Id;
+                existing.CreatedAt = DateTime.UtcNow;
+                _db.Payments.Update(existing);
+            }
 
+            await _db.SaveChangesAsync();
             return (intent.ClientSecret, intent.Id);
         }
 
-        public async Task<(string paymentIntentId, string entityRef, DateTime expiresAt)> CreateMultibancoAsync(int quotaId)
-        {
-            var quota = await _db.Quotas.FindAsync(quotaId);
-            if (quota == null) throw new Exception("Quota not found.");
 
-            var amountCents = (long)(quota.Amount * 100m);
-
-            var options = new PaymentIntentCreateOptions
-            {
-                Amount = amountCents,
-                Currency = "eur",
-                PaymentMethodTypes = new List<string> { "multibanco" },
-                Description = $"Quota {quotaId} - {quota.DueDate:yyyy-MM}",
-                Metadata = new Dictionary<string, string> { ["quota_id"] = quotaId.ToString() }
-            };
-
-            var piService = new PaymentIntentService();
-            var intent = await piService.CreateAsync(options);
-
-            _db.Payments.Add(new Payment
-            {
-                QuotaId = quotaId,
-                Amount = quota.Amount,
-                Method = PaymentMethodType.Multibanco,
-                Status = PaymentStatusType.Pending,
-                Provider = "stripe",
-                ProviderPaymentId = intent.Id
-            });
-            await _db.SaveChangesAsync();
-
-            // Normalmente os dados MB só aparecem depois da confirmação no cliente
-            return (intent.Id, "Available on next_action", DateTime.UtcNow.AddDays(3));
-        }
 
         public async Task HandleWebhookAsync(string json, string signatureHeader)
         {
@@ -141,6 +142,37 @@ namespace CondoSphere.Services
                 await _db.SaveChangesAsync();
             }
             // Outros eventos podem ser ignorados ou tratados aqui conforme necessário
+        }
+
+
+
+        public async Task<string> ConfirmAndMarkAsync(string intentId)
+        {
+            var piService = new PaymentIntentService();
+            var pi = await piService.GetAsync(intentId); // sem expands
+
+            if (string.Equals(pi.Status, "succeeded", StringComparison.OrdinalIgnoreCase))
+            {
+                var payment = await _db.Payments
+                    .Include(p => p.Quota)
+                    .FirstOrDefaultAsync(p => p.ProviderPaymentId == pi.Id);
+
+                if (payment != null)
+                {
+                    payment.Status = PaymentStatusType.Succeeded;
+                    payment.PaidAt = DateTime.UtcNow;
+
+                    // Se fizeres questão do recibo via Charge, podemos tentar depois.
+                    // payment.ReceiptUrl = ... (opcional)
+
+                    if (payment.Quota != null)
+                        payment.Quota.IsPaid = true;
+
+                    await _db.SaveChangesAsync();
+                }
+            }
+
+            return pi.Status; // succeeded / processing / requires_action / canceled / ...
         }
     }
 }

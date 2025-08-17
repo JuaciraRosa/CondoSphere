@@ -1,0 +1,81 @@
+﻿@model CondoSphere.ModelTest.QuotaPayVM
+
+@{
+    ViewData["Title"] = "Pay quota";
+}
+<section class="section">
+    <div class="container">
+        <h3>Pay quota</h3>
+        <p class="text-muted mb-1">@Model.Description</p>
+        <p class="fs-5 fw-semibold">Amount: @Model.Amount.ToString("C")</p>
+
+        <div class="card p-3 shadow-sm">
+            <div id="card-element" class="form-control mb-3"></div>
+            <div id="card-errors" class="text-danger mb-2" role="alert"></div>
+            <button id="payBtn" class="btn btn-primary">
+                <i class="bi bi-credit-card-2-front"></i> Pay now
+            </button>
+            <div id="paySpinner" class="spinner-border ms-2" style="display:none" role="status"></div>
+        </div>
+
+        <a class="btn btn-link mt-3" asp-action="Index">Back</a>
+    </div>
+</section>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    (async () => {
+      // 1) Cria PaymentIntent no backend
+      const res = await fetch('/api/payments/card/intent', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ quotaId: @Model.QuotaId })
+      });
+      const errorDiv = document.getElementById('card-errors');
+      if (!res.ok) {
+        errorDiv.textContent = 'Failed to create payment intent.';
+        return;
+      }
+      const { clientSecret, publishableKey } = await res.json();
+
+      // 2) Inicializa Stripe.js
+      const stripe = Stripe(publishableKey);
+      const elements = stripe.elements();
+      const card = elements.create('card');
+      card.mount('#card-element');
+
+      const btn = document.getElementById('payBtn');
+      const spinner = document.getElementById('paySpinner');
+
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        btn.disabled = true; spinner.style.display = 'inline-block'; errorDiv.textContent = '';
+
+        // 3) Confirma pagamento
+        const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: { card }
+        });
+
+        btn.disabled = false; spinner.style.display = 'none';
+
+        if (error) {
+          errorDiv.textContent = error.message || 'Payment failed.';
+          return;
+        }
+
+        if (paymentIntent && paymentIntent.status === 'succeeded') {
+          // 4) Marca pago de imediato no servidor
+          await fetch('/api/payments/confirm', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ intentId: paymentIntent.id })
+          });
+
+          // Redireciona (ajuste o destino como preferir)
+          window.location.href = '@Url.Action("Details", "Quotas", new { id = Model.QuotaId })';
+        } else {
+          errorDiv.textContent = 'Payment not completed.';
+        }
+      });
+    })();
+</script>

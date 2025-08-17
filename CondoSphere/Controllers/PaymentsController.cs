@@ -10,22 +10,53 @@ using CondoSphere.Models;
 using CondoSphere.Data.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using CondoSphere.Services;
 
 namespace CondoSphere.Controllers
 {
     [Authorize(Roles = "Administrator,Manager,Resident")]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-
     public class PaymentsController : Controller
     {
         private readonly IPaymentRepository _payments;
         private readonly IQuotaRepository _quotas;
+        private readonly IPaymentService _paymentService;  // <—
+        private readonly IConfiguration _cfg;              // <—
 
-        public PaymentsController(IPaymentRepository payments, IQuotaRepository quotas)
+        public PaymentsController(
+            IPaymentRepository payments,
+            IQuotaRepository quotas,
+            IPaymentService paymentService,   // <—
+            IConfiguration cfg)               // <—
         {
             _payments = payments;
             _quotas = quotas;
+            _paymentService = paymentService;
+            _cfg = cfg;
         }
+
+        // ... (Index/Details/Create/Edit/Delete que já tens)
+
+        // ===== Stripe AJAX (mesma rota que o front espera) =====
+        public class CreateReq { public int QuotaId { get; set; } }
+
+        // POST /payments/card/intent
+        [HttpPost("/payments/card/intent")]
+        [IgnoreAntiforgeryToken] // chamadas fetch; se quiseres, envia o token no header e troca por [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CardIntent([FromBody] CreateReq req)
+        {
+            var (clientSecret, intentId) = await _paymentService.CreateCardIntentAsync(req.QuotaId);
+            return Ok(new
+            {
+                clientSecret,
+                intentId,
+                publishableKey = _cfg["Stripe:PublishableKey"]
+            });
+        }
+
+
+
+
 
         public async Task<IActionResult> Index()
         {

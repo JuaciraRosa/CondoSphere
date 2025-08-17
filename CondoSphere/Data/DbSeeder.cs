@@ -65,19 +65,39 @@ namespace CondoSphere.Data
             var admin = await EnsureUser("admin@condo.com", "Admin User", "Admin123$", "Administrator");
             var manager = await EnsureUser("manager@condo.com", "Manager User", "Manager123$", "Manager");
             var resident = await EnsureUser("resident@condo.com", "Resident User", "Resident123$", "Resident");
+            // 5) Unit do residente (cria se não existir e garante Id)
+            var unit = await ctx.Units
+                .FirstOrDefaultAsync(u => u.Number == "A101" && u.CondominiumId == condo.Id);
 
-            // 5) Sample unit for resident
-            if (!await ctx.Units.AnyAsync())
+            if (unit == null)
             {
-                ctx.Units.Add(new Unit
+                unit = new Unit
                 {
                     Number = "A101",
                     Area = 85.0,
                     CondominiumId = condo.Id,
-                    OwnerId = resident.Id // string (IdentityUser key)
+                    OwnerId = resident.Id // string do Identity
+                };
+                ctx.Units.Add(unit);
+                await ctx.SaveChangesAsync(); // <-- garante unit.Id gerado
+            }
+
+            // 6) Quota de exemplo (só se não existir para esse mês)
+            var dueDate = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1).AddMonths(1);
+            bool quotaExists = await ctx.Quotas.AnyAsync(q => q.UnitId == unit.Id && q.DueDate == dueDate);
+
+            if (!quotaExists)
+            {
+                ctx.Quotas.Add(new Quota
+                {
+                    UnitId = unit.Id,        // agora existe Id
+                    Amount = 25.00m,
+                    DueDate = dueDate,
+                    IsPaid = false
                 });
                 await ctx.SaveChangesAsync();
             }
+
         }
     }
 }

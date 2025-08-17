@@ -10,6 +10,7 @@ using CondoSphere.Models;
 using CondoSphere.Data.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using CondoSphere.Services;
+using CondoSphere.ModelTest;
 
 namespace CondoSphere.Controllers
 {
@@ -118,5 +119,31 @@ namespace CondoSphere.Controllers
             }
             return RedirectToAction(nameof(Index));
         }
+
+        /// <summary>
+        /// test endpoint
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> Pay(int id)
+        {
+            var quota = await _quotaRepository.GetByIdAsync(id);
+            if (quota == null) return NotFound();
+            if (quota.IsPaid) return BadRequest("Quota already paid.");
+
+            var vm = new QuotaPayVM
+            {
+                QuotaId = quota.Id,
+                Amount = quota.Amount,
+                Description = $"Quota #{quota.Id} — {quota.DueDate:yyyy-MM}"
+            };
+            return View(vm);
+        }
+
+
+
+
     }
 }
