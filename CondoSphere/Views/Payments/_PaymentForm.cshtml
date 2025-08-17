@@ -1,0 +1,67 @@
+﻿@model CondoSphere.Models.Payment
+
+<div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+
+<div class="row g-3">
+
+    <div class="col-md-6">
+        <label asp-for="QuotaId" class="form-label">Quota</label>
+        <select asp-for="QuotaId" class="form-select" asp-items="ViewBag.QuotaId"></select>
+        <span asp-validation-for="QuotaId" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="Amount" class="form-label"></label>
+        <input asp-for="Amount" class="form-control" step="0.01" />
+        <span asp-validation-for="Amount" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-4">
+        <label asp-for="Method" class="form-label"></label>
+        <select asp-for="Method" class="form-select"
+                asp-items="Html.GetEnumSelectList<CondoSphere.Models.PaymentMethodType>()"></select>
+        <span asp-validation-for="Method" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-4">
+        <label asp-for="Status" class="form-label"></label>
+        <select asp-for="Status" class="form-select"
+                asp-items="Html.GetEnumSelectList<CondoSphere.Models.PaymentStatusType>()"></select>
+        <span asp-validation-for="Status" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-4">
+        <label asp-for="Provider" class="form-label"></label>
+        <input asp-for="Provider" class="form-control" />
+        <span asp-validation-for="Provider" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="ProviderPaymentId" class="form-label"></label>
+        <input asp-for="ProviderPaymentId" class="form-control" />
+        <span asp-validation-for="ProviderPaymentId" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="ProviderReference" class="form-label"></label>
+        <input asp-for="ProviderReference" class="form-control" />
+        <span asp-validation-for="ProviderReference" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-8">
+        <label asp-for="ReceiptUrl" class="form-label"></label>
+        <input asp-for="ReceiptUrl" class="form-control" />
+        <span asp-validation-for="ReceiptUrl" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-4">
+        <label asp-for="PaidAt" class="form-label"></label>
+        <input asp-for="PaidAt" type="datetime-local" class="form-control" />
+        <span asp-validation-for="PaidAt" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="CreatedAt" class="form-label"></label>
+        <input asp-for="CreatedAt" class="form-control" readonly />
+    </div>
+</div>

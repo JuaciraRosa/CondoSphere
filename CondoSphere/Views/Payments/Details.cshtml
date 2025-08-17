@@ -1,6 +1,17 @@
 ﻿@model CondoSphere.Models.Payment
+@using CondoSphere.Models
 
+@{
     ViewData["Title"] = "Payment Details";
+
+    var statusBadge = Model.Status switch
+    {
+        PaymentStatusType.Pending => "bg-warning",
+        PaymentStatusType.Succeeded => "bg-success",
+        PaymentStatusType.Failed => "bg-danger",
+        PaymentStatusType.Canceled => "bg-dark",
+        _ => "bg-secondary"
+    };
 }
 
 <section class="section">
@@ -9,22 +20,66 @@
             <h4 class="mb-4"><i class="bi bi-info-circle"></i> Payment Details</h4>
 
             <div class="row gy-3">
-                <div class="col-md-4">
-                    <div class="fw-semibold text-muted">Quota</div>
-                    <div>@(Model?.Quota != null ? $"Quota #{Model.Quota.Id}" : $"#{Model.QuotaId}")</div>
+                <div class="col-md-3">
+                    <div class="fw-semibold text-muted">Status</div>
+                    <div><span class="badge @statusBadge">@Model.Status</span></div>
                 </div>
-                <div class="col-md-4">
-                    <div class="fw-semibold text-muted">Payment date</div>
-                    <div>@Model.PaymentDate.ToString("yyyy-MM-dd")</div>
+
+                <div class="col-md-3">
+                    <div class="fw-semibold text-muted">Amount</div>
+                    <div>@Model.Amount.ToString("N2")</div>
                 </div>
-                <div class="col-md-4">
+
+                <div class="col-md-3">
                     <div class="fw-semibold text-muted">Method</div>
-                    <div>@Model.PaymentMethod</div>
+                    <div>@Model.Method</div>
                 </div>
-                <div class="col-md-4">
-                    <div class="fw-semibold text-muted">Receipt #</div>
-                    <div>@Model.ReceiptNumber</div>
+
+                <div class="col-md-3">
+                    <div class="fw-semibold text-muted">Quota</div>
+                    <div>
+                        @(Model.Quota != null
+                            ? $"#{Model.Quota.Id} — {Model.Quota.DueDate:yyyy-MM}"
+                            : $"#{Model.QuotaId}")
+                    </div>
                 </div>
+
+                <div class="col-md-3">
+                    <div class="fw-semibold text-muted">Provider</div>
+                    <div>@(string.IsNullOrWhiteSpace(Model.Provider) ? "-" : Model.Provider)</div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="fw-semibold text-muted">Created</div>
+                    <div>@Model.CreatedAt.ToString("yyyy-MM-dd HH:mm")</div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="fw-semibold text-muted">Paid</div>
+                    <div>@(Model.PaidAt?.ToString("yyyy-MM-dd HH:mm") ?? "-")</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="fw-semibold text-muted">Provider Payment Id</div>
+                    <div class="font-monospace">@(!string.IsNullOrEmpty(Model.ProviderPaymentId) ? Model.ProviderPaymentId : "-")</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="fw-semibold text-muted">Provider Reference</div>
+                    <div class="font-monospace">@(!string.IsNullOrEmpty(Model.ProviderReference) ? Model.ProviderReference : "-")</div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.ReceiptUrl))
+                {
+                    <div class="col-12">
+                        <div class="fw-semibold text-muted">Receipt</div>
+                        <div>
+                            <a href="@Model.ReceiptUrl" target="_blank" class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-receipt"></i> Open receipt
+                            </a>
+                        </div>
+                    </div>
+                }
             </div>
 
             <div class="mt-4 d-flex gap-2">
@@ -34,8 +89,9 @@
         </div>
     </div>
 </section>
+
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-}
+ }

@@ -8,16 +8,21 @@ using Microsoft.EntityFrameworkCore;
 using CondoSphere.Data;
 using CondoSphere.Models;
 using CondoSphere.Data.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using CondoSphere.Services;
 
 namespace CondoSphere.Controllers
 {
+    [Authorize(Roles = "Administrator,Manager")]
     public class QuotasController : Controller
     {
         private readonly IQuotaRepository _quotaRepository;
+        private readonly IQuotaService _quotaService;
 
-        public QuotasController(IQuotaRepository quotaRepository)
+        public QuotasController(IQuotaRepository quotaRepository, IQuotaService quotaService)
         {
             _quotaRepository = quotaRepository;
+            _quotaService = quotaService;
         }
 
         public async Task<IActionResult> Index()
@@ -26,28 +31,24 @@ namespace CondoSphere.Controllers
             return View(quotas);
         }
 
-        // GET: Quotas/Details/5
+
+
         public async Task<IActionResult> Details(int id)
         {
             var quota = await _quotaRepository.GetByIdAsync(id);
-            if (quota == null)
-                return NotFound();
-
+            if (quota == null) return NotFound();
             return View(quota);
         }
-
 
         public IActionResult Create() => View();
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Quota quota)
         {
-            if (ModelState.IsValid)
-            {
-                await _quotaRepository.AddAsync(quota);
-                return RedirectToAction(nameof(Index));
-            }
-            return View(quota);
+            if (!ModelState.IsValid) return View(quota);
+            await _quotaRepository.AddAsync(quota);
+            return RedirectToAction(nameof(Index));
         }
 
         public async Task<IActionResult> Edit(int id)
@@ -58,16 +59,15 @@ namespace CondoSphere.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Quota quota)
         {
             if (id != quota.Id) return NotFound();
-            if (ModelState.IsValid)
-            {
-                _quotaRepository.Update(quota);
-                await _quotaRepository.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            return View(quota);
+            if (!ModelState.IsValid) return View(quota);
+
+            _quotaRepository.Update(quota);
+            await _quotaRepository.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
 
         public async Task<IActionResult> Delete(int id)
@@ -78,9 +78,44 @@ namespace CondoSphere.Controllers
         }
 
         [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             await _quotaRepository.DeleteAsync(id);
+            return RedirectToAction(nameof(Index));
+        }
+
+        // ===== NEW: generation actions =====
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GenerateMonthly(int condominiumId, int year, int month, decimal amount)
+        {
+            try
+            {
+                var created = await _quotaService.EnsureMonthlyAsync(condominiumId, year, month, amount);
+                TempData["Ok"] = $"{created} quota(s) generated for {month:D2}/{year}.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Err"] = $"Generation failed: {ex.Message}";
+            }
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GenerateRange(int condominiumId, DateTime from, DateTime to, decimal amount)
+        {
+            try
+            {
+                var created = await _quotaService.EnsureRangeMonthlyAsync(condominiumId, from, to, amount);
+                TempData["Ok"] = $"{created} quota(s) generated for {from:yyyy-MM}..{to:yyyy-MM}.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Err"] = $"Generation failed: {ex.Message}";
+            }
             return RedirectToAction(nameof(Index));
         }
     }

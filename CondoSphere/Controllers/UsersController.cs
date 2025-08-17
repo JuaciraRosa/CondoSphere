@@ -77,7 +77,7 @@ namespace CondoSphere.Controllers
         // POST: Users/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, User user)
+        public async Task<IActionResult> Edit(string id, User user)
         {
             if (id != user.Id) return NotFound();
 

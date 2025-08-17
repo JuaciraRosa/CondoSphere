@@ -8,79 +8,118 @@ using Microsoft.EntityFrameworkCore;
 using CondoSphere.Data;
 using CondoSphere.Models;
 using CondoSphere.Data.Interfaces;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 
 namespace CondoSphere.Controllers
 {
+    [Authorize(Roles = "Administrator,Manager,Resident")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+
     public class PaymentsController : Controller
     {
-        private readonly IPaymentRepository _paymentRepository;
+        private readonly IPaymentRepository _payments;
+        private readonly IQuotaRepository _quotas;
 
-        public PaymentsController(IPaymentRepository paymentRepository)
+        public PaymentsController(IPaymentRepository payments, IQuotaRepository quotas)
         {
-            _paymentRepository = paymentRepository;
+            _payments = payments;
+            _quotas = quotas;
         }
 
         public async Task<IActionResult> Index()
         {
-            var payments = await _paymentRepository.GetAllAsync();
-            return View(payments);
+            var list = await _payments.GetAllDetailedAsync();
+            return View(list);
         }
 
-        // GET: Payments/Details/5
         public async Task<IActionResult> Details(int id)
         {
-            var payment = await _paymentRepository.GetByIdAsync(id);
-            if (payment == null)
-                return NotFound();
-
+            var payment = await _payments.GetByIdDetailedAsync(id);
+            if (payment == null) return NotFound();
             return View(payment);
         }
 
-        public IActionResult Create() => View();
-
-        [HttpPost]
-        public async Task<IActionResult> Create(Payment payment)
+        // ------- Create -------
+        [HttpGet]
+        public async Task<IActionResult> Create()
         {
-            if (ModelState.IsValid)
-            {
-                await _paymentRepository.AddAsync(payment);
-                return RedirectToAction(nameof(Index));
-            }
-            return View(payment);
+            await LoadSelects();
+            return View(new Payment { Status = PaymentStatusType.Pending });
         }
 
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(Payment model)
+        {
+            if (!ModelState.IsValid)
+            {
+                await LoadSelects(model);
+                return View(model);
+            }
+
+            // campos de sistema
+            model.CreatedAt = DateTime.UtcNow;
+
+            await _payments.AddAsync(model);
+            return RedirectToAction(nameof(Index));
+        }
+
+        // ------- Edit -------
+        [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
-            var payment = await _paymentRepository.GetByIdAsync(id);
+            var payment = await _payments.GetByIdDetailedAsync(id);
             if (payment == null) return NotFound();
+
+            await LoadSelects(payment);
             return View(payment);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Edit(int id, Payment payment)
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, Payment model)
         {
-            if (id != payment.Id) return NotFound();
-            if (ModelState.IsValid)
+            if (id != model.Id) return NotFound();
+
+            if (!ModelState.IsValid)
             {
-                _paymentRepository.Update(payment);
-                await _paymentRepository.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                await LoadSelects(model);
+                return View(model);
             }
-            return View(payment);
+
+            _payments.Update(model);
+            await _payments.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
 
+        // ------- Delete -------
+        [HttpGet]
         public async Task<IActionResult> Delete(int id)
         {
-            var payment = await _paymentRepository.GetByIdAsync(id);
+            var payment = await _payments.GetByIdDetailedAsync(id);
             if (payment == null) return NotFound();
             return View(payment);
         }
 
-        [HttpPost, ActionName("Delete")]
+        [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            await _paymentRepository.DeleteAsync(id);
+            await _payments.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
+        }
+
+        // ------- helpers -------
+        private async Task LoadSelects(Payment? current = null)
+        {
+            var quotas = await _quotas.GetAllAsync();
+            var items = quotas.Select(q => new SelectListItem
+            {
+                Value = q.Id.ToString(),
+                Text = $"#{q.Id} — {q.DueDate:yyyy-MM} — {q.Amount:N2}"
+            }).ToList();
+
+            ViewBag.QuotaId = new SelectList(items, "Value", "Text", current?.QuotaId);
+            ViewBag.MethodList = new SelectList(Enum.GetValues(typeof(PaymentMethodType)));
+            ViewBag.StatusList = new SelectList(Enum.GetValues(typeof(PaymentStatusType)));
         }
     }
 }

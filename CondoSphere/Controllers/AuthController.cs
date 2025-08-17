@@ -3,55 +3,62 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using CondoSphere.Data;
 
 namespace CondoSphere.Controllers
 {
+    [AllowAnonymous]
     public class AuthController : Controller
     {
-        private readonly IUserRepository _userRepository;
+        private readonly SignInManager<User> _signInManager;
+        private readonly UserManager<User> _userManager;
 
-        public AuthController(IUserRepository userRepository)
+        public AuthController(SignInManager<User> signInManager, UserManager<User> userManager)
         {
-            _userRepository = userRepository;
+            _signInManager = signInManager;
+            _userManager = userManager;
         }
 
         [HttpGet]
-        public IActionResult Login()
-        {
-            return View();
-        }
+        [AllowAnonymous]
+        public IActionResult Login() => View();
 
         [HttpPost]
-        public async Task<IActionResult> Login(string email, string password)
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Login(string email, string password, bool rememberMe = false)
         {
-            var user = await _userRepository.GetByEmailAsync(email);
-
-            if (user == null || user.PasswordHash != password || !user.IsActive)
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             {
-                ModelState.AddModelError("", "Invalid login attempt.");
+                ModelState.AddModelError("", "Email and password are required.");
                 return View();
             }
 
-            var claims = new List<Claim>
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null || !user.IsActive)
             {
-                new Claim(ClaimTypes.Name, user.FullName),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim("role", user.Role.ToString())
-            };
+                ModelState.AddModelError("", "Invalid credentials.");
+                return View();
+            }
 
-            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            var principal = new ClaimsPrincipal(identity);
-
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+            var result = await _signInManager.PasswordSignInAsync(user, password, rememberMe, lockoutOnFailure: false);
+            if (!result.Succeeded)
+            {
+                ModelState.AddModelError("", "Invalid credentials.");
+                return View();
+            }
 
             return RedirectToAction("Index", "Dashboard");
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return RedirectToAction("Login");
+            await _signInManager.SignOutAsync();
+            return RedirectToAction(nameof(Login));
         }
     }
 }

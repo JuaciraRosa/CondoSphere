@@ -1,36 +1,44 @@
 ﻿@model CondoSphere.Models.Condominium
 
+
+
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Condominium Details";
 }
+@section PageHeader {
+    <section class="page-title">
+        <div class="container">
+            <h1>Condominium Details</h1>
+            <div class="breadcrumbs">
+                <ol>
+                    <li><a asp-controller="Home" asp-action="Index">Home</a></li>
+                    <li><a asp-controller="Condominiums" asp-action="Index">Condominiums</a></li>
+                    <li>Details</li>
+                </ol>
+            </div>
+        </div>
+    </section>
+}
+<section class="section">
+    <div class="container">
+        <div class="card shadow-sm p-4">
+            <div class="row gy-3">
+                <div class="col-md-6"><div class="fw-semibold text-muted">Name</div><div>@Model.Name</div></div>
+                <div class="col-md-6"><div class="fw-semibold text-muted">Company</div><div>@Model.Company?.Name ?? "-"</div></div>
+                <div class="col-md-12"><div class="fw-semibold text-muted">Address</div><div>@Model.Address</div></div>
+            </div>
 
-<h1>Details</h1>
+            @* Se o GetDetailsAsync incluir coleções, podes mostrar contagens *@
+            <div class="row gy-3 mt-3">
+                <div class="col-md-4"><div class="fw-semibold text-muted">Units</div><div>@(Model.Units?.Count ?? 0)</div></div>
+                <div class="col-md-4"><div class="fw-semibold text-muted">Expenses</div><div>@(Model.Expenses?.Count ?? 0)</div></div>
+                <div class="col-md-4"><div class="fw-semibold text-muted">Requests</div><div>@(Model.MaintenanceRequests?.Count ?? 0)</div></div>
+            </div>
 
-<div>
-    <h4>Condominium</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Name)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Name)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Address)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Address)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Company)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Company.Id)
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
-</div>
+            <div class="mt-4 d-flex gap-2">
+                <a class="btn btn-outline-secondary" asp-action="Index"><i class="bi bi-arrow-left"></i> Back</a>
+                <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model.Id"><i class="bi bi-pencil"></i> Edit</a>
+            </div>
+        </div>
+    </div>
+</section>

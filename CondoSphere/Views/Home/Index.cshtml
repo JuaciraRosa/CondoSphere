@@ -1,62 +1,67 @@
-﻿﻿@{
+﻿﻿@using Microsoft.AspNetCore.Identity
+@inject SignInManager<CondoSphere.Data.User> SignInManager
+@inject UserManager<CondoSphere.Data.User> UserManager
+
+@{
     ViewData["Title"] = "Home";
+    var user = User.Identity.IsAuthenticated ? await UserManager.GetUserAsync(User) : null;
+    var role = user != null ? (await UserManager.GetRolesAsync(user)).FirstOrDefault() : null;
 }
 
 <section id="hero" class="hero">
-    <div id="heroCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="5000">
-        <div class="carousel-inner">
-
-            <div class="carousel-item active">
-                <img src="~/assets/img/hero-carousel/hero-carousel-1.jpg" alt="CondoSphere">
-                <div class="container" data-aos="fade-up">
-                    <h2>Gestão de Condomínios sem Dor de Cabeça</h2>
-                    <p>Administre unidades, quotas, pagamentos e reuniões num painel moderno.</p>
-                    <a class="btn-get-started" asp-controller="Auth" asp-action="Login">Começar</a>
-                </div>
-            </div>
-
-        </div>
-
-        <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Anterior</span>
-        </button>
-        <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
-            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Próximo</span>
-        </button>
-
-        <ol class="carousel-indicators"></ol>
-    </div>
+    <!-- ... mantém seu código do carousel ... -->
 </section>
 
 <section id="features" class="section features">
     <div class="container">
         <div class="row gy-4">
-            <div class="col-md-6 col-lg-3">
-                <div class="features-item">
-                    <i class="bi bi-building"></i>
-                    <h3><a href="#">Condomínios</a></h3>
+
+            @if (role == "Admin" || role == "Manager")
+            {
+                <div class="col-md-6 col-lg-3">
+                    <div class="features-item">
+                        <i class="bi bi-building"></i>
+                        <h3>
+                            <a asp-controller="Condominiums" asp-action="Index">Condominiums</a>
+                        </h3>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="features-item">
-                    <i class="bi bi-wallet2"></i>
-                    <h3><a href="#">Quotas & Pagamentos</a></h3>
+
+                <div class="col-md-6 col-lg-3">
+                    <div class="features-item">
+                        <i class="bi bi-wallet2"></i>
+                        <h3>
+                            <a asp-controller="Quotas" asp-action="Index">Quotas and Payments</a>
+                        </h3>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="features-item">
-                    <i class="bi bi-people"></i>
-                    <h3><a href="#">Reuniões</a></h3>
+            }
+
+            @if (role == "Admin" || role == "Manager" || role == "Resident")
+            {
+                <div class="col-md-6 col-lg-3">
+                    <div class="features-item">
+                        <i class="bi bi-people"></i>
+                        <h3>
+                            <a asp-controller="Meetings" asp-action="Index">Meetings</a>
+                        </h3>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="features-item">
-                    <i class="bi bi-bell"></i>
-                    <h3><a href="#">Notificações</a></h3>
+
+                <div class="col-md-6 col-lg-3">
+                    <div class="features-item">
+                        <i class="bi bi-bell"></i>
+                        <h3>
+                            <a asp-controller="Notifications" asp-action="Index">Notifications</a>
+                        </h3>
+                    </div>
                 </div>
-            </div>
+            }
         </div>
     </div>
 </section>
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

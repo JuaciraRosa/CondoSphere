@@ -1,0 +1,92 @@
+﻿@model CondoSphere.Models.MaintenanceRequest
+@using System.Security.Claims
+
+@{
+    ViewData["Title"] = "Create Request";
+    var isResident = User.IsInRole("Resident");
+    var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+}
+
+@section PageHeader {
+    <section class="page-title">
+        <div class="container">
+            <h1>Create Request</h1>
+            <div class="breadcrumbs">
+                <ol>
+                    <li><a asp-controller="Home" asp-action="Index">Home</a></li>
+                    <li><a asp-controller="MaintenanceRequests" asp-action="Index">Maintenance</a></li>
+                    <li>Create</li>
+                </ol>
+            </div>
+        </div>
+    </section>
+}
+
+<section class="section">
+    <div class="container">
+        <div class="card p-4 shadow-sm">
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="Title" class="form-label"></label>
+                        <input asp-for="Title" class="form-control" />
+                        <span asp-validation-for="Title" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="SubmittedAt" class="form-label"></label>
+                        <input asp-for="SubmittedAt" type="datetime-local" class="form-control"
+                               value="@(Model?.SubmittedAt == default ? "" : Model.SubmittedAt.ToString("yyyy-MM-ddTHH:mm"))" />
+                        <span asp-validation-for="SubmittedAt" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-12">
+                        <label asp-for="Description" class="form-label"></label>
+                        <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="Status" class="form-label"></label>
+                        <select asp-for="Status" class="form-select"
+                                asp-items="Html.GetEnumSelectList<CondoSphere.Models.RequestStatus>()"></select>
+                        <span asp-validation-for="Status" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="CondominiumId" class="form-label"></label>
+                        <select asp-for="CondominiumId" class="form-select" asp-items="ViewBag.CondominiumId"></select>
+                        <span asp-validation-for="CondominiumId" class="text-danger"></span>
+                    </div>
+
+                    @if (!isResident)
+                    {
+                        <div class="col-md-4">
+                            <label asp-for="SubmittedById" class="form-label"></label>
+                            <select asp-for="SubmittedById" class="form-select" asp-items="ViewBag.SubmittedById"></select>
+                            <span asp-validation-for="SubmittedById" class="text-danger"></span>
+                        </div>
+                    }
+                    else
+                    {
+                        <input type="hidden" asp-for="SubmittedById" value="@currentUserId" />
+                    }
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button class="btn btn-primary"><i class="bi bi-check2"></i> Save</button>
+                    <a class="btn btn-outline-secondary" asp-action="Index"><i class="bi bi-arrow-left"></i> Back</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

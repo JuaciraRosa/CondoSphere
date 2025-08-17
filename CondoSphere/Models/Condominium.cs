@@ -5,6 +5,7 @@ namespace CondoSphere.Models
     public class Condominium
     {
         public int Id { get; set; }
+
         [Required]
         [StringLength(100, ErrorMessage = "Name can't exceed 100 characters.")]
         public string Name { get; set; }
@@ -14,6 +15,7 @@ namespace CondoSphere.Models
         public string Address { get; set; }
 
         [Required]
+        public int CompanyId { get; set; }
         public Company Company { get; set; }
 
         public ICollection<Unit> Units { get; set; }

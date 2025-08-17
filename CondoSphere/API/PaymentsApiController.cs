@@ -1,5 +1,7 @@
 ﻿using CondoSphere.Data.Interfaces;
 using CondoSphere.Models;
+using CondoSphere.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,44 +11,46 @@ namespace CondoSphere.API
     [Route("api/payments")]
     public class PaymentsApiController : ControllerBase
     {
-        private readonly IPaymentRepository _repository;
-
-        public PaymentsApiController(IPaymentRepository repository)
+        private readonly IPaymentService _payments;
+        private readonly IConfiguration _cfg;
+        public PaymentsApiController(IPaymentService payments, IConfiguration cfg)
         {
-            _repository = repository;
+            _payments = payments;
+            _cfg = cfg;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAll() => Ok(await _repository.GetAllAsync());
+        public class CreateReq { public int QuotaId { get; set; } }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> Get(int id)
+        [HttpPost("card/intent")]
+        public async Task<IActionResult> CreateCardIntent([FromBody] CreateReq req)
         {
-            var payment = await _repository.GetByIdAsync(id);
-            if (payment == null) return NotFound();
-            return Ok(payment);
+            var (clientSecret, intentId) = await _payments.CreateCardIntentAsync(req.QuotaId);
+            return Ok(new
+            {
+                clientSecret,
+                intentId,
+                publishableKey = _cfg["Stripe:PublishableKey"]
+            });
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Create(Payment payment)
+        [HttpPost("multibanco/create")]
+        public async Task<IActionResult> CreateMultibanco([FromBody] CreateReq req)
         {
-            await _repository.AddAsync(payment);
-            return CreatedAtAction(nameof(Get), new { id = payment.Id }, payment);
+            var (intentId, reference, expiresAt) = await _payments.CreateMultibancoAsync(req.QuotaId);
+            return Ok(new { intentId, reference, expiresAt });
         }
 
-        [HttpPut("{id}")]
-        public IActionResult Update(int id, Payment payment)
+        // Webhook precisa ser público e sem auth
+        [AllowAnonymous]
+        [HttpPost("stripe-webhook")]
+        public async Task<IActionResult> StripeWebhook()
         {
-            if (id != payment.Id) return BadRequest();
-            _repository.Update(payment);
-            return NoContent();
-        }
+            using var reader = new StreamReader(Request.Body);
+            var json = await reader.ReadToEndAsync();
+            var signature = Request.Headers["Stripe-Signature"].ToString();
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
-        {
-            await _repository.DeleteAsync(id);
-            return NoContent();
+            await _payments.HandleWebhookAsync(json, signature);
+            return Ok(); // 200 para Stripe
         }
     }
 }

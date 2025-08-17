@@ -11,37 +11,15 @@
 
             <form asp-action="Create" method="post">
                 @Html.AntiForgeryToken()
-                <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
-
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label asp-for="QuotaId" class="form-label">Quota</label>
-                        <select asp-for="QuotaId" class="form-select" asp-items="ViewBag.QuotaId"></select>
-                        <span asp-validation-for="QuotaId" class="text-danger"></span>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label asp-for="PaymentDate" class="form-label"></label>
-                        <input asp-for="PaymentDate" type="date" class="form-control" />
-                        <span asp-validation-for="PaymentDate" class="text-danger"></span>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label asp-for="PaymentMethod" class="form-label"></label>
-                        <input asp-for="PaymentMethod" class="form-control" />
-                        <span asp-validation-for="PaymentMethod" class="text-danger"></span>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label asp-for="ReceiptNumber" class="form-label"></label>
-                        <input asp-for="ReceiptNumber" class="form-control" />
-                        <span asp-validation-for="ReceiptNumber" class="text-danger"></span>
-                    </div>
-                </div>
+                @await Html.PartialAsync("_PaymentForm", Model)
 
                 <div class="mt-4 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-check2"></i> Save</button>
-                    <a class="btn btn-outline-secondary" asp-action="Index"><i class="bi bi-arrow-left"></i> Cancel</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check2"></i> Save
+                    </button>
+                    <a class="btn btn-outline-secondary" asp-action="Index">
+                        <i class="bi bi-arrow-left"></i> Cancel
+                    </a>
                 </div>
             </form>
         </div>
@@ -52,4 +30,4 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-}
+ }

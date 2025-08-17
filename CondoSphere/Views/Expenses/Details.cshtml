@@ -1,42 +1,47 @@
 ﻿@model CondoSphere.Models.Expense
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Expense Details";
 }
-
-<h1>Details</h1>
-
-<div>
-    <h4>Expense</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Description)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Description)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Amount)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Amount)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Date)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Date)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Condominium)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Condominium.Id)
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
-</div>
+@section PageHeader {
+    <section class="page-title">
+        <div class="container">
+            <h1>Expense Details</h1>
+            <div class="breadcrumbs">
+                <ol>
+                    <li><a asp-controller="Home" asp-action="Index">Home</a></li>
+                    <li><a asp-controller="Expenses" asp-action="Index">Expenses</a></li>
+                    <li>Details</li>
+                </ol>
+            </div>
+        </div>
+    </section>
+}
+<section class="section">
+    <div class="container">
+        <div class="card shadow-sm p-4">
+            <div class="row gy-3">
+                <div class="col-md-6">
+                    <div class="fw-semibold text-muted">Description</div>
+                    <div>@Model.Description</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="fw-semibold text-muted">Amount</div>
+                    <div>@Model.Amount.ToString("C2")</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="fw-semibold text-muted">Date</div>
+                    <div>@Model.Date.ToString("yyyy-MM-dd")</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="fw-semibold text-muted">Condominium</div>
+                    <div>@Model.Condominium?.Name ?? "-"</div>
+                </div>
+            </div>
+            <div class="mt-4 d-flex gap-2">
+                <a class="btn btn-outline-secondary" asp-action="Index"><i class="bi bi-arrow-left"></i> Back</a>
+                <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model.Id"><i class="bi bi-pencil"></i> Edit</a>
+            </div>
+        </div>
+    </div>
+</section>

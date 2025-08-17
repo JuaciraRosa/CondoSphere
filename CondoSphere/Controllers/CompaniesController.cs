@@ -1,100 +1,85 @@
 ﻿using CondoSphere.Data.Interfaces;
 using CondoSphere.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 
 namespace CondoSphere.Controllers
 {
+    [Authorize(Roles = "Administrator,Manager")]
     public class CompaniesController : Controller
     {
-        private readonly ICompanyRepository _companyRepository;
+        private readonly ICompanyRepository _companyRepo;
 
-        public CompaniesController(ICompanyRepository companyRepository)
+        public CompaniesController(ICompanyRepository companyRepo)
         {
-            _companyRepository = companyRepository;
+            _companyRepo = companyRepo;
         }
 
-        // GET: Companies
+        // GET: /Companies
         public async Task<IActionResult> Index()
         {
-            var companies = await _companyRepository.GetAllAsync();
+            var companies = await _companyRepo.GetAllAsync(); // lista simples
             return View(companies);
         }
 
-        // GET: Companies/Details/5
+        // GET: /Companies/Details/5
         public async Task<IActionResult> Details(int id)
         {
-            var company = await _companyRepository.GetByIdAsync(id);
-            if (company == null)
-                return NotFound();
-
+            var company = await _companyRepo.GetWithCondominiumsAsync(id); // inclui Condominiums
+            if (company == null) return NotFound();
             return View(company);
         }
 
+        // GET: /Companies/Create
+        public IActionResult Create() => View();
 
-        // GET: Companies/Create
-        public IActionResult Create()
-        {
-            return View();
-        }
-
-        // POST: Companies/Create
+        // POST: /Companies/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Company company)
         {
-            if (ModelState.IsValid)
-            {
-                await _companyRepository.AddAsync(company);
-                return RedirectToAction(nameof(Index));
-            }
-            return View(company);
+            if (!ModelState.IsValid) return View(company);
+
+            await _companyRepo.AddAsync(company);
+            return RedirectToAction(nameof(Index));
         }
 
-        // GET: Companies/Edit/5
+        // GET: /Companies/Edit/5
         public async Task<IActionResult> Edit(int id)
         {
-            var company = await _companyRepository.GetByIdAsync(id);
-            if (company == null)
-                return NotFound();
-
+            var company = await _companyRepo.GetByIdAsync(id);
+            if (company == null) return NotFound();
             return View(company);
         }
 
-        // POST: Companies/Edit/5
+        // POST: /Companies/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Company company)
         {
-            if (id != company.Id)
-                return NotFound();
+            if (id != company.Id) return NotFound();
+            if (!ModelState.IsValid) return View(company);
 
-            if (ModelState.IsValid)
-            {
-                _companyRepository.Update(company);
-                await _companyRepository.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-
-            return View(company);
+            _companyRepo.Update(company);
+            await _companyRepo.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
 
-        // GET: Companies/Delete/5
+        // GET: /Companies/Delete/5
         public async Task<IActionResult> Delete(int id)
         {
-            var company = await _companyRepository.GetByIdAsync(id);
-            if (company == null)
-                return NotFound();
-
+            var company = await _companyRepo.GetByIdAsync(id);
+            if (company == null) return NotFound();
             return View(company);
         }
 
-        // POST: Companies/Delete/5
+        // POST: /Companies/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            await _companyRepository.DeleteAsync(id);
+            await _companyRepo.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
         }
     }

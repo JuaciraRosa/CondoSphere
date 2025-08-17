@@ -9,36 +9,49 @@
             <h4 class="mb-3 text-danger"><i class="bi bi-exclamation-triangle"></i> Delete Payment</h4>
             <p>Are you sure you want to delete this payment?</p>
 
-            <div class="row gy-3">
+            <div class="row gy-2">
                 <div class="col-md-4">
                     <div class="fw-semibold text-muted">Quota</div>
-                    <div>@(Model?.Quota != null ? $"Quota #{Model.Quota.Id}" : $"#{Model.QuotaId}")</div>
+                    <div>@(Model?.Quota != null ? $"#{Model.Quota.Id} — {Model.Quota.DueDate:yyyy-MM}" : $"#{Model.QuotaId}")</div>
                 </div>
                 <div class="col-md-4">
-                    <div class="fw-semibold text-muted">Payment date</div>
-                    <div>@Model.PaymentDate.ToString("yyyy-MM-dd")</div>
+                    <div class="fw-semibold text-muted">Amount</div>
+                    <div>@Model.Amount.ToString("N2")</div>
                 </div>
                 <div class="col-md-4">
                     <div class="fw-semibold text-muted">Method</div>
-                    <div>@Model.PaymentMethod</div>
+                    <div>@Model.Method</div>
                 </div>
                 <div class="col-md-4">
-                    <div class="fw-semibold text-muted">Receipt #</div>
-                    <div>@Model.ReceiptNumber</div>
+                    <div class="fw-semibold text-muted">Status</div>
+                    <div>@Model.Status</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fw-semibold text-muted">Provider</div>
+                    <div>@Model.Provider</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fw-semibold text-muted">Paid at (UTC)</div>
+                    <div>@(Model.PaidAt.HasValue ? Model.PaidAt.Value.ToString("yyyy-MM-dd HH:mm") : "-")</div>
                 </div>
             </div>
 
             <form class="mt-4 d-flex gap-2" asp-action="Delete" method="post">
                 @Html.AntiForgeryToken()
                 <input type="hidden" asp-for="Id" />
-                <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> Delete</button>
-                <a class="btn btn-outline-secondary" asp-action="Index"><i class="bi bi-arrow-left"></i> Back</a>
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+                <a class="btn btn-outline-secondary" asp-action="Index">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
             </form>
         </div>
     </div>
 </section>
+
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-}
+ }
