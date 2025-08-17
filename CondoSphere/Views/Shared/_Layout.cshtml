@@ -1,4 +1,12 @@
-﻿<!DOCTYPE html>
+﻿﻿@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var user = HttpContextAccessor.HttpContext?.User;
+    var role = user?.FindFirst("role")?.Value; // "Administrator", "Manager", etc.
+}
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -19,18 +27,45 @@
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
+                        @if (user?.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
+                            </li>
 
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
-                        </li>
+                            @if (role == "Administrator")
+                            {
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Users" asp-action="Index">Users</a></li>
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Companies" asp-action="Index">Companies</a></li>
+                            }
 
+                            @if (role == "Administrator" || role == "Manager")
+                            {
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Condominiums" asp-action="Index">Condominiums</a></li>
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Meetings" asp-action="Index">Meetings</a></li>
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Expenses" asp-action="Index">Expenses</a></li>
+                            }
+
+                            @if (role == "Resident")
+                            {
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Units" asp-action="Index">My Unit</a></li>
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Payments" asp-action="Index">Payments</a></li>
+                            }
+
+                            <li class="nav-item">
+                                <form method="post" asp-controller="Auth" asp-action="Logout">
+                                    <button type="submit" class="btn btn-link nav-link text-dark" style="padding: 0;">Logout</button>
+                                </form>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Auth" asp-action="Login">Login</a>
+                            </li>
+                        }
                     </ul>
+
                 </div>
             </div>
         </nav>

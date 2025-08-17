@@ -1,38 +1,56 @@
 using CondoSphere.Data;
 using CondoSphere.Data.DependencyInjection;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
+// Add DB Context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Add Repositories
 builder.Services.AddRepositories();
 
+// Add Authentication
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Auth/Login";
+    });
 
-    // Add services to the container.
-    builder.Services.AddControllersWithViews();
+builder.Services.AddAuthorization();
+
+builder.Services.AddHttpContextAccessor();
+// Add MVC
+builder.Services.AddControllersWithViews();
 
 
+
+// Build app
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Run seeder
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    await DbSeeder.Seed(services);
+
+}
+
+// Configure middleware
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
-
-// teste de comit 
-///jkbxdkqxbd
 app.UseRouting();
 
+app.UseAuthentication(); // <- importante
 app.UseAuthorization();
 
 app.MapControllerRoute(
