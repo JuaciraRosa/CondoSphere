@@ -2,7 +2,7 @@
 {
     public enum PaymentMethodType
     {
-        Card,
-        Multibanco
+        Card
+
     }
 }

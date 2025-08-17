@@ -4,7 +4,12 @@
     {
 
         Task<(string clientSecret, string paymentIntentId)> CreateCardIntentAsync(int quotaId);
-        Task<(string paymentIntentId, string entityRef, DateTime expiresAt)> CreateMultibancoAsync(int quotaId);
+
         Task HandleWebhookAsync(string json, string signatureHeader);
+
+        Task<string> ConfirmAndMarkAsync(string intentId);
+
+
+
     }
 }

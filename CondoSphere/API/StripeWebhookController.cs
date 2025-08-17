@@ -1,11 +1,13 @@
 ﻿using Azure.Core;
 using CondoSphere.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CondoSphere.API
 {
     [ApiController]
     [Route("api/webhooks/stripe")]
+    [AllowAnonymous]
     public class StripeWebhookController : ControllerBase
     {
         private readonly IPaymentService _payments;
