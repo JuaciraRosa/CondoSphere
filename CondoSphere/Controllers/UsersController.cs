@@ -25,6 +25,16 @@ namespace CondoSphere.Controllers
             return View(users);
         }
 
+        // GET: Users/Details/5
+        public async Task<IActionResult> Details(int id)
+        {
+            var user = await _userRepo.GetByIdAsync(id);
+            if (user == null)
+                return NotFound();
+
+            return View(user);
+        }
+
         public IActionResult Create() => View();
 
         [HttpPost]
