@@ -1,12 +1,19 @@
-﻿namespace CondoSphere.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace CondoSphere.Models
 {
     public class Condominium
     {
         public int Id { get; set; }
+        [Required]
+        [StringLength(100, ErrorMessage = "Name can't exceed 100 characters.")]
         public string Name { get; set; }
+
+        [Required]
+        [StringLength(200, ErrorMessage = "Address can't exceed 200 characters.")]
         public string Address { get; set; }
 
-        public int CompanyId { get; set; }
+        [Required]
         public Company Company { get; set; }
 
         public ICollection<Unit> Units { get; set; }

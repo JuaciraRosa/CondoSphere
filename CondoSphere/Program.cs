@@ -29,6 +29,8 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 
+// teste de comit 
+///jkbxdkqxbd
 app.UseRouting();
 
 app.UseAuthorization();
