@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace CondoSphere.API
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/quotas")]
     public class QuotasApiController : ControllerBase
     {
         private readonly IQuotaRepository _repository;

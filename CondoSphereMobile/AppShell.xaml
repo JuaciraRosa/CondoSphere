@@ -13,15 +13,16 @@
     <!-- Dashboard -->
     <ShellContent Route="DashboardPage" ContentTemplate="{DataTemplate views:DashboardPage}" />
 
-    <!-- Administrator Pages -->
     <ShellContent Route="UsersPage" ContentTemplate="{DataTemplate views:UsersPage}" />
     <ShellContent Route="CompaniesPage" ContentTemplate="{DataTemplate views:CompaniesPage}" />
     <ShellContent Route="CondominiumsPage" ContentTemplate="{DataTemplate views:CondominiumsPage}" />
     <ShellContent Route="MeetingsPage" ContentTemplate="{DataTemplate views:MeetingsPage}" />
     <ShellContent Route="ExpensesPage" ContentTemplate="{DataTemplate views:ExpensesPage}" />
-
-    <!-- Manager Pages -->
     <ShellContent Route="UnitsPage" ContentTemplate="{DataTemplate views:UnitsPage}" />
     <ShellContent Route="PaymentsPage" ContentTemplate="{DataTemplate views:PaymentsPage}" />
+    <ShellContent Route="QuotasPage" ContentTemplate="{DataTemplate views:QuotasPage}" />
+    <ShellContent Route="MaintenanceRequestsPage" ContentTemplate="{DataTemplate views:MaintenanceRequestsPage}" />
+    <ShellContent Route="NotificationsPage" ContentTemplate="{DataTemplate views:NotificationsPage}" />
+
 
 </Shell>

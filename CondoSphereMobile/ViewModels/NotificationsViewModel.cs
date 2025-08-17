@@ -1,4 +1,5 @@
-﻿using CondoSphereMobile.Models;
+﻿
+using CondoSphereMobile.Models;
 using CondoSphereMobile.Services;
 using System;
 using System.Collections.Generic;
@@ -10,21 +11,21 @@ using System.Windows.Input;
 
 namespace CondoSphereMobile.ViewModels
 {
-    public class UsersViewModel : BindableObject
+    public class NotificationsViewModel : BindableObject
     {
         private readonly ApiService _apiService;
 
-        public ObservableCollection<User> Users { get; set; } = new ObservableCollection<User>();
+        public ObservableCollection<Notification> Notifications { get; set; } = new();
 
-        public ICommand LoadUsersCommand { get; }
+        public ICommand LoadNotificationsCommand { get; }
 
-        public UsersViewModel()
+        public NotificationsViewModel()
         {
             _apiService = new ApiService();
-            LoadUsersCommand = new Command(async () => await LoadUsersAsync());
+            LoadNotificationsCommand = new Command(async () => await LoadNotificationsAsync());
         }
 
-        private async Task LoadUsersAsync()
+        private async Task LoadNotificationsAsync()
         {
             try
             {
@@ -32,14 +33,10 @@ namespace CondoSphereMobile.ViewModels
                 if (!string.IsNullOrEmpty(token))
                     _apiService.SetAuthToken(token);
 
-                var users = await _apiService.GetAsync<List<User>>("users");
-
-
-                Users.Clear();
-                foreach (var user in users)
-                {
-                    Users.Add(user);
-                }
+                var notifications = await _apiService.GetAsync<List<Notification>>("notifications");
+                Notifications.Clear();
+                foreach (var notification in notifications)
+                    Notifications.Add(notification);
             }
             catch (Exception ex)
             {
