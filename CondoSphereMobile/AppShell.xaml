@@ -3,17 +3,25 @@
     x:Class="CondoSphereMobile.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:local="clr-namespace:CondoSphereMobile"
+    xmlns:views="clr-namespace:CondoSphereMobile.Views"
     Shell.FlyoutBehavior="Disabled"
     Title="CondoSphereMobile">
 
-    <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
-
-
+    <!-- Login -->
     <ShellContent Route="LoginPage" ContentTemplate="{DataTemplate views:LoginPage}" />
+
+    <!-- Dashboard -->
     <ShellContent Route="DashboardPage" ContentTemplate="{DataTemplate views:DashboardPage}" />
+
+    <!-- Administrator Pages -->
+    <ShellContent Route="UsersPage" ContentTemplate="{DataTemplate views:UsersPage}" />
+    <ShellContent Route="CompaniesPage" ContentTemplate="{DataTemplate views:CompaniesPage}" />
+    <ShellContent Route="CondominiumsPage" ContentTemplate="{DataTemplate views:CondominiumsPage}" />
+    <ShellContent Route="MeetingsPage" ContentTemplate="{DataTemplate views:MeetingsPage}" />
+    <ShellContent Route="ExpensesPage" ContentTemplate="{DataTemplate views:ExpensesPage}" />
+
+    <!-- Manager Pages -->
+    <ShellContent Route="UnitsPage" ContentTemplate="{DataTemplate views:UnitsPage}" />
+    <ShellContent Route="PaymentsPage" ContentTemplate="{DataTemplate views:PaymentsPage}" />
 
 </Shell>

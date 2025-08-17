@@ -1,44 +1,68 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore;
 using CondoSphere.Data;
 using CondoSphere.Data.DependencyInjection;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add DB Context
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// DB
+builder.Services.AddDbContext<ApplicationDbContext>(opts =>
+    opts.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Add Repositories
+// DI
 builder.Services.AddRepositories();
 
-// Add Authentication
+// MVC (cookies) for web
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
+    .AddCookie(options => { options.LoginPath = "/Auth/Login"; });
+
+// JWT (for API)
+var jwtKey = builder.Configuration["Jwt:Key"];
+var jwtIssuer = builder.Configuration["Jwt:Issuer"];
+var jwtAudience = builder.Configuration["Jwt:Audience"];
+
+builder.Services.AddAuthentication()
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
-        options.LoginPath = "/Auth/Login";
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(2)
+        };
     });
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddHttpContextAccessor();
-// Add MVC
+// CORS (allow mobile to call your API)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("maui",
+        p => p.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
+
+// MVC
 builder.Services.AddControllersWithViews();
 
-
-
-// Build app
 var app = builder.Build();
 
-// Run seeder
+// Seed
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     await DbSeeder.Seed(services);
-
 }
 
-// Configure middleware
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -50,9 +74,14 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-app.UseAuthentication(); // <- importante
+app.UseCors("maui");
+
+// Important: auth order
+app.UseAuthentication();
 app.UseAuthorization();
 
+// Map API and MVC
+app.MapControllers(); // if using attribute routing for API
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
