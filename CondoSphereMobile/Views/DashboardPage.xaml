@@ -3,24 +3,22 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="CondoSphereMobile.Views.DashboardPage"
               Title="Dashboard">
+
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="15">
-            <Label Text="Bem-vindo(a)!"
-                   FontSize="24"
+            <Label Text="Dashboard"
+                   FontSize="28"
+                   FontAttributes="Bold"
                    HorizontalOptions="Center" />
 
-            <Label x:Name="lblUserName"
-                   FontSize="18"
-                   HorizontalOptions="Center" />
-
-            <Label x:Name="lblRole"
-                   FontSize="14"
-                   HorizontalOptions="Center"
-                   TextColor="Gray" />
-
-            <BoxView HeightRequest="1" Color="LightGray" />
-
-            <VerticalStackLayout x:Name="menuContainer" Spacing="10" />
+            <!-- Menu Buttons -->
+            <Button Text="Users" Clicked="OnUsersClicked" />
+            <Button Text="Companies" Clicked="OnCompaniesClicked" />
+            <Button Text="Condominiums" Clicked="OnCondominiumsClicked" />
+            <Button Text="Meetings" Clicked="OnMeetingsClicked" />
+            <Button Text="Expenses" Clicked="OnExpensesClicked" />
+            <Button Text="Units" Clicked="OnUnitsClicked" />
+            <Button Text="Payments" Clicked="OnPaymentsClicked" />
 
         </VerticalStackLayout>
     </ScrollView>
