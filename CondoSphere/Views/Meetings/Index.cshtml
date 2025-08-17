@@ -1,57 +1,62 @@
 ﻿@model IEnumerable<CondoSphere.Models.Meeting>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Meetings";
+
 }
 
-<h1>Index</h1>
+<div class="page-header d-print-none">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <h2 class="page-title">
+                    <i class="ti ti-calendar-event"></i> Meetings
+                </h2>
+            </div>
+            <div class="col-auto ms-auto">
+                <a asp-action="Create" class="btn btn-primary">
+                    <i class="ti ti-plus"></i> Create New Meeting
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.ScheduledDate)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Agenda)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.MinutesDocumentPath)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Condominium)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>
-                    @Html.DisplayFor(modelItem => item.ScheduledDate)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Agenda)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.MinutesDocumentPath)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Condominium.Id)
-                </td>
-                <td>
-                    <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                    <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                    <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+<div class="page-body">
+    <div class="container-xl">
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-vcenter card-table">
+                    <thead>
+                        <tr>
+                            <th>@Html.DisplayNameFor(model => model.ScheduledDate)</th>
+                            <th>@Html.DisplayNameFor(model => model.Agenda)</th>
+                            <th>@Html.DisplayNameFor(model => model.MinutesDocumentPath)</th>
+                            <th>@Html.DisplayNameFor(model => model.Condominium)</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@Html.DisplayFor(modelItem => item.ScheduledDate)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Agenda)</td>
+                                <td>@Html.DisplayFor(modelItem => item.MinutesDocumentPath)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Condominium.Id)</td>
+                                <td class="text-end">
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning"><i class="ti ti-edit"></i></a>
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info"><i class="ti ti-eye"></i></a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger"><i class="ti ti-trash"></i></a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");

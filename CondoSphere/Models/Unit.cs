@@ -21,7 +21,7 @@ namespace CondoSphere.Models
         public Condominium Condominium { get; set; }
 
         [Required]
-        public int OwnerId { get; set; }
+        public string OwnerId { get; set; }
         public User Owner { get; set; }
     }
 

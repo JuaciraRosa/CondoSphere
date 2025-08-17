@@ -1,78 +1,83 @@
 ﻿using CondoSphere.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace CondoSphere.Data
 {
     public static class DbSeeder
     {
-        public static async Task Seed(IServiceProvider services)
+        public static async Task SeedAsync(IServiceProvider sp)
         {
+            using var scope = sp.CreateScope();
+            var ctx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var roleMgr = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+            var userMgr = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
 
-            using var scope = services.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            // Evita duplicações
-            if (context.Users.Any()) return;
+            // 1) Ensure schema (creates AspNetRoles, AspNetUsers, etc.)
+            await ctx.Database.MigrateAsync();
 
+            // 2) Roles
+            string[] roles = { "Administrator", "Manager", "Resident" };
+            foreach (var r in roles)
+                if (!await roleMgr.RoleExistsAsync(r))
+                    await roleMgr.CreateAsync(new IdentityRole(r));
 
-            var company = new Company
+            // 3) Company & Condominium (idempotent)
+            var company = await ctx.Companies.FirstOrDefaultAsync(c => c.TaxNumber == "123456789");
+            if (company == null)
             {
-                Name = "CondoSphere Lda.",
-                TaxNumber = "123456789",
-                Email = "contact@condosphere.com"
-            };
-            context.Companies.Add(company);
+                company = new Company { Name = "CondoSphere Lda.", TaxNumber = "123456789", Email = "contact@condosphere.com" };
+                ctx.Companies.Add(company);
+                await ctx.SaveChangesAsync();
+            }
 
-            var condominium = new Condominium
+            var condo = await ctx.Condominiums.FirstOrDefaultAsync(c => c.Name == "Condomínio Central");
+            if (condo == null)
             {
-                Name = "Condomínio Central",
-                Address = "Rua Principal, nº 100",
-                Company = company
-            };
-            context.Condominiums.Add(condominium);
+                condo = new Condominium { Name = "Condomínio Central", Address = "Rua Principal, nº 100", CompanyId = company.Id };
+                ctx.Condominiums.Add(condo);
+                await ctx.SaveChangesAsync();
+            }
 
-            var admin = new User
+            // 4) Users (Identity, hashed passwords)
+            async Task<User> EnsureUser(string email, string name, string password, string role)
             {
-                FullName = "Admin User",
-                Email = "admin@condo.com",
-                PasswordHash = "admin123",
-                Role = UserRole.Administrator,
-                IsActive = true,
-                Company = company
-            };
+                var u = await userMgr.FindByEmailAsync(email);
+                if (u == null)
+                {
+                    u = new User
+                    {
+                        UserName = email,
+                        Email = email,
+                        FullName = name,
+                        EmailConfirmed = true,
+                        IsActive = true,
+                        CompanyId = company.Id
+                    };
+                    var res = await userMgr.CreateAsync(u, password);
+                    if (!res.Succeeded) throw new Exception(string.Join("; ", res.Errors.Select(e => e.Description)));
+                }
+                if (!await userMgr.IsInRoleAsync(u, role))
+                    await userMgr.AddToRoleAsync(u, role);
+                return u;
+            }
 
-            var manager = new User
+            var admin = await EnsureUser("admin@condo.com", "Admin User", "Admin123$", "Administrator");
+            var manager = await EnsureUser("manager@condo.com", "Manager User", "Manager123$", "Manager");
+            var resident = await EnsureUser("resident@condo.com", "Resident User", "Resident123$", "Resident");
+
+            // 5) Sample unit for resident
+            if (!await ctx.Units.AnyAsync())
             {
-                FullName = "Manager User",
-                Email = "manager@condo.com",
-                PasswordHash = "manager123",
-                Role = UserRole.Manager,
-                IsActive = true,
-                Company = company
-            };
-
-            var resident = new User
-            {
-                FullName = "Resident User",
-                Email = "resident@condo.com",
-                PasswordHash = "resident123",
-                Role = UserRole.Resident,
-                IsActive = true,
-                Company = company
-            };
-
-            context.Users.AddRange(admin, manager, resident);
-
-
-            var unit = new Unit
-            {
-                Number = "A101",
-                Area = 85.0,
-                Condominium = condominium,
-                Owner = resident
-            };
-            context.Units.Add(unit);
-
-
-            context.SaveChanges();
+                ctx.Units.Add(new Unit
+                {
+                    Number = "A101",
+                    Area = 85.0,
+                    CondominiumId = condo.Id,
+                    OwnerId = resident.Id // string (IdentityUser key)
+                });
+                await ctx.SaveChangesAsync();
+            }
         }
     }
 }

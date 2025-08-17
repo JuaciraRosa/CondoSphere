@@ -5,6 +5,7 @@ namespace CondoSphere.Models
     public class Expense
     {
         public int Id { get; set; }
+
         [Required]
         [StringLength(150, ErrorMessage = "Description can't exceed 150 characters.")]
         public string Description { get; set; }
@@ -22,5 +23,4 @@ namespace CondoSphere.Models
         public int CondominiumId { get; set; }
         public Condominium Condominium { get; set; }
     }
-
 }

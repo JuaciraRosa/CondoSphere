@@ -6,7 +6,6 @@
 
 <section class="section">
     <div class="container">
-
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2 class="mb-0"><i class="bi bi-credit-card-2-front"></i> Payments</h2>
             <a asp-action="Create" class="btn btn-success">
@@ -20,51 +19,61 @@
                     <thead class="table-light">
                         <tr>
                             <th>Quota</th>
-                            <th>Payment date</th>
+                            <th>Amount</th>
                             <th>Method</th>
-                            <th>Receipt #</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Paid</th>
                             <th class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var item in Model)
+                        @foreach (var item in (Model ?? Enumerable.Empty<Payment>()))
                         {
+                            var statusBadge = item.Status switch
+                            {
+                                PaymentStatusType.Pending => "bg-warning",
+                                PaymentStatusType.Succeeded => "bg-success",
+                                PaymentStatusType.Failed => "bg-danger",
+                                PaymentStatusType.Canceled => "bg-dark",
+                                _ => "bg-secondary"
+                            };
+
                             <tr>
-                                <td>
-                                    @if (item?.Quota != null)
-                                    {
-                                        <span>Quota #@item.Quota.Id</span>
-                                    }
-                                    else
-                                    {
-                                        <span>#@item.QuotaId</span>
-                                    }
-                                </td>
-                                <td>@item.PaymentDate.ToString("yyyy-MM-dd")</td>
-                                <td>@item.PaymentMethod</td>
-                                <td>@item.ReceiptNumber</td>
+                                <td>@(item.Quota != null ? $"#{item.Quota.Id} — {item.Quota.DueDate:yyyy-MM}" : $"#{item.QuotaId}")</td>
+                                <td>@item.Amount.ToString("N2")</td>
+                                <td>@item.Method</td>
+                                <td><span class="badge @statusBadge">@item.Status</span></td>
+                                <td>@item.Provider</td>
+                                <td>@item.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>@(item.PaidAt.HasValue ? item.PaidAt.Value.ToString("yyyy-MM-dd HH:mm") : "-")</td>
                                 <td class="text-end">
-                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
+                                    @if (!string.IsNullOrEmpty(item.ReceiptUrl))
+                                    {
+                                        <a href="@item.ReceiptUrl" target="_blank" class="btn btn-sm btn-outline-success" title="Receipt">
+                                            <i class="bi bi-receipt"></i>
+                                        </a>
+                                    }
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
                                 </td>
                             </tr>
                         }
+                        @if (Model == null || !Model.Any())
+                        {
+                            <tr><td colspan="8" class="text-center text-muted py-4">No records found.</td></tr>
+                        }
                     </tbody>
+
                 </table>
             </div>
         </div>
-
     </div>
 </section>
+
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-}
+ }

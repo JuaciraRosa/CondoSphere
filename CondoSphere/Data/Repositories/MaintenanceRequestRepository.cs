@@ -9,11 +9,27 @@ namespace CondoSphere.Data.Repositories
         public MaintenanceRequestRepository(ApplicationDbContext context) : base(context) { }
 
         public async Task<IEnumerable<MaintenanceRequest>> GetOpenRequestsAsync()
-        {
-            return await _context.MaintenanceRequests
-                .Where(r => r.Status == RequestStatus.Open)
-                .ToListAsync();
-        }
+      => await _context.MaintenanceRequests
+          .AsNoTracking()
+          .Include(m => m.Condominium)
+          .Include(m => m.SubmittedBy)
+          .Where(m => m.Status == RequestStatus.Open)
+          .OrderByDescending(m => m.SubmittedAt)
+          .ToListAsync();
+
+        public async Task<IEnumerable<MaintenanceRequest>> GetAllDetailedAsync()
+      => await _context.MaintenanceRequests
+          .AsNoTracking()
+          .Include(m => m.Condominium)
+          .Include(m => m.SubmittedBy)
+          .OrderByDescending(m => m.SubmittedAt)
+          .ToListAsync();
+
+        public async Task<MaintenanceRequest?> GetByIdDetailedAsync(int id)
+            => await _context.MaintenanceRequests
+                .Include(m => m.Condominium)
+                .Include(m => m.SubmittedBy)
+                .FirstOrDefaultAsync(m => m.Id == id);
     }
 
 }

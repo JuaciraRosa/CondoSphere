@@ -5,17 +5,16 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CondoSphere.API
 {
-    [ApiController]
     [Route("api/users")]
-    public class UsersController : ControllerBase
+    [ApiController]
+    public class UsersApiController : ControllerBase
     {
         private readonly IUserRepository _userRepo;
 
-        public UsersController(IUserRepository userRepo)
+        public UsersApiController(IUserRepository userRepo)
         {
             _userRepo = userRepo;
         }
-
         [HttpGet]
         public async Task<ActionResult<IEnumerable<User>>> GetAll()
         {
@@ -39,13 +38,16 @@ namespace CondoSphere.API
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, User user)
+        public async Task<IActionResult> Update(string id, User user)
         {
-            if (id != user.Id) return BadRequest();
+            if (id != user.Id)
+                return BadRequest();
+
             _userRepo.Update(user);
             await _userRepo.SaveChangesAsync();
             return NoContent();
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
@@ -55,4 +57,5 @@ namespace CondoSphere.API
         }
     }
 }
+
 

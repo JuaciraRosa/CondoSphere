@@ -6,6 +6,7 @@ namespace CondoSphere.Models
     public class MaintenanceRequest
     {
         public int Id { get; set; }
+
         [Required]
         [StringLength(100, ErrorMessage = "Title can't exceed 100 characters.")]
         public string Title { get; set; }
@@ -27,7 +28,7 @@ namespace CondoSphere.Models
 
 
         [Required]
-        public int SubmittedById { get; set; }
+        public string SubmittedById { get; set; }
         public User SubmittedBy { get; set; }
     }
 

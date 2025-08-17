@@ -14,6 +14,16 @@ namespace CondoSphere.Data.Repositories
                 .Where(q => q.UnitId == unitId)
                 .ToListAsync();
         }
+
+        public Task<bool> ExistsAsync(int unitId, int year, int month)
+        {
+            var first = new DateTime(year, month, 1);
+            var next = first.AddMonths(1);
+            return _context.Quotas.AnyAsync(q =>
+                q.UnitId == unitId &&
+                q.DueDate >= first && q.DueDate < next
+            );
+        }
     }
 
 }

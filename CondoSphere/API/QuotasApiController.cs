@@ -1,5 +1,7 @@
 ﻿using CondoSphere.Data.Interfaces;
 using CondoSphere.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,6 +9,8 @@ namespace CondoSphere.API
 {
     [ApiController]
     [Route("api/quotas")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+
     public class QuotasApiController : ControllerBase
     {
         private readonly IQuotaRepository _repository;

@@ -71,12 +71,13 @@
                         @if (role == "Resident")
                         {
                             <li><a asp-controller="Units" asp-action="Index">My Unit</a></li>
-                            <li><a asp-controller="Payments" asp-action="Index">Payments</a></li>
+                            <li><a asp-controller="Meetings" asp-action="Index">Meetings</a></li>
+                            <li><a asp-controller="Notifications" asp-action="Index">Notifications</a></li>
                         }
 
                         @* Account dropdown *@
                         <li class="dropdown">
-                            <a href="#"><span>@(user?.Identity?.Name ?? "Account")</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
+                            <a href="#"><span>@($"{user?.Identity?.Name} ({role})")</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
                             <ul>
                                 <li><a asp-controller="Account" asp-action="Profile">Profile</a></li>
                                 <li><a asp-controller="Account" asp-action="ChangePassword">Change Password</a></li>
@@ -97,7 +98,6 @@
                 }
                 else
                 {
-                    @* FORÇA MVC: evita confundir com a API *@
                     <a class="btn btn-primary btn-sm" href="@Url.Action("Login","Auth")">Login</a>
                 }
             </div>

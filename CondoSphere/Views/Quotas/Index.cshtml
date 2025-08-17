@@ -4,15 +4,66 @@
     ViewData["Title"] = "Quotas";
 }
 
-<section class="section">
-    <div class="container">
+@* Flash messages *@
+@if (TempData["Ok"] is string ok && !string.IsNullOrWhiteSpace(ok))
+{
+    <div class="alert alert-success">@ok</div>
+}
+@if (TempData["Err"] is string err && !string.IsNullOrWhiteSpace(err))
+{
+    <div class="alert alert-danger">@err</div>
+}
 
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="mb-0"><i class="bi bi-cash-coin"></i> Quotas</h2>
-            <a asp-action="Create" class="btn btn-success">
-                <i class="bi bi-plus-lg"></i> New
-            </a>
+<div class="card mb-3 p-3">
+    <h5>Generate quotas</h5>
+
+    <form asp-action="GenerateMonthly" method="post" class="row g-2">
+        @Html.AntiForgeryToken()
+        <div class="col-md-4">
+            <label class="form-label">Condominium</label>
+            <select name="condominiumId" class="form-select" asp-items="ViewBag.Condominiums"></select>
         </div>
+        <div class="col-md-2">
+            <label class="form-label">Year</label>
+            <input name="year" type="number" class="form-control" value="@DateTime.UtcNow.Year" required />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Month</label>
+            <input name="month" type="number" min="1" max="12" class="form-control" value="@DateTime.UtcNow.Month" required />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Amount per unit (€)</label>
+            <input name="amount" type="number" step="0.01" class="form-control" required />
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+            <button class="btn btn-primary w-100">Generate</button>
+        </div>
+    </form>
+
+    <form asp-action="GenerateRange" method="post" class="row g-2 mt-2">
+        @Html.AntiForgeryToken()
+        <div class="col-md-4">
+            <label class="form-label">Condominium</label>
+            <select name="condominiumId" class="form-select" asp-items="ViewBag.Condominiums"></select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">From (yyyy-mm)</label>
+            <input name="from" type="month" class="form-control" required />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">To (yyyy-mm)</label>
+            <input name="to" type="month" class="form-control" required />
+        </div>
+        <div class="col-md-1">
+            <label class="form-label">Amount</label>
+            <input name="amount" type="number" step="0.01" class="form-control" required />
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+            <button class="btn btn-outline-secondary w-100">Range</button>
+        </div>
+    </form>
+</div>
+
 
         <div class="card shadow-sm">
             <div class="table-responsive">

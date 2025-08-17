@@ -1,13 +1,12 @@
 ﻿using CondoSphere.Models;
+using Microsoft.AspNetCore.Identity;
 
 namespace CondoSphere.Data
 {
-    public class User
+    public class User : IdentityUser
     {
-        public int Id { get; set; }
+
         public string FullName { get; set; }
-        public string Email { get; set; }
-        public string PasswordHash { get; set; }
         public UserRole Role { get; set; }  // Enum: Administrator, Manager, Resident, Staff
         public bool IsActive { get; set; }
 
@@ -16,5 +15,4 @@ namespace CondoSphere.Data
 
         public ICollection<Unit> OwnedUnits { get; set; } // For residents
     }
-
 }

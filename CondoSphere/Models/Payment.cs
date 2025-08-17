@@ -5,21 +5,25 @@ namespace CondoSphere.Models
     public class Payment
     {
         public int Id { get; set; }
-        [Required]
+
+        // Ligação à quota
         public int QuotaId { get; set; }
         public Quota Quota { get; set; }
 
-        [Required]
-        [DataType(DataType.DateTime)]
-        public DateTime PaymentDate { get; set; }
+        // Montante efetivo cobrado
+        public decimal Amount { get; set; }
 
-        [Required]
-        [StringLength(50, ErrorMessage = "Payment method must be up to 50 characters.")]
-        public string PaymentMethod { get; set; } // MB Way, Multibanco, etc.
+        public PaymentMethodType Method { get; set; }
+        public PaymentStatusType Status { get; set; }
 
+        // Dados do provedor (Stripe)
+        public string Provider { get; set; }            // "stripe"
+        public string ProviderPaymentId { get; set; }   // PaymentIntent Id
+        public string ProviderReference { get; set; }   // Multibanco: entidade/referência numa string
+        public string ReceiptUrl { get; set; }          // URL do recibo do provedor (opcional)
 
-        [StringLength(100, ErrorMessage = "Receipt number must be up to 100 characters.")]
-        public string ReceiptNumber { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? PaidAt { get; set; }
     }
 
 }
