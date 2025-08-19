@@ -13,8 +13,20 @@ namespace CondoSphere.Data.Repositories
         {
             return await _context.Companies
                 .Include(c => c.Condominiums)
+                    .ThenInclude(co => co.Units)   // ✅ só carrega Units
+                .Include(c => c.Condominiums)
+                    .ThenInclude(co => co.MaintenanceRequests) // ✅ MaintenanceRequests está em Condominium
                 .FirstOrDefaultAsync(c => c.Id == id);
         }
+
+
+
+        public IQueryable<Company> Query()
+        {
+            return _context.Companies.AsQueryable();
+        }
+
+
     }
 
 }
