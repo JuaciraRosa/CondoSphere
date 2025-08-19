@@ -1,7 +1,9 @@
 ﻿using CondoSphere.Data.Interfaces;
 using CondoSphere.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace CondoSphere.API
 {
@@ -34,6 +36,43 @@ namespace CondoSphere.API
         [HttpPost]
         public async Task<ActionResult> Create(MaintenanceRequest request)
         {
+            await _repository.AddAsync(request);
+            return CreatedAtAction(nameof(Get), new { id = request.Id }, request);
+        }
+
+        /// <summary>
+        /// Create a maintenance request for the logged resident.
+        /// </summary>
+        [HttpPost("create-my")]
+        [Authorize(Roles = "Resident")]
+        public async Task<IActionResult> CreateMy([FromBody] MaintenanceRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new ProblemDetails
+                {
+                    Title = "Validation error",
+                    Detail = "Please check the submitted fields.",
+                    Status = StatusCodes.Status400BadRequest
+                });
+            }
+
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new ProblemDetails
+                {
+                    Title = "Unauthorized",
+                    Detail = "User not authenticated.",
+                    Status = StatusCodes.Status401Unauthorized
+                });
+            }
+
+            // Force server-side values
+            request.SubmittedById = userId;
+            request.SubmittedAt = DateTime.UtcNow;
+            request.Status = RequestStatus.InProgress;
+
             await _repository.AddAsync(request);
             return CreatedAtAction(nameof(Get), new { id = request.Id }, request);
         }

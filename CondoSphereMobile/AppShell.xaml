@@ -21,7 +21,7 @@
     <ShellContent Route="UnitsPage" ContentTemplate="{DataTemplate views:UnitsPage}" />
     <ShellContent Route="PaymentsPage" ContentTemplate="{DataTemplate views:PaymentsPage}" />
     <ShellContent Route="QuotasPage" ContentTemplate="{DataTemplate views:QuotasPage}" />
-    <!--<ShellContent Route="MaintenanceRequestsPage" ContentTemplate="{DataTemplate views:MaintenanceRequestsPage}" />-->
+    <ShellContent Route="MaintenanceRequestsPage" ContentTemplate="{DataTemplate views:MaintenanceRequestsPage}" />
     <ShellContent Route="NotificationsPage" ContentTemplate="{DataTemplate views:NotificationsPage}" />
 
 
