@@ -23,6 +23,11 @@ namespace CondoSphere.Models
         [Required]
         public string OwnerId { get; set; }
         public User Owner { get; set; }
+
+
+        public ICollection<Quota> Quotas { get; set; }
+
+
     }
 
 }
