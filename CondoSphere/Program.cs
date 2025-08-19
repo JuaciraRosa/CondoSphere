@@ -89,6 +89,45 @@ builder.Services.AddControllersWithViews(options =>
 })
 .AddViewLocalization()
 .AddDataAnnotationsLocalization();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "CondoSphere API",
+        Version = "v1",
+        Description = "API REST para gestão de condomínios"
+    });
+
+    // ?? JWT in Swagger
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Type: Bearer {your token}"
+    });
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+
+    // ? Avoid “Conflicting schemaIds” (User, etc.)
+    c.CustomSchemaIds(type => type.FullName!.Replace("+", "."));
+});
+
 
 var app = builder.Build();
 
@@ -110,6 +149,15 @@ app.UseCors("maui");
 // Important: auth order
 app.UseAuthentication();
 app.UseAuthorization();
+if (app.Environment.IsDevelopment() || true) // deixar sempre ativo por enquanto
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "CondoSphere API v1");
+        c.RoutePrefix = string.Empty; // Swagger abre na raiz /
+    });
+}
 
 // Map API and MVC
 app.MapControllers(); // if using attribute routing for API
