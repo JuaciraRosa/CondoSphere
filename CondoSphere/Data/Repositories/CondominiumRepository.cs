@@ -16,6 +16,11 @@ namespace CondoSphere.Data.Repositories
                 .Include(c => c.MaintenanceRequests)
                 .FirstOrDefaultAsync(c => c.Id == id);
         }
+
+        public IQueryable<Company> Query()
+        {
+            return _context.Companies.AsQueryable();
+        }
     }
 
 }
