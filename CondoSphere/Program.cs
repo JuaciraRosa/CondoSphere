@@ -11,8 +11,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using CondoSphere.Services;
 
-
 var builder = WebApplication.CreateBuilder(args);
+
+// 2) Resources nos assemblies
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 
 // DB
 builder.Services.AddDbContext<ApplicationDbContext>(opts =>
@@ -24,6 +26,7 @@ builder.Services.AddIdentity<User, IdentityRole>()
 
 // DI
 builder.Services.AddRepositories();
+
 
 
 // MVC (cookies) for web
@@ -75,17 +78,20 @@ builder.Services.AddCors(options =>
 });
 
 
-// MVC
+
 builder.Services.AddControllersWithViews(options =>
 {
+    // Políticas de autorização
     var policy = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build();
-
     options.Filters.Add(new AuthorizeFilter(policy));
-});
+})
+.AddViewLocalization()
+.AddDataAnnotationsLocalization();
 
 var app = builder.Build();
+
 
 
 if (!app.Environment.IsDevelopment())
