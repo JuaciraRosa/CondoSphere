@@ -1,5 +1,6 @@
 ﻿using CondoSphere.Data.Interfaces;
 using CondoSphere.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -9,6 +10,7 @@ namespace CondoSphere.API
 {
     [Route("api/maintenance-requests")]
     [ApiController]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class MaintenanceRequestsApiController : ControllerBase
     {
         private readonly IMaintenanceRequestRepository _repository;
@@ -18,57 +20,57 @@ namespace CondoSphere.API
             _repository = repository;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<MaintenanceRequest>>> GetAll()
+        // Admin/Manager veem todos
+        [HttpGet("list")]
+        [Authorize(Roles = "Administrator,Manager")]
+        public async Task<IActionResult> GetAll() => Ok(await _repository.GetAllAsync());
+
+        // Resident vê só os dele
+        [HttpGet("mine")]
+        [Authorize(Roles = "Resident")]
+        public async Task<IActionResult> Mine()
         {
-            var requests = await _repository.GetAllAsync();
-            return Ok(requests);
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var data = (await _repository.GetAllAsync())
+                       .Where(r => r.SubmittedById == userId);
+            return Ok(data);
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<MaintenanceRequest>> Get(int id)
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> Get(int id)
         {
             var request = await _repository.GetByIdAsync(id);
-            if (request == null) return NotFound();
+            if (request == null)
+                return NotFound(new ProblemDetails { Title = "Not found", Detail = $"Request {id} not found", Status = 404 });
+
+            // Resident só pode ver se for dele
+            if (User.IsInRole("Resident") && request.SubmittedById != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
+                return Forbid();
+
             return Ok(request);
         }
 
         [HttpPost]
-        public async Task<ActionResult> Create(MaintenanceRequest request)
+        [Authorize(Roles = "Administrator,Manager")]
+        public async Task<IActionResult> Create([FromBody] MaintenanceRequest request)
         {
+            if (!ModelState.IsValid) return BadRequest(new ValidationProblemDetails(ModelState));
             await _repository.AddAsync(request);
             return CreatedAtAction(nameof(Get), new { id = request.Id }, request);
         }
 
-        /// <summary>
-        /// Create a maintenance request for the logged resident.
-        /// </summary>
+        /// Resident cria sem enviar SubmittedById (servidor popula)
         [HttpPost("create-my")]
         [Authorize(Roles = "Resident")]
         public async Task<IActionResult> CreateMy([FromBody] MaintenanceRequest request)
         {
             if (!ModelState.IsValid)
-            {
-                return BadRequest(new ProblemDetails
-                {
-                    Title = "Validation error",
-                    Detail = "Please check the submitted fields.",
-                    Status = StatusCodes.Status400BadRequest
-                });
-            }
+                return BadRequest(new ValidationProblemDetails(ModelState));
 
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized(new ProblemDetails
-                {
-                    Title = "Unauthorized",
-                    Detail = "User not authenticated.",
-                    Status = StatusCodes.Status401Unauthorized
-                });
-            }
+                return Unauthorized(new ProblemDetails { Title = "Unauthorized", Status = 401 });
 
-            // Force server-side values
             request.SubmittedById = userId;
             request.SubmittedAt = DateTime.UtcNow;
             request.Status = RequestStatus.InProgress;
@@ -77,17 +79,19 @@ namespace CondoSphere.API
             return CreatedAtAction(nameof(Get), new { id = request.Id }, request);
         }
 
-        [HttpPut("{id}")]
-        public async Task<ActionResult> Update(int id, MaintenanceRequest request)
+        [HttpPut("{id:int}")]
+        [Authorize(Roles = "Administrator,Manager")]
+        public async Task<IActionResult> Update(int id, [FromBody] MaintenanceRequest request)
         {
-            if (id != request.Id) return BadRequest();
+            if (id != request.Id) return BadRequest(new ProblemDetails { Title = "ID mismatch", Status = 400 });
             _repository.Update(request);
             await _repository.SaveChangesAsync();
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
-        public async Task<ActionResult> Delete(int id)
+        [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Administrator,Manager")]
+        public async Task<IActionResult> Delete(int id)
         {
             await _repository.DeleteAsync(id);
             return NoContent();

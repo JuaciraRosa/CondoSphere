@@ -10,7 +10,6 @@ namespace CondoSphere.API
     [ApiController]
     [Route("api/quotas")]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-
     public class QuotasApiController : ControllerBase
     {
         private readonly IQuotaRepository _repository;
@@ -20,33 +19,47 @@ namespace CondoSphere.API
             _repository = repository;
         }
 
-        [HttpGet]
+        [HttpGet("list")]
         public async Task<IActionResult> GetAll() => Ok(await _repository.GetAllAsync());
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> Get(int id)
         {
             var quota = await _repository.GetByIdAsync(id);
-            if (quota == null) return NotFound();
+            if (quota == null)
+                return NotFound(new ProblemDetails { Title = "Not found", Detail = $"Quota {id} not found", Status = 404 });
+
             return Ok(quota);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Create(Quota quota)
+        [HttpGet("by-unit/{unitId:int}")]
+        public async Task<IActionResult> GetByUnit(int unitId)
         {
+            var data = (await _repository.GetAllAsync()).Where(q => q.UnitId == unitId);
+            return Ok(data);
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Administrator,Manager")]
+        public async Task<IActionResult> Create([FromBody] Quota quota)
+        {
+            if (!ModelState.IsValid) return BadRequest(new ValidationProblemDetails(ModelState));
             await _repository.AddAsync(quota);
             return CreatedAtAction(nameof(Get), new { id = quota.Id }, quota);
         }
 
-        [HttpPut("{id}")]
-        public IActionResult Update(int id, Quota quota)
+        [HttpPut("{id:int}")]
+        [Authorize(Roles = "Administrator,Manager")]
+        public async Task<IActionResult> Update(int id, [FromBody] Quota quota)
         {
-            if (id != quota.Id) return BadRequest();
+            if (id != quota.Id) return BadRequest(new ProblemDetails { Title = "ID mismatch", Status = 400 });
             _repository.Update(quota);
+            await _repository.SaveChangesAsync();
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Administrator,Manager")]
         public async Task<IActionResult> Delete(int id)
         {
             await _repository.DeleteAsync(id);
