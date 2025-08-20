@@ -1,5 +1,7 @@
 ﻿using CondoSphere.Data;
 using CondoSphere.Data.Interfaces;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +10,7 @@ namespace CondoSphere.API
 {
     [Route("api/users")]
     [ApiController]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class UsersApiController : ControllerBase
     {
         private readonly IUserRepository _userRepo;
@@ -18,14 +21,14 @@ namespace CondoSphere.API
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string search = null, [FromQuery] string sort = null)
+        [Authorize(Roles = "Administrator")]
+        public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10,
+            [FromQuery] string? search = null, [FromQuery] string? sort = null)
         {
             var query = _userRepo.Query();
 
             if (!string.IsNullOrEmpty(search))
-            {
                 query = query.Where(u => u.FullName.Contains(search) || u.Email.Contains(search));
-            }
 
             query = sort switch
             {
@@ -40,7 +43,9 @@ namespace CondoSphere.API
 
             return Ok(new { total, page, pageSize, data = users });
         }
+
         [HttpGet("{id}")]
+        [Authorize(Roles = "Administrator")]
         public async Task<ActionResult<User>> GetById(string id)
         {
             var user = await _userRepo.GetByIdStringAsync(id);
@@ -49,24 +54,20 @@ namespace CondoSphere.API
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(User user)
+        [Authorize(Roles = "Administrator")]
+        public async Task<IActionResult> Create([FromBody] User user)
         {
+            if (!ModelState.IsValid) return BadRequest(new ValidationProblemDetails(ModelState));
             await _userRepo.AddAsync(user);
             return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(string id, User user)
+        [Authorize(Roles = "Administrator")]
+        public async Task<IActionResult> Update(string id, [FromBody] User user)
         {
             if (id != user.Id)
-            {
-                return BadRequest(new ProblemDetails
-                {
-                    Title = "ID mismatch",
-                    Detail = "The id in the URL does not match the id in the body.",
-                    Status = StatusCodes.Status400BadRequest
-                });
-            }
+                return BadRequest(new ProblemDetails { Title = "ID mismatch", Status = 400 });
 
             _userRepo.Update(user);
             await _userRepo.SaveChangesAsync();
@@ -74,6 +75,7 @@ namespace CondoSphere.API
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Administrator")]
         public async Task<IActionResult> Delete(string id)
         {
             await _userRepo.DeleteByIdStringAsync(id);

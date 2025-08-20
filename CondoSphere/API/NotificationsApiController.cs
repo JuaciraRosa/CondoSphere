@@ -1,5 +1,7 @@
 ﻿using CondoSphere.Data.Interfaces;
 using CondoSphere.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,6 +9,7 @@ namespace CondoSphere.API
 {
     [Route("api/notifications")]
     [ApiController]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class NotificationsApiController : ControllerBase
     {
         private readonly INotificationRepository _repository;
@@ -16,39 +19,41 @@ namespace CondoSphere.API
             _repository = repository;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Notification>>> GetAll()
-        {
-            var notifications = await _repository.GetAllAsync();
-            return Ok(notifications);
-        }
+        [HttpGet("list")]
+        public async Task<IActionResult> GetAll() => Ok(await _repository.GetAllAsync());
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Notification>> Get(int id)
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> Get(int id)
         {
-            var notification = await _repository.GetByIdAsync(id);
-            if (notification == null) return NotFound();
-            return Ok(notification);
+            var n = await _repository.GetByIdAsync(id);
+            if (n == null)
+                return NotFound(new ProblemDetails { Title = "Not found", Detail = $"Notification {id} not found", Status = 404 });
+
+            return Ok(n);
         }
 
         [HttpPost]
-        public async Task<ActionResult> Create(Notification notification)
+        [Authorize(Roles = "Administrator,Manager")]
+        public async Task<IActionResult> Create([FromBody] Notification notification)
         {
+            if (!ModelState.IsValid) return BadRequest(new ValidationProblemDetails(ModelState));
             await _repository.AddAsync(notification);
             return CreatedAtAction(nameof(Get), new { id = notification.Id }, notification);
         }
 
-        [HttpPut("{id}")]
-        public async Task<ActionResult> Update(int id, Notification notification)
+        [HttpPut("{id:int}")]
+        [Authorize(Roles = "Administrator,Manager")]
+        public async Task<IActionResult> Update(int id, [FromBody] Notification notification)
         {
-            if (id != notification.Id) return BadRequest();
+            if (id != notification.Id) return BadRequest(new ProblemDetails { Title = "ID mismatch", Status = 400 });
             _repository.Update(notification);
             await _repository.SaveChangesAsync();
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
-        public async Task<ActionResult> Delete(int id)
+        [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Administrator,Manager")]
+        public async Task<IActionResult> Delete(int id)
         {
             await _repository.DeleteAsync(id);
             return NoContent();
