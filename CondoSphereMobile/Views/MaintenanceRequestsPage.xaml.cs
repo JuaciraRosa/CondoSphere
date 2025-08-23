@@ -14,13 +14,10 @@ public partial class MaintenanceRequestsPage : ContentPage
         };
     }
 
-    private async void OnBackToDashboard(object sender, EventArgs e)
+    private async void OnBackToHomeClicked(object sender, EventArgs e)
     {
-        await Shell.Current.GoToAsync("//DashboardPage");
+        await Shell.Current.GoToAsync("///DashboardPage");
     }
 
-    private async void OnGoDashboardClicked(object sender, EventArgs e)
-    {
-        await Shell.Current.GoToAsync("//DashboardPage");
-    }
+
 }
