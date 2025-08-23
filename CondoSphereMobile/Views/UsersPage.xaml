@@ -14,6 +14,13 @@
                         <Label Text="{Binding Email}" FontSize="14" TextColor="Gray" />
                         <Label Text="{Binding Role}" FontSize="14" />
                         <Label Text="{Binding IsActive, StringFormat='Active: {0}'}" FontSize="14" />
+
+
+                        <Button Text="Back to Home"
+          Clicked="OnBackToHomeClicked"
+          BackgroundColor="DarkSlateBlue"
+          TextColor="White"
+          Margin="0,20,0,0" />
                     </VerticalStackLayout>
                 </Frame>
             </DataTemplate>

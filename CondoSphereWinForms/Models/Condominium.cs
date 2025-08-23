@@ -1,0 +1,16 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace CondoSphereWinForms.Models
+{
+    public class Condominium
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }      // required na API
+        public string Address { get; set; }   // required na API
+        public int CompanyId { get; set; }    // required na API
+    }
+}

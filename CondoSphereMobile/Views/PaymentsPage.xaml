@@ -5,5 +5,11 @@
                Title="Payments">
     <VerticalStackLayout Padding="20">
         <Label Text="Payments Page" FontSize="20" HorizontalOptions="Center" />
+
+        <Button Text="Back to Home"
+          Clicked="OnBackToHomeClicked"
+          BackgroundColor="DarkSlateBlue"
+          TextColor="White"
+          Margin="0,20,0,0" />
     </VerticalStackLayout>
 </ContentPage>
