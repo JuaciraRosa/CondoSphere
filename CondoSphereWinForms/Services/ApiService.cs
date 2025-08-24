@@ -10,58 +10,58 @@ namespace CondoSphereWinForms.Services
 {
     public static class ApiClient
     {
-       
-        public static readonly Uri BaseUri = new Uri("https://condosphere.azurewebsites.net/api/");
+        // >>> Aponte para a SUA API (a que retorna JSON)
+        public static readonly Uri BaseUri = new Uri("https://condospheresite.azurewebsites.net/api/");
+        // Se publicar a API no Azure, troque aqui.
 
         private static readonly HttpClient _http = new HttpClient { BaseAddress = BaseUri };
-        private static string _token;
 
-        public static void SetToken(string jwt)
+        public static void SetToken(string? jwt)
         {
-            _token = jwt;
             _http.DefaultRequestHeaders.Authorization =
-                string.IsNullOrWhiteSpace(jwt)
-                    ? null
-                    : new AuthenticationHeaderValue("Bearer", jwt);
+                string.IsNullOrWhiteSpace(jwt) ? null : new AuthenticationHeaderValue("Bearer", jwt);
+            _http.DefaultRequestHeaders.Accept.Clear();
+            _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
         public static async Task<T> GetAsync<T>(string endpoint)
         {
             var resp = await _http.GetAsync(endpoint);
             if ((int)resp.StatusCode == 401) throw new UnauthorizedAccessException();
-            resp.EnsureSuccessStatusCode();
 
-            var json = await resp.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var body = await resp.Content.ReadAsStringAsync();
+            var ct = resp.Content.Headers.ContentType?.MediaType;
+            if (!resp.IsSuccessStatusCode || (ct != null && !ct.Contains("json")) || body.TrimStart().StartsWith("<"))
+                throw new Exception($"GET {resp.RequestMessage?.RequestUri} → {(int)resp.StatusCode} {resp.ReasonPhrase}\n{body}");
+
+            return JsonSerializer.Deserialize<T>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         }
 
         public static async Task<TOut> PostAsync<TIn, TOut>(string endpoint, TIn payload)
         {
             var json = JsonSerializer.Serialize(payload);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            var resp = await _http.PostAsync(endpoint, content);
+            var resp = await _http.PostAsync(endpoint, new StringContent(json, Encoding.UTF8, "application/json"));
             if ((int)resp.StatusCode == 401) throw new UnauthorizedAccessException();
-            resp.EnsureSuccessStatusCode();
 
-            var resJson = await resp.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<TOut>(resJson, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var body = await resp.Content.ReadAsStringAsync();
+            var ct = resp.Content.Headers.ContentType?.MediaType;
+            if (!resp.IsSuccessStatusCode || (ct != null && !ct.Contains("json")) || body.TrimStart().StartsWith("<"))
+                throw new Exception($"POST {resp.RequestMessage?.RequestUri} → {(int)resp.StatusCode} {resp.ReasonPhrase}\n{body}");
+
+            return JsonSerializer.Deserialize<TOut>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         }
 
-        public static async Task PostAsync<TIn>(string endpoint, TIn payload)
+        public static async Task<TOut> PutAsync<TIn, TOut>(string endpoint, TIn payload)
         {
             var json = JsonSerializer.Serialize(payload);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            var resp = await _http.PostAsync(endpoint, content);
+            var resp = await _http.PutAsync(endpoint, new StringContent(json, Encoding.UTF8, "application/json"));
             if ((int)resp.StatusCode == 401) throw new UnauthorizedAccessException();
-            resp.EnsureSuccessStatusCode();
+
+            var body = await resp.Content.ReadAsStringAsync();
+            if (!resp.IsSuccessStatusCode) throw new Exception(body);
+            return string.IsNullOrWhiteSpace(body)
+                ? default! // NoContent
+                : JsonSerializer.Deserialize<TOut>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         }
 
         public static async Task DeleteAsync(string endpoint)

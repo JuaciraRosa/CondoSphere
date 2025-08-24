@@ -1,0 +1,30 @@
+﻿@{
+    ViewData["Title"] = "Two-Factor Auth";
+}
+
+<h2>Two-Factor Authentication</h2>
+
+@if ((bool)ViewBag.Enabled)
+{
+    <div class="alert alert-success">2FA is enabled.</div>
+    <form asp-action="DisableTwoFactor" method="post">
+        <button class="btn btn-warning">Disable 2FA</button>
+    </form>
+}
+else
+{
+    <div class="alert alert-info">
+        <p>Install an Authenticator app (Google/Microsoft).</p>
+        <p><strong>Key:</strong> @ViewBag.Key</p>
+        <p><strong>otpauth URI:</strong> <code>@ViewBag.OtpAuthUri</code></p>
+        <small>Scan the URI or enter the key in your app, then type the 6-digit code below.</small>
+    </div>
+
+    <form asp-action="EnableTwoFactor" method="post">
+        <div class="mb-2">
+            <label class="form-label">Code</label>
+            <input name="code" class="form-control" maxlength="7" />
+        </div>
+        <button class="btn btn-primary">Enable 2FA</button>
+    </form>
+}
