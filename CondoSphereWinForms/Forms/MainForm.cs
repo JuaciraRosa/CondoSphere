@@ -71,12 +71,14 @@ namespace CondoSphereWinForms.Forms
             }
             catch (UnauthorizedAccessException)
             {
-                MessageBox.Show("Session expired. Please log in again.", "Unauthorized", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Session expired. Please log in again.", "Unauthorized",
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 DoLogout();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Error loading data", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.Message, "Error loading data",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -87,18 +89,19 @@ namespace CondoSphereWinForms.Forms
             {
                 try
                 {
-                    // POST /api/condominiums
-                    await ApiClient.PostAsync<Condominium>("condominiums", dlg.Result);
+                    await ApiClient.PostAsync("condominiums", dlg.Result);
                     await LoadDataAsync();
                 }
                 catch (UnauthorizedAccessException)
                 {
-                    MessageBox.Show("Session expired. Please log in again.", "Unauthorized", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Session expired. Please log in again.", "Unauthorized",
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     DoLogout();
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message, "Error creating", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(ex.Message, "Error creating",
+                                    MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -107,28 +110,32 @@ namespace CondoSphereWinForms.Forms
         {
             if (dgv.CurrentRow?.DataBoundItem is not Condominium selected)
             {
-                MessageBox.Show("Select a row first.", "Delete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Select a row first.", "Delete",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            if (MessageBox.Show($"Delete '{selected.Name}'?", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            if (MessageBox.Show($"Delete '{selected.Name}'?", "Confirm",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
                 try
                 {
-                    // DELETE /api/condominiums/{id}
                     await ApiClient.DeleteAsync($"condominiums/{selected.Id}");
                     await LoadDataAsync();
                 }
                 catch (UnauthorizedAccessException)
                 {
-                    MessageBox.Show("Session expired. Please log in again.", "Unauthorized", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Session expired. Please log in again.", "Unauthorized",
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     DoLogout();
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message, "Error deleting", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(ex.Message, "Error deleting",
+                                    MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
+
     }
 }

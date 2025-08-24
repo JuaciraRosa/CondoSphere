@@ -1,0 +1,110 @@
+﻿@model CondoSphere.Models.Account.ProfileViewModel
+@{
+    ViewData["Title"] = "Profile";
+}
+
+<h2 class="mb-3">Profile</h2>
+
+@if (TempData["Success"] is string ok && !string.IsNullOrEmpty(ok))
+{
+    <div class="alert alert-success">@ok</div>
+}
+@if (TempData["Error"] is string err && !string.IsNullOrEmpty(err))
+{
+    <div class="alert alert-danger">@err</div>
+}
+
+<div class="row g-4">
+    <!-- Coluna esquerda: avatar + ações -->
+    <div class="col-12 col-lg-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    @if (!string.IsNullOrEmpty(Model.ProfileImagePath))
+                    {
+                        <img src="@Model.ProfileImagePath"
+                             alt="Avatar"
+                             style="width:140px;height:140px;border-radius:50%;object-fit:cover;border:1px solid #ddd;" />
+                    }
+                    else
+                    {
+                        <div style="width:140px;height:140px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;border:1px solid #ddd;">
+                            No Photo
+                        </div>
+                    }
+                </div>
+
+                <form asp-controller="Account" asp-action="UpdateProfile" method="post" enctype="multipart/form-data" class="mt-2">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-2 text-start">
+                        <label class="form-label">Profile photo</label>
+                        <input type="file" name="avatar" accept="image/*" class="form-control" />
+                    </div>
+                    <button class="btn btn-outline-primary w-100" type="submit">Upload new photo</button>
+                </form>
+
+                <hr class="my-4" />
+
+                <div class="d-grid gap-2">
+                    <a asp-controller="Account" asp-action="TwoFactor" class="btn btn-secondary">Two-Factor Settings</a>
+                    <a asp-controller="Account" asp-action="DownloadData" class="btn btn-outline-dark">Download My Data (JSON)</a>
+
+                    <form asp-controller="Account" asp-action="Deactivate" method="post" onsubmit="return confirm('Deactivate your account?');">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-outline-warning w-100" type="submit">Deactivate Account</button>
+                    </form>
+
+                    <form asp-controller="Account" asp-action="DeleteAccount" method="post" onsubmit="return confirm('Delete your account permanently?');">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-outline-danger w-100" type="submit">Delete Account</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Coluna direita: dados básicos -->
+    <div class="col-12 col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form asp-controller="Account" asp-action="UpdateProfile" method="post" class="row g-3">
+                    @Html.AntiForgeryToken()
+
+                    <div class="col-12">
+                        <h5 class="mb-3">Basic Information</h5>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Full name</label>
+                        <input asp-for="FullName" class="form-control" />
+                        <span asp-validation-for="FullName" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Email</label>
+                        <input asp-for="Email" class="form-control" readonly />
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Company</label>
+                        <input class="form-control" value="@Model.CompanyName" readonly />
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Role</label>
+                        <input class="form-control" value="@Model.Role" readonly />
+                    </div>
+
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <a asp-controller="Dashboard" asp-action="Index" class="btn btn-secondary ms-2">Back</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
