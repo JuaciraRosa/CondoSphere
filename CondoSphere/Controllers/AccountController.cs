@@ -311,68 +311,71 @@ namespace CondoSphere.Controllers
             return RedirectToAction("Login", "Auth");
         }
 
-
-        [AllowAnonymous]
+        // GET: /Account/ForgotPassword
         [HttpGet]
-        public IActionResult ForgotPassword() => View();
-
         [AllowAnonymous]
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ForgotPassword(string email)
+        public IActionResult ForgotPassword()
         {
-            if (string.IsNullOrWhiteSpace(email))
-            {
-                TempData["Error"] = "Email required.";
-                return View();
-            }
+            return View();
+        }
 
-            var user = await _userManager.FindByEmailAsync(email);
+        [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
+        {
+            if (!ModelState.IsValid) return View(model);
+
+            var user = await _userManager.FindByEmailAsync(model.Email);
             if (user == null || !(await _userManager.IsEmailConfirmedAsync(user)))
             {
-                // não revelar que o usuário não existe → UX/segurança
-                TempData["Success"] = "If a valid user exists, a reset link was sent.";
-                return View();
+                // Não revela se existe ou não
+                TempData["Success"] = "If that account exists, you will receive an email to reset the password.";
+                return RedirectToAction(nameof(ForgotPassword));
             }
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var link = Url.Action("ResetPassword", "Account",
-                new { email = user.Email, token = token }, Request.Scheme);
+            var callbackUrl = Url.Action("ResetPassword", "Account",
+                new { token, email = user.Email }, protocol: Request.Scheme);
 
-            // TODO: enviar e-mail. Por ora, mostramos o link (para testes)
-            TempData["Success"] = "Copy this reset link (dev): " + link;
-            return View();
+            // aqui usarias IEmailSender para enviar o link
+            Console.WriteLine($"Reset password link: {callbackUrl}");
+
+            TempData["Success"] = "Check your email for password reset instructions.";
+            return RedirectToAction(nameof(ForgotPassword));
         }
 
-        [AllowAnonymous]
+        // GET: /Account/ResetPassword
         [HttpGet]
-        public IActionResult ResetPassword(string email, string token)
-        {
-            ViewBag.Email = email;
-            ViewBag.Token = token;
-            return View();
-        }
-
         [AllowAnonymous]
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ResetPassword(string email, string token, string newPassword)
+        public IActionResult ResetPassword(string token, string email)
         {
-            var user = await _userManager.FindByEmailAsync(email);
-            if (user == null) return RedirectToAction("Login", "Auth");
-
-            var res = await _userManager.ResetPasswordAsync(user, token, newPassword);
-            if (res.Succeeded)
-            {
-                TempData["Success"] = "Password updated. You can login now.";
-                return RedirectToAction("Login", "Auth");
-            }
-
-            TempData["Error"] = string.Join("; ", res.Errors.Select(e => e.Description));
-            ViewBag.Email = email;
-            ViewBag.Token = token;
-            return View();
+            return View(new ResetPasswordViewModel { Token = token, Email = email });
         }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        {
+            if (!ModelState.IsValid) return View(model);
+
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null) return RedirectToAction(nameof(ResetPasswordConfirmation));
+
+            var result = await _userManager.ResetPasswordAsync(user, model.Token, model.Password);
+            if (result.Succeeded)
+                return RedirectToAction(nameof(ResetPasswordConfirmation));
+
+            foreach (var error in result.Errors)
+                ModelState.AddModelError("", error.Description);
+
+            return View(model);
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult ResetPasswordConfirmation() => View();
 
 
     }
