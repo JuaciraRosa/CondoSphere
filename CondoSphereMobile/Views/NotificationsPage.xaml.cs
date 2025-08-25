@@ -6,4 +6,9 @@ public partial class NotificationsPage : ContentPage
 	{
 		InitializeComponent();
 	}
+
+    private async void OnBackToHomeClicked(object sender, EventArgs e)
+    {
+        await Shell.Current.GoToAsync("///DashboardPage");
+    }
 }

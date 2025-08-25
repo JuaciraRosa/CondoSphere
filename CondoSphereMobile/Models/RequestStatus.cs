@@ -11,6 +11,7 @@ namespace CondoSphereMobile.Models
         Open = 0,
         InProgress = 1,
         Completed = 2,
-        Rejected = 3
+        Rejected = 3,
+        Cancelled = 3
     }
 }

@@ -16,6 +16,8 @@ namespace CondoSphere.Data.Repositories
                 .Include(c => c.MaintenanceRequests)
                 .FirstOrDefaultAsync(c => c.Id == id);
         }
+
+       
     }
 
 }

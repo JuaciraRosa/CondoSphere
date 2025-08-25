@@ -14,6 +14,6 @@ namespace CondoSphereMobile.Models
         public DateTime SubmittedAt { get; set; }
         public RequestStatus Status { get; set; }
         public int CondominiumId { get; set; }
-        public int SubmittedById { get; set; }
+        public string SubmittedById { get; set; }
     }
 }

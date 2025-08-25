@@ -1,4 +1,4 @@
-﻿using Android.Mtp;
+﻿
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -40,10 +40,17 @@ namespace CondoSphereMobile.Services
             var json = JsonSerializer.Serialize(data);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync(endpoint, content);
-            response.EnsureSuccessStatusCode();
-            var resultJson = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<TResponse>(resultJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var resp = await _httpClient.PostAsync(endpoint, content);
+            var body = await resp.Content.ReadAsStringAsync();
+
+            if (!resp.IsSuccessStatusCode)
+                throw new Exception($"HTTP {(int)resp.StatusCode} {resp.ReasonPhrase}: {body}");
+
+            return JsonSerializer.Deserialize<TResponse>(body, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
         }
+
     }
 }
