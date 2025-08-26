@@ -9,7 +9,7 @@ namespace CondoSphere.API
 {
     [Route("api/expenses")]
     [ApiController]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [AllowAnonymous]
     public class ExpensesApiController : ControllerBase
     {
         private readonly IExpenseRepository _repository;

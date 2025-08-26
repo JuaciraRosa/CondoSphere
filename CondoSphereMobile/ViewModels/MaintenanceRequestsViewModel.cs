@@ -49,17 +49,18 @@ namespace CondoSphereMobile.ViewModels
         {
             try
             {
-                await EnsureAuthAsync();
-                // Ajuste o endpoint conforme sua rota final no servidor
+                await EnsureAuthAsync(); // seu método que seta o token
                 var list = await _api.GetAsync<List<MaintenanceRequest>>("maintenance-requests");
                 Requests.Clear();
-                foreach (var r in list) Requests.Add(r);
+                foreach (var r in list)
+                    Requests.Add(r);
             }
             catch (Exception ex)
             {
                 await Application.Current.MainPage.DisplayAlert("Error", ex.Message, "OK");
             }
         }
+
 
         public async Task CreateAsync()
         {

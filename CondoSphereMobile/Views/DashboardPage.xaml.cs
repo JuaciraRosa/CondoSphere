@@ -41,4 +41,9 @@ public partial class DashboardPage : ContentPage
     {
         await Shell.Current.GoToAsync("///PaymentsPage");
     }
+
+    private async void OnQuotasClicked(object sender, EventArgs e)
+    {
+        await Shell.Current.GoToAsync("///QuotasPage");
+    }
 }

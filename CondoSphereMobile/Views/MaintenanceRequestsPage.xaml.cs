@@ -14,10 +14,10 @@ public partial class MaintenanceRequestsPage : ContentPage
         };
     }
 
-    private async void OnBackToHomeClicked(object sender, EventArgs e)
+    private async void OnBackToDashboardClicked(object sender, EventArgs e)
     {
+        // Rota absoluta para o Dashboard registrado no AppShell
         await Shell.Current.GoToAsync("///DashboardPage");
     }
-
 
 }

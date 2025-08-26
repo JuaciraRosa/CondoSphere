@@ -1,46 +1,55 @@
-﻿using CondoSphereMobile.Models;
-using CondoSphereMobile.Services;
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.ObjectModel;
 using System.Windows.Input;
+using CondoSphereMobile.Models;
+using CondoSphereMobile.Services;
 
 namespace CondoSphereMobile.ViewModels
 {
     public class QuotasViewModel : BindableObject
     {
-        private readonly ApiService _apiService;
+        private readonly ApiService _api;
+        private bool _isBusy;
 
-        public ObservableCollection<Quota> Quotas { get; set; } = new();
+        public ObservableCollection<Quota> Quotas { get; } = new();
+
+        public bool IsBusy
+        {
+            get => _isBusy;
+            set { _isBusy = value; OnPropertyChanged(); }
+        }
 
         public ICommand LoadQuotasCommand { get; }
 
         public QuotasViewModel()
         {
-            _apiService = new ApiService();
-            LoadQuotasCommand = new Command(async () => await LoadQuotasAsync());
+            _api = new ApiService();
+            LoadQuotasCommand = new Command(async () => await LoadAsync());
         }
 
-        private async Task LoadQuotasAsync()
+        private async Task EnsureAuthAsync()
         {
+            var token = await SecureStorage.GetAsync("jwt_token");
+            if (!string.IsNullOrEmpty(token)) _api.SetAuthToken(token);
+        }
+
+        private async Task LoadAsync()
+        {
+            if (IsBusy) return;
             try
             {
-                var token = await SecureStorage.GetAsync("jwt_token");
-                if (!string.IsNullOrEmpty(token))
-                    _apiService.SetAuthToken(token);
+                IsBusy = true;
+                await EnsureAuthAsync();
 
-                var quotas = await _apiService.GetAsync<List<Quota>>("quotas");
+                var list = await _api.GetAsync<List<Quota>>("quotas");
                 Quotas.Clear();
-                foreach (var quota in quotas)
-                    Quotas.Add(quota);
+                foreach (var q in list) Quotas.Add(q);
             }
             catch (Exception ex)
             {
                 await Application.Current.MainPage.DisplayAlert("Error", ex.Message, "OK");
             }
+            finally { IsBusy = false; }
         }
     }
 }
+
