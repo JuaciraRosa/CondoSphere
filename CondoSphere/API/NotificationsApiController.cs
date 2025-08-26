@@ -9,7 +9,7 @@ namespace CondoSphere.API
 {
     [Route("api/notifications")]
     [ApiController]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [AllowAnonymous]
     public class NotificationsApiController : ControllerBase
     {
         private readonly INotificationRepository _repository;

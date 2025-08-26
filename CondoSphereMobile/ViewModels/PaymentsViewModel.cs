@@ -1,46 +1,54 @@
-﻿using CondoSphereMobile.Models;
-using CondoSphereMobile.Services;
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.ObjectModel;
 using System.Windows.Input;
+using CondoSphereMobile.Models;
+using CondoSphereMobile.Services;
 
 namespace CondoSphereMobile.ViewModels
 {
     public class PaymentsViewModel : BindableObject
     {
-        private readonly ApiService _apiService;
+        private readonly ApiService _api;
+        private bool _isBusy;
 
-        public ObservableCollection<Payment> Payments { get; set; } = new();
+        public ObservableCollection<Payment> Payments { get; } = new();
+
+        public bool IsBusy
+        {
+            get => _isBusy;
+            set { _isBusy = value; OnPropertyChanged(); }
+        }
 
         public ICommand LoadPaymentsCommand { get; }
 
         public PaymentsViewModel()
         {
-            _apiService = new ApiService();
-            LoadPaymentsCommand = new Command(async () => await LoadPaymentsAsync());
+            _api = new ApiService();
+            LoadPaymentsCommand = new Command(async () => await LoadAsync());
         }
 
-        private async Task LoadPaymentsAsync()
+        private async Task EnsureAuthAsync()
         {
+            var token = await SecureStorage.GetAsync("jwt_token");
+            if (!string.IsNullOrEmpty(token)) _api.SetAuthToken(token);
+        }
+
+        private async Task LoadAsync()
+        {
+            if (IsBusy) return;
             try
             {
-                var token = await SecureStorage.GetAsync("jwt_token");
-                if (!string.IsNullOrEmpty(token))
-                    _apiService.SetAuthToken(token);
+                IsBusy = true;
+                await EnsureAuthAsync();
 
-                var payments = await _apiService.GetAsync<List<Payment>>("payments");
+                var list = await _api.GetAsync<List<Payment>>("payments");
                 Payments.Clear();
-                foreach (var payment in payments)
-                    Payments.Add(payment);
+                foreach (var p in list) Payments.Add(p);
             }
             catch (Exception ex)
             {
                 await Application.Current.MainPage.DisplayAlert("Error", ex.Message, "OK");
             }
+            finally { IsBusy = false; }
         }
     }
 }

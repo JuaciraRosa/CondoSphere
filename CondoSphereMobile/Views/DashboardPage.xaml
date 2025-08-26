@@ -19,6 +19,7 @@
             <Button Text="Expenses" Clicked="OnExpensesClicked" />
             <Button Text="Units" Clicked="OnUnitsClicked" />
             <Button Text="Payments" Clicked="OnPaymentsClicked" />
+            <Button Text="Quotas" Clicked="OnQuotasClicked" />
 
         </VerticalStackLayout>
     </ScrollView>

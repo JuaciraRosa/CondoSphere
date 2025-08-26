@@ -1,10 +1,12 @@
 ﻿using CondoSphere.Data.Interfaces;
 using CondoSphere.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CondoSphere.API
 {
+    [AllowAnonymous]
     [Route("api/condominiums")]
     [ApiController]
 

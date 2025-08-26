@@ -10,7 +10,7 @@ namespace CondoSphere.API
 {
     [Route("api/units")]
     [ApiController]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [AllowAnonymous]
     public class UnitsApiController : ControllerBase
     {
         private readonly IUnitRepository _repository;

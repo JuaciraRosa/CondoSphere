@@ -9,7 +9,7 @@ namespace CondoSphere.API
 {
     [Route("api/meetings")]
     [ApiController]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [AllowAnonymous]
     public class MeetingsApiController : ControllerBase
     {
         private readonly IMeetingRepository _repository;

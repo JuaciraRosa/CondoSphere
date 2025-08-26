@@ -1,19 +1,31 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:CondoSphereMobile.ViewModels"
              x:Class="CondoSphereMobile.Views.UnitsPage"
-             Title="UnitsPage">
-    <VerticalStackLayout>
-        <Label 
-            Text="Welcome to .NET MAUI!"
-            VerticalOptions="Center" 
-            HorizontalOptions="Center" />
+             Title="Units">
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Dashboard" Priority="0" Order="Primary" Clicked="OnBackToDashboardClicked" />
+    </ContentPage.ToolbarItems>
 
+    <ContentPage.BindingContext>
+        <vm:UnitsViewModel/>
+    </ContentPage.BindingContext>
 
-        <Button Text="Back to Home"
-          Clicked="OnBackToHomeClicked"
-          BackgroundColor="DarkSlateBlue"
-          TextColor="White"
-          Margin="0,20,0,0" />
-    </VerticalStackLayout>
+    <RefreshView IsRefreshing="{Binding IsBusy}" Command="{Binding LoadUnitsCommand}">
+        <CollectionView ItemsSource="{Binding Units}" Margin="12">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Frame Padding="10" Margin="0,0,0,12" BorderColor="#ddd" HasShadow="False">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="{Binding Number}" FontAttributes="Bold"/>
+                            <Label Text="{Binding Area, StringFormat='{0} m²'}"/>
+                            <Label Text="{Binding CondominiumId, StringFormat='Condo: {0}'}" FontSize="12"/>
+                            <Label Text="{Binding OwnerId, StringFormat='Owner: {0}'}" FontSize="12"/>
+                        </VerticalStackLayout>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </RefreshView>
 </ContentPage>

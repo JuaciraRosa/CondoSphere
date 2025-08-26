@@ -89,7 +89,8 @@ namespace CondoSphereWinForms.Forms
             {
                 try
                 {
-                    await ApiClient.PostAsync("condominiums", dlg.Result);
+                    // Informe os tipos de entrada e saída
+                    var created = await ApiClient.PostAsync<Condominium, Condominium>("condominiums", dlg.Result);
                     await LoadDataAsync();
                 }
                 catch (UnauthorizedAccessException)
@@ -105,6 +106,7 @@ namespace CondoSphereWinForms.Forms
                 }
             }
         }
+
 
         private async Task DeleteAsync()
         {

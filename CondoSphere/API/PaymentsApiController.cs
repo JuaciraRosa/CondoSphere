@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CondoSphere.API
 {
-    // [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+  
     [ApiController]
     [Route("api/payments")]
     [AllowAnonymous]

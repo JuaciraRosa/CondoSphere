@@ -1,11 +1,13 @@
 ﻿using CondoSphere.Data.Interfaces;
 using CondoSphere.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace CondoSphere.API
 {
+    [AllowAnonymous]
     [Route("api/companies")]
     [ApiController]
     public class CompaniesApiController : ControllerBase

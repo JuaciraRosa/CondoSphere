@@ -9,7 +9,7 @@ namespace CondoSphere.API
 {
     [Route("api/residents")]
     [ApiController]
-    [Authorize(Roles = "Resident")]
+    [AllowAnonymous]
     public class ResidentsApiController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

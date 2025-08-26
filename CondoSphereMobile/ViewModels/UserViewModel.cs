@@ -1,50 +1,57 @@
-﻿using CondoSphereMobile.Models;
-using CondoSphereMobile.Services;
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.ObjectModel;
 using System.Windows.Input;
+using CondoSphereMobile.Models;
+using CondoSphereMobile.Services;
 
 namespace CondoSphereMobile.ViewModels
 {
     public class UsersViewModel : BindableObject
     {
-        private readonly ApiService _apiService;
+        private readonly ApiService _api;
+        private bool _isBusy;
 
-        public ObservableCollection<User> Users { get; set; } = new ObservableCollection<User>();
+        public ObservableCollection<User> Users { get; } = new();
+
+        public bool IsBusy
+        {
+            get => _isBusy;
+            set { _isBusy = value; OnPropertyChanged(); }
+        }
 
         public ICommand LoadUsersCommand { get; }
 
         public UsersViewModel()
         {
-            _apiService = new ApiService();
-            LoadUsersCommand = new Command(async () => await LoadUsersAsync());
+            _api = new ApiService();
+            LoadUsersCommand = new Command(async () => await LoadAsync());
         }
 
-        private async Task LoadUsersAsync()
+        private async Task EnsureAuthAsync()
         {
+            var token = await SecureStorage.GetAsync("jwt_token");
+            if (!string.IsNullOrEmpty(token))
+                _api.SetAuthToken(token);
+        }
+
+        private async Task LoadAsync()
+        {
+            if (IsBusy) return;
             try
             {
-                var token = await SecureStorage.GetAsync("jwt_token");
-                if (!string.IsNullOrEmpty(token))
-                    _apiService.SetAuthToken(token);
+                IsBusy = true;
+                await EnsureAuthAsync();
 
-                var users = await _apiService.GetAsync<List<User>>("users");
-
-
+                // IMPORTANTe: usar PagedResult<User> e ler .Data
+                var page = await _api.GetAsync<PagedResult<User>>("users");
                 Users.Clear();
-                foreach (var user in users)
-                {
-                    Users.Add(user);
-                }
+                foreach (var u in page.Data)
+                    Users.Add(u);
             }
             catch (Exception ex)
             {
                 await Application.Current.MainPage.DisplayAlert("Error", ex.Message, "OK");
             }
+            finally { IsBusy = false; }
         }
     }
 }

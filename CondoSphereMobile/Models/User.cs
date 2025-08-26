@@ -8,11 +8,10 @@ namespace CondoSphereMobile.Models
 {
     public class User
     {
-        public int Id { get; set; }
+        public string Id { get; set; }          // Identity = string
         public string FullName { get; set; }
         public string Email { get; set; }
-        public UserRole Role { get; set; }   // "Administrator", "Manager", "Resident", "Staff"
+        public string Role { get; set; }        // se vier como enum no API, mapeie para string
         public bool IsActive { get; set; }
-        public int? CompanyId { get; set; }
     }
 }
