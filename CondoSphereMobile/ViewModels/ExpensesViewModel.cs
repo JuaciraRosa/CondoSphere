@@ -1,45 +1,57 @@
-﻿using CondoSphereMobile.Models;
-using CondoSphereMobile.Services;
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.ObjectModel;
 using System.Windows.Input;
+using CondoSphereMobile.Models;
+using CondoSphereMobile.Services;
 
 namespace CondoSphereMobile.ViewModels
 {
     public class ExpensesViewModel : BindableObject
     {
-        private readonly ApiService _apiService;
+        private readonly ApiService _api;
+        private bool _isBusy;
 
-        public ObservableCollection<Expense> Expenses { get; set; } = new();
+        public ObservableCollection<Expense> Expenses { get; } = new();
+
+        public bool IsBusy
+        {
+            get => _isBusy;
+            set { _isBusy = value; OnPropertyChanged(); }
+        }
 
         public ICommand LoadExpensesCommand { get; }
 
         public ExpensesViewModel()
         {
-            _apiService = new ApiService();
-            LoadExpensesCommand = new Command(async () => await LoadExpensesAsync());
+            _api = new ApiService();
+            LoadExpensesCommand = new Command(async () => await LoadAsync());
         }
 
-        private async Task LoadExpensesAsync()
+        private async Task EnsureAuthAsync()
         {
+            var token = await SecureStorage.GetAsync("jwt_token");
+            if (!string.IsNullOrEmpty(token))
+                _api.SetAuthToken(token);
+        }
+
+        private async Task LoadAsync()
+        {
+            if (IsBusy) return;
             try
             {
-                var token = await SecureStorage.GetAsync("jwt_token");
-                if (!string.IsNullOrEmpty(token))
-                    _apiService.SetAuthToken(token);
+                IsBusy = true;
+                await EnsureAuthAsync();
 
-                var expenses = await _apiService.GetAsync<List<Expense>>("expenses");
+                var list = await _api.GetAsync<List<Expense>>("expenses");
                 Expenses.Clear();
-                foreach (var expense in expenses)
-                    Expenses.Add(expense);
+                foreach (var e in list) Expenses.Add(e);
             }
             catch (Exception ex)
             {
                 await Application.Current.MainPage.DisplayAlert("Error", ex.Message, "OK");
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
     }

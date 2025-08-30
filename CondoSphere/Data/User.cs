@@ -14,5 +14,7 @@ namespace CondoSphere.Data
         public Company Company { get; set; }
 
         public ICollection<Unit> OwnedUnits { get; set; } // For residents
+
+        public string ProfileImagePath { get; set; } // ex: "/uploads/avatars/abc.jpg"
     }
 }

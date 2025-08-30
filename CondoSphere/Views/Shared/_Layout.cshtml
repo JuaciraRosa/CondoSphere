@@ -33,6 +33,9 @@
 
     <!-- Main CSS -->
     <link href="~/assets/css/main.css" rel="stylesheet" asp-append-version="true" />
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-..." crossorigin="anonymous" referrerpolicy="no-referrer" />
+
 </head>
 <body class="index-page">
 
@@ -81,8 +84,17 @@
                             <ul>
                                 <li><a asp-controller="Account" asp-action="Profile">Profile</a></li>
                                 <li><a asp-controller="Account" asp-action="ChangePassword">Change Password</a></li>
+                                <li><a asp-controller="Account" asp-action="DownloadData">Download My Data (JSON)</a></li>
+                                <li><a asp-controller="Account" asp-action="ForgotPassword">Forgot Password</a></li>
+                                <li>
+                                    <form asp-controller="Account" asp-action="Deactivate" method="post" style="display:inline;">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-link text-danger">Deactivate Account</button>
+                                    </form>
+                                </li>
                             </ul>
                         </li>
+
                     }
                 </ul>
                 <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>

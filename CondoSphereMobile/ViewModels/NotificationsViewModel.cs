@@ -1,47 +1,54 @@
-﻿
+﻿using System.Collections.ObjectModel;
+using System.Windows.Input;
 using CondoSphereMobile.Models;
 using CondoSphereMobile.Services;
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Input;
 
 namespace CondoSphereMobile.ViewModels
 {
     public class NotificationsViewModel : BindableObject
     {
-        private readonly ApiService _apiService;
+        private readonly ApiService _api;
+        private bool _isBusy;
 
-        public ObservableCollection<Notification> Notifications { get; set; } = new();
+        public ObservableCollection<Notification> Notifications { get; } = new();
+
+        public bool IsBusy
+        {
+            get => _isBusy;
+            set { _isBusy = value; OnPropertyChanged(); }
+        }
 
         public ICommand LoadNotificationsCommand { get; }
 
         public NotificationsViewModel()
         {
-            _apiService = new ApiService();
-            LoadNotificationsCommand = new Command(async () => await LoadNotificationsAsync());
+            _api = new ApiService();
+            LoadNotificationsCommand = new Command(async () => await LoadAsync());
         }
 
-        private async Task LoadNotificationsAsync()
+        private async Task EnsureAuthAsync()
         {
+            var token = await SecureStorage.GetAsync("jwt_token");
+            if (!string.IsNullOrEmpty(token)) _api.SetAuthToken(token);
+        }
+
+        private async Task LoadAsync()
+        {
+            if (IsBusy) return;
             try
             {
-                var token = await SecureStorage.GetAsync("jwt_token");
-                if (!string.IsNullOrEmpty(token))
-                    _apiService.SetAuthToken(token);
+                IsBusy = true;
+                await EnsureAuthAsync();
 
-                var notifications = await _apiService.GetAsync<List<Notification>>("notifications");
+                var list = await _api.GetAsync<List<Notification>>("notifications");
                 Notifications.Clear();
-                foreach (var notification in notifications)
-                    Notifications.Add(notification);
+                foreach (var n in list) Notifications.Add(n);
             }
             catch (Exception ex)
             {
                 await Application.Current.MainPage.DisplayAlert("Error", ex.Message, "OK");
             }
+            finally { IsBusy = false; }
         }
     }
 }

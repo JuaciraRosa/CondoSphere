@@ -31,17 +31,17 @@ namespace CondoSphereMobile.ViewModels
                 if (!string.IsNullOrEmpty(token))
                     _apiService.SetAuthToken(token);
 
-                var companies = await _apiService.GetAsync<List<Company>>("companies");
+                var result = await _apiService.GetAsync<PagedResult<Company>>("companies");
                 Companies.Clear();
-                foreach (var company in companies)
-                {
-                    Companies.Add(company);
-                }
+                foreach (var c in result.Data)
+                    Companies.Add(c);
             }
             catch (Exception ex)
             {
                 await Application.Current.MainPage.DisplayAlert("Error", ex.Message, "OK");
             }
         }
+
+
     }
 }

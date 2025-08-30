@@ -5,6 +5,13 @@
              x:Class="CondoSphereMobile.Views.CompaniesPage"
              Title="Companies">
 
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Dashboard"
+                 Priority="0"
+                 Order="Primary"
+                 Clicked="OnBackToDashboardClicked" />
+    </ContentPage.ToolbarItems>
     <ContentPage.BindingContext>
         <viewmodels:CompaniesViewModel/>
     </ContentPage.BindingContext>

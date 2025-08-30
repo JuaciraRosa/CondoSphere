@@ -4,18 +4,23 @@ namespace CondoSphereMobile.Views;
 
 public partial class UsersPage : ContentPage
 {
-    private readonly UsersViewModel _viewModel;
-
     public UsersPage()
     {
         InitializeComponent();
-        _viewModel = new UsersViewModel();
-        BindingContext = _viewModel;
     }
 
     protected override void OnAppearing()
     {
         base.OnAppearing();
-        _viewModel.LoadUsersCommand.Execute(null);
+        if (BindingContext is UsersViewModel vm &&
+            vm.LoadUsersCommand.CanExecute(null))
+        {
+            vm.LoadUsersCommand.Execute(null);
+        }
+    }
+
+    private async void OnBackToDashboardClicked(object sender, EventArgs e)
+    {
+        await Shell.Current.GoToAsync("///DashboardPage");
     }
 }

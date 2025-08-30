@@ -2627,3 +2627,253 @@ section,
   color: color-mix(in srgb, var(--default-color), transparent 60%);
   font-size: 14px;
 }
+
+:root {
+    --bg: #f7f8fb;
+    --card: #fff;
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --brand: #3b82f6;
+    --brand-ink: #0b65f5;
+    --ring: rgba(59,130,246,.35);
+    --border: #e5e7eb;
+    --success: #10b981;
+    --warning: #f59e0b;
+}
+
+html, body {
+    background: var(--bg);
+    color: var(--ink);
+}
+
+.container-narrow {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1.25rem;
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 1rem 0 1.5rem;
+}
+
+.page-title {
+    font-weight: 800;
+    letter-spacing: .2px;
+    margin: 0;
+}
+
+.page-sub {
+    color: var(--muted);
+    margin-top: .25rem;
+    font-size: .95rem;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    background: var(--brand);
+    color: #fff;
+    border: none;
+    border-radius: .75rem;
+    padding: .7rem 1rem;
+    font-weight: 600;
+    box-shadow: 0 6px 14px rgba(59,130,246,.18);
+    transition: .15s transform ease, .15s box-shadow ease, .15s background ease;
+}
+
+    .btn:hover {
+        background: var(--brand-ink);
+        transform: translateY(-1px);
+    }
+
+    .btn:focus {
+        outline: 3px solid var(--ring);
+        outline-offset: 2px;
+    }
+
+.btn-ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--border);
+}
+
+    .btn-ghost:hover {
+        background: #f3f4f6;
+    }
+
+.grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(12, minmax(0,1fr));
+}
+
+.col-4 {
+    grid-column: span 4;
+}
+
+@media (max-width:1024px) {
+    .col-4 {
+        grid-column: span 6;
+    }
+}
+
+@media (max-width:640px) {
+    .col-4 {
+        grid-column: span 12;
+    }
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 1rem;
+    box-shadow: 0 4px 14px rgba(17,24,39,.04);
+}
+
+.card-muted {
+    color: var(--muted);
+    font-size: .9rem;
+}
+
+.card-compact {
+    padding: 1rem;
+}
+
+.stat {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+    .stat .icon {
+        width: 44px;
+        height: 44px;
+        border-radius: .75rem;
+        background: #eff6ff;
+        display: grid;
+        place-items: center;
+        border: 1px solid #dbeafe;
+    }
+
+    .stat .value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .stat .label {
+        color: var(--muted);
+        font-size: .9rem;
+        margin-top: .1rem;
+    }
+
+.table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    border-radius: .75rem;
+    background: var(--card);
+}
+
+    .table th, .table td {
+        padding: .85rem .9rem;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+    }
+
+    .table th {
+        background: #f9fafb;
+        font-weight: 700;
+        font-size: .9rem;
+        color: #374151;
+    }
+
+    .table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .table tbody tr:hover {
+        background: #fafafa;
+    }
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: .2rem .6rem;
+    font-size: .8rem;
+    border: 1px solid var(--border);
+}
+
+.badge-success {
+    background: #ecfdf5;
+    color: #065f46;
+    border-color: #a7f3d0;
+}
+
+.badge-warning {
+    background: #fffbeb;
+    color: #92400e;
+    border-color: #fde68a;
+}
+
+.empty {
+    text-align: center;
+    padding: 3rem;
+    border: 1px dashed var(--border);
+    border-radius: 1rem;
+    background: linear-gradient(#fff, #fff) padding-box, repeating-linear-gradient(-45deg,#e5e7eb 0 10px,transparent 10px 20px) border-box;
+}
+
+    .empty h3 {
+        margin: .5rem 0 0;
+        font-weight: 800;
+    }
+
+    .empty p {
+        color: var(--muted);
+        margin: .25rem 0 1rem;
+    }
+/* --- sticky footer (genérico) --- */
+html, body {
+    height: 100%;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* o conteúdo principal cresce e empurra o footer para baixo */
+main, .main, .content, .page-content {
+    flex: 1 0 auto;
+    padding-bottom: 2rem; /* espaço antes do footer */
+}
+
+/* footer sempre visível e com leve destaque */
+footer, .site-footer {
+    flex-shrink: 0;
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+    padding: 1rem 0;
+    text-align: center;
+    color: #6b7280;
+}
+
+/* opcional: quando existir “cards” centralizados, limite a largura */
+.container-narrow {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1.25rem;
+}

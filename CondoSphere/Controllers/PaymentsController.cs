@@ -15,7 +15,7 @@ using CondoSphere.Services;
 namespace CondoSphere.Controllers
 {
     [Authorize(Roles = "Administrator,Manager,Resident")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+   
     public class PaymentsController : Controller
     {
         private readonly IPaymentRepository _payments;
@@ -53,9 +53,6 @@ namespace CondoSphere.Controllers
                 publishableKey = _cfg["Stripe:PublishableKey"]
             });
         }
-
-
-
 
 
         public async Task<IActionResult> Index()

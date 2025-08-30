@@ -1,9 +1,28 @@
-namespace CondoSphereMobile.Views;
+using CondoSphereMobile.ViewModels; // <- importante
 
-public partial class CondominiumsPage : ContentPage
+namespace CondoSphereMobile.Views
 {
-	public CondominiumsPage()
-	{
-		InitializeComponent();
-	}
+    public partial class CondominiumsPage : ContentPage
+    {
+        public CondominiumsPage()
+        {
+            InitializeComponent();
+        }
+
+        protected override void OnAppearing()
+        {
+            base.OnAppearing();
+
+            if (BindingContext is CondominiumsViewModel vm &&
+                vm.LoadCondominiumsCommand.CanExecute(null))
+            {
+                vm.LoadCondominiumsCommand.Execute(null);
+            }
+        }
+
+        private async void OnBackToDashboardClicked(object sender, EventArgs e)
+        {
+            await Shell.Current.GoToAsync("///DashboardPage");
+        }
+    }
 }
