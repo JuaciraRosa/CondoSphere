@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System.ComponentModel.DataAnnotations;
 
 namespace CondoSphere.Models
 {
@@ -17,10 +18,12 @@ namespace CondoSphere.Models
 
         [Required]
         [DataType(DataType.Date)]
-        public DateTime Date { get; set; }
+        public DateTime Date { get; set; } = DateTime.UtcNow;
 
         [Required]
         public int CondominiumId { get; set; }
-        public Condominium Condominium { get; set; }
+
+        [ValidateNever]
+        public Condominium? Condominium { get; set; }
     }
 }

@@ -1,4 +1,5 @@
-﻿@model IEnumerable<CondoSphere.Models.Quota>
+﻿@using System.Globalization
+@model IEnumerable<CondoSphere.Models.Quota>
 
 @{
     ViewData["Title"] = "Quotas";
@@ -18,6 +19,7 @@
     <h5>Generate quotas</h5>
 
     <form asp-action="GenerateMonthly" method="post" class="row g-2">
+        <div asp-validation-summary="All" class="text-danger mb-2"></div>
         @Html.AntiForgeryToken()
         <div class="col-md-4">
             <label class="form-label">Condominium</label>
@@ -40,28 +42,8 @@
         </div>
     </form>
 
-    <form asp-action="GenerateRange" method="post" class="row g-2 mt-2">
-        @Html.AntiForgeryToken()
-        <div class="col-md-4">
-            <label class="form-label">Condominium</label>
-            <select name="condominiumId" class="form-select" asp-items="ViewBag.Condominiums"></select>
-        </div>
-        <div class="col-md-3">
-            <label class="form-label">From (yyyy-mm)</label>
-            <input name="from" type="month" class="form-control" required />
-        </div>
-        <div class="col-md-3">
-            <label class="form-label">To (yyyy-mm)</label>
-            <input name="to" type="month" class="form-control" required />
-        </div>
-        <div class="col-md-1">
-            <label class="form-label">Amount</label>
-            <input name="amount" type="number" step="0.01" class="form-control" required />
-        </div>
-        <div class="col-md-1 d-flex align-items-end">
-            <button class="btn btn-outline-secondary w-100">Range</button>
-        </div>
-    </form>
+
+    
 </div>
 
 <div class="card shadow-sm">
@@ -81,7 +63,7 @@
                 {
                     <tr>
                         <td>@(item?.Unit?.Number ?? $"#{item.UnitId}")</td>
-                        <td>@item.Amount.ToString("C")</td>
+                        <td>@item.Amount.ToString("C", new CultureInfo("pt-PT"))</td>
                         <td>@item.DueDate.ToString("yyyy-MM-dd")</td>
                         <td>
                             @if (item.IsPaid)

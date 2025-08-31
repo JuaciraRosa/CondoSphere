@@ -1,0 +1,28 @@
+﻿@model CondoSphere.Features.Voting.MeetingVoteDto
+@{
+    ViewData["Title"] = "Votação — Lançar Voto";
+    var meetingId = (int)ViewBag.MeetingId;
+}
+<h2>Votação — Reunião #@meetingId</h2>
+
+<form asp-action="Cast" method="post">
+    <div asp-validation-summary="All" class="text-danger mb-2"></div>
+    <input type="hidden" asp-for="MeetingId" value="@meetingId" />
+    <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input asp-for="VoterEmail" class="form-control" placeholder="o.seu@email.com" required />
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Unidade (fração)</label>
+        <input asp-for="UnitNumber" class="form-control" placeholder="A1" required />
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Voto</label>
+        <select asp-for="Choice" class="form-select" required>
+            <option>A favor</option>
+            <option>Contra</option>
+            <option>Abstenção</option>
+        </select>
+    </div>
+    <button class="btn btn-primary">Submeter Voto</button>
+</form>

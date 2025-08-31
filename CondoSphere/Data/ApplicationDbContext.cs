@@ -24,12 +24,28 @@ namespace CondoSphere.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            // ===== Relations =====
+
             // Unit -> Owner (User)
             modelBuilder.Entity<Unit>()
                 .HasOne(u => u.Owner)
                 .WithMany(x => x.OwnedUnits)
                 .HasForeignKey(u => u.OwnerId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Unit -> Condominium
+            modelBuilder.Entity<Unit>()
+                .HasOne(u => u.Condominium)
+                .WithMany(c => c.Units)
+                .HasForeignKey(u => u.CondominiumId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Condominium -> Company
+            modelBuilder.Entity<Condominium>()
+                .HasOne(c => c.Company)
+                .WithMany(co => co.Condominiums)
+                .HasForeignKey(c => c.CompanyId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // MaintenanceRequest -> SubmittedBy (User)
             modelBuilder.Entity<MaintenanceRequest>()
@@ -38,7 +54,55 @@ namespace CondoSphere.Data
                 .HasForeignKey(m => m.SubmittedById)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Precisão para valores monetários
+            // MaintenanceRequest -> Condominium
+            modelBuilder.Entity<MaintenanceRequest>()
+                .HasOne(m => m.Condominium)
+                .WithMany(c => c.MaintenanceRequests)
+                .HasForeignKey(m => m.CondominiumId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Meeting -> Condominium
+            modelBuilder.Entity<Meeting>()
+                .HasOne(m => m.Condominium)
+                .WithMany(c => c.Meetings)
+                .HasForeignKey(m => m.CondominiumId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Notification -> Condominium
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.Condominium)
+                .WithMany(c => c.Notifications)
+                .HasForeignKey(n => n.CondominiumId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Notification <-> User (many-to-many)
+            modelBuilder.Entity<Notification>()
+                .HasMany(n => n.Recipients)
+                .WithMany()
+                .UsingEntity(j => j.ToTable("NotificationRecipients"));
+
+            // Quota -> Unit
+            modelBuilder.Entity<Quota>()
+                .HasOne(q => q.Unit)
+                .WithMany(u => u.Quotas)
+                .HasForeignKey(q => q.UnitId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Payment -> Quota (1:1)
+            modelBuilder.Entity<Quota>()
+                .HasOne(q => q.Payment)
+                .WithOne(p => p.Quota)
+                .HasForeignKey<Payment>(p => p.QuotaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // User -> Company (opcional)
+            modelBuilder.Entity<User>()
+                .HasOne<Company>()
+                .WithMany(c => c.Users)
+                .HasForeignKey(u => u.CompanyId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // ===== Precision for money =====
             modelBuilder.Entity<Quota>()
                 .Property(q => q.Amount)
                 .HasPrecision(18, 2);
@@ -47,18 +111,15 @@ namespace CondoSphere.Data
                 .Property(e => e.Amount)
                 .HasPrecision(18, 2);
 
-            // (Adicione outras precisões se necessário)
             modelBuilder.Entity<Payment>()
-            .Property(p => p.Amount)
-            .HasPrecision(18, 2);
+                .Property(p => p.Amount)
+                .HasPrecision(18, 2);
 
-            modelBuilder.Entity<Quota>()
-           .HasOne(q => q.Payment)
-           .WithOne(p => p.Quota)
-           .HasForeignKey<Payment>(p => p.QuotaId)
-           .OnDelete(DeleteBehavior.Restrict);
-
-
+            // ===== Defaults =====
+            modelBuilder.Entity<User>()
+                .Property(u => u.ProfileImagePath)
+                .IsRequired()
+                .HasDefaultValue("");
         }
 
 

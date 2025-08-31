@@ -11,38 +11,41 @@ using CondoSphere.Data.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using CondoSphere.Services;
+using CondoSphere.Messaging;
+using System.Security.Claims;
 
 namespace CondoSphere.Controllers
 {
     [Authorize(Roles = "Administrator,Manager,Resident")]
-   
+
+    [Authorize(Roles = "Administrator,Manager,Resident")]
     public class PaymentsController : Controller
     {
         private readonly IPaymentRepository _payments;
         private readonly IQuotaRepository _quotas;
-        private readonly IPaymentService _paymentService;  // <—
-        private readonly IConfiguration _cfg;              // <—
+        private readonly IPaymentService _paymentService;
+        private readonly IConfiguration _cfg;
+        private readonly DomainNotificationService _notify;
 
         public PaymentsController(
             IPaymentRepository payments,
             IQuotaRepository quotas,
-            IPaymentService paymentService,   // <—
-            IConfiguration cfg)               // <—
+            IPaymentService paymentService,
+            IConfiguration cfg,
+            DomainNotificationService notify)
         {
             _payments = payments;
             _quotas = quotas;
             _paymentService = paymentService;
             _cfg = cfg;
+            _notify = notify;
         }
 
-        // ... (Index/Details/Create/Edit/Delete que já tens)
-
-        // ===== Stripe AJAX (mesma rota que o front espera) =====
+        // ===== Stripe AJAX =====
         public class CreateReq { public int QuotaId { get; set; } }
 
-        // POST /payments/card/intent
         [HttpPost("/payments/card/intent")]
-        [IgnoreAntiforgeryToken] // chamadas fetch; se quiseres, envia o token no header e troca por [ValidateAntiForgeryToken]
+        [IgnoreAntiforgeryToken]
         public async Task<IActionResult> CardIntent([FromBody] CreateReq req)
         {
             var (clientSecret, intentId) = await _paymentService.CreateCardIntentAsync(req.QuotaId);
@@ -53,7 +56,6 @@ namespace CondoSphere.Controllers
                 publishableKey = _cfg["Stripe:PublishableKey"]
             });
         }
-
 
         public async Task<IActionResult> Index()
         {
@@ -85,9 +87,7 @@ namespace CondoSphere.Controllers
                 return View(model);
             }
 
-            // campos de sistema
             model.CreatedAt = DateTime.UtcNow;
-
             await _payments.AddAsync(model);
             return RedirectToAction(nameof(Index));
         }
@@ -114,8 +114,23 @@ namespace CondoSphere.Controllers
                 return View(model);
             }
 
+            // pega estado anterior
+            var before = await _payments.GetByIdDetailedAsync(id);
+            if (before == null) return NotFound();
+            var wasPaidBefore = before.Status == PaymentStatusType.Succeeded;
+
             _payments.Update(model);
             await _payments.SaveChangesAsync();
+
+            // se mudou para pago, notifica por email
+            var isPaidNow = model.Status == PaymentStatusType.Succeeded;
+            if (!wasPaidBefore && isPaidNow)
+            {
+                var to = ResolveDestEmail(model);
+                await _notify.PaymentReceivedAsync(to, model.Id, model.Amount);
+                TempData["ok"] = $"Pagamento #{model.Id:D6} confirmado. Email enviado para {to}.";
+            }
+
             return RedirectToAction(nameof(Index));
         }
 
@@ -148,6 +163,20 @@ namespace CondoSphere.Controllers
             ViewBag.QuotaId = new SelectList(items, "Value", "Text", current?.QuotaId);
             ViewBag.MethodList = new SelectList(Enum.GetValues(typeof(PaymentMethodType)));
             ViewBag.StatusList = new SelectList(Enum.GetValues(typeof(PaymentStatusType)));
+        }
+
+        private string ResolveDestEmail(Payment payment)
+        {
+            // Se o Payment tiver um campo de e-mail do pagador, usa aqui:
+            // if (!string.IsNullOrWhiteSpace(payment.PayerEmail)) return payment.PayerEmail;
+
+            // fallback: email do utilizador autenticado
+            var claim = User.FindFirst(ClaimTypes.Email) ?? User.FindFirst(ClaimTypes.Name);
+            if (claim != null && !string.IsNullOrWhiteSpace(claim.Value))
+                return claim.Value;
+
+            // último recurso (teste)
+            return "Support@condosphere-web-app.somee.com";
         }
     }
 }

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
 
 namespace CondoSphereMobile.Models
 {
@@ -10,8 +12,8 @@ namespace CondoSphereMobile.Models
     {
         Open = 0,
         InProgress = 1,
-        Completed = 2,
+        Resolved = 2,
         Rejected = 3,
-        Cancelled = 3
+      
     }
 }

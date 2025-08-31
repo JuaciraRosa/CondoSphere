@@ -39,6 +39,7 @@ namespace CondoSphere.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Company company)
         {
+           
             if (!ModelState.IsValid) return View(company);
 
             await _companyRepo.AddAsync(company);
@@ -48,6 +49,8 @@ namespace CondoSphere.Controllers
         // GET: /Companies/Edit/5
         public async Task<IActionResult> Edit(int id)
         {
+            
+
             var company = await _companyRepo.GetByIdAsync(id);
             if (company == null) return NotFound();
             return View(company);
@@ -58,6 +61,7 @@ namespace CondoSphere.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Company company)
         {
+           
             if (id != company.Id) return NotFound();
             if (!ModelState.IsValid) return View(company);
 

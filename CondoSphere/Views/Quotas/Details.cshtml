@@ -1,4 +1,5 @@
-﻿@model CondoSphere.Models.Quota
+﻿@using System.Globalization
+@model CondoSphere.Models.Quota
 
 @{
     ViewData["Title"] = "Quota Details";
@@ -16,7 +17,7 @@
                 </div>
                 <div class="col-md-4">
                     <div class="fw-semibold text-muted">Amount</div>
-                    <div>@Model.Amount.ToString("C")</div>
+                    <div>@Model.Amount.ToString("C", new CultureInfo("pt-PT"))</div>
                 </div>
                 <div class="col-md-4">
                     <div class="fw-semibold text-muted">Due date</div>

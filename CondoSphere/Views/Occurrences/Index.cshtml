@@ -1,0 +1,45 @@
+﻿@model IEnumerable<CondoSphere.Features.Ocurrences.OccurrenceDto>
+@{
+    ViewData["Title"] = "Ocorrências";
+
+    var map = ViewBag.CondoLookup as Dictionary<int, (string Condo, string Company)>;
+}
+<h2>Ocorrências</h2>
+<p><a class="btn btn-primary" href="/Occurrences/Create">Nova Ocorrência</a></p>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Condomínio</th>
+            <th>Unidade</th>
+            <th>Título</th>
+            <th>Estado</th>
+            <th>Criada em</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var o in Model)
+        {
+            var text = o.CondominiumId;
+            string display = text.ToString();
+
+            if (map != null && map.TryGetValue(o.CondominiumId, out var info))
+                display = $"{info.Condo} ({info.Company})";
+            <tr>
+                <td>@display</td>
+                <td>@o.UnitNumber</td>
+                <td>@o.Title</td>
+                <td>@o.Status</td>
+                <td>@o.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                <td>
+                    <form asp-action="ChangeStatus" method="post" style="display:inline">
+                        <input type="hidden" name="id" value="@o.Id" />
+                        <button class="btn btn-sm btn-warning" name="status" value="InProgress">Em progresso</button>
+                        <button class="btn btn-sm btn-success" name="status" value="Resolved">Resolver</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+

@@ -9,11 +9,27 @@ namespace CondoSphere.Data
         public static async Task SeedAsync(IServiceProvider sp)
         {
             using var scope = sp.CreateScope();
+            var env = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
             var ctx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var roleMgr = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
             var userMgr = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
 
-            // 1) Ensure schema (creates AspNetRoles, AspNetUsers, etc.)
+            // --- (0) Garante a imagem padrão em wwwroot/images/default-user.png ---
+            var webroot = env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            var imagesDir = Path.Combine(webroot, "images");
+            Directory.CreateDirectory(imagesDir);
+            var defaultAvatarFsPath = Path.Combine(imagesDir, "default-user.png");
+            var defaultAvatarWebPath = "/images/default-user.png";
+
+            if (!File.Exists(defaultAvatarFsPath))
+            {
+                // PNG 1x1 transparente
+                var base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+X4iQAAAAASUVORK5CYII=";
+                var bytes = Convert.FromBase64String(base64);
+                await File.WriteAllBytesAsync(defaultAvatarFsPath, bytes);
+            }
+
+            // 1) Ensure schema (inclui AspNetUsers/AspNetRoles)
             await ctx.Database.MigrateAsync();
 
             // 2) Roles
@@ -52,19 +68,40 @@ namespace CondoSphere.Data
                         FullName = name,
                         EmailConfirmed = true,
                         IsActive = true,
-                        CompanyId = company.Id
+                        CompanyId = company.Id,
+                        // >>> garante foto padrão <<<
+                        ProfileImagePath = defaultAvatarWebPath
                     };
                     var res = await userMgr.CreateAsync(u, password);
                     if (!res.Succeeded) throw new Exception(string.Join("; ", res.Errors.Select(e => e.Description)));
                 }
+                else
+                {
+                    // se já existe mas sem caminho, corrige
+                    if (string.IsNullOrWhiteSpace(u.ProfileImagePath))
+                    {
+                        u.ProfileImagePath = defaultAvatarWebPath;
+                        await userMgr.UpdateAsync(u);
+                    }
+                }
+
                 if (!await userMgr.IsInRoleAsync(u, role))
                     await userMgr.AddToRoleAsync(u, role);
+
                 return u;
             }
 
             var admin = await EnsureUser("admin@condo.com", "Admin User", "Admin123$", "Administrator");
             var manager = await EnsureUser("manager@condo.com", "Manager User", "Manager123$", "Manager");
             var resident = await EnsureUser("resident@condo.com", "Resident User", "Resident123$", "Resident");
+            // Usuário de teste para reset de senha (Yopmail)
+            var testReset = await EnsureUser(
+                "condosphere.reset.test@yopmail.com",
+                "ZZZ_Reset_Tester_Account_DO_NOT_USE",
+                "Reset123$",
+                "Resident"
+            );
+
             // 5) Unit do residente (cria se não existir e garante Id)
             var unit = await ctx.Units
                 .FirstOrDefaultAsync(u => u.Number == "A101" && u.CondominiumId == condo.Id);
@@ -98,6 +135,15 @@ namespace CondoSphere.Data
                 await ctx.SaveChangesAsync();
             }
 
+            // 7) (extra de segurança) Corrige qualquer usuário com NULL/empty no banco
+            var toFix = await ctx.Users
+                .Where(x => x.ProfileImagePath == null || x.ProfileImagePath == "")
+                .ToListAsync();
+            if (toFix.Count > 0)
+            {
+                foreach (var u in toFix) u.ProfileImagePath = defaultAvatarWebPath;
+                await ctx.SaveChangesAsync();
+            }
         }
     }
 }

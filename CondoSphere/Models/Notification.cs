@@ -1,4 +1,5 @@
 ﻿using CondoSphere.Data;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 
 namespace CondoSphere.Models
@@ -6,19 +7,24 @@ namespace CondoSphere.Models
     public class Notification
     {
         public int Id { get; set; }
-        [Required]
-        [StringLength(500, ErrorMessage = "Message can't exceed 500 characters.")]
-        public string Message { get; set; }
+        [Required, StringLength(500)]
+        [Display(Name = "Message")]
+        public string Message { get; set; } = string.Empty;
+
+        [Required, DataType(DataType.DateTime)]
+        [Display(Name = "Sent At")]
+        public DateTime SentAt { get; set; } = DateTime.UtcNow;
 
         [Required]
-        [DataType(DataType.DateTime)]
-        public DateTime SentAt { get; set; }
-
-        [Required]
+        [Display(Name = "Condominium")]
         public int CondominiumId { get; set; }
-        public Condominium Condominium { get; set; }
 
-        public ICollection<User> Recipients { get; set; }
+        [ValidateNever]
+        public Condominium? Condominium { get; set; }
+
+        [ValidateNever]
+        [Display(Name = "Recipients")]
+        public ICollection<User> Recipients { get; set; } = new List<User>();
     }
 
 }

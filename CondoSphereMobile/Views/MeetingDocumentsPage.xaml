@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CondoSphereMobile.Views.MeetingDocumentsPage"
+             Title="MeetingDocumentsPage">
+
+
+
+    <VerticalStackLayout Padding="16" Spacing="8">
+        <CollectionView ItemsSource="{Binding Items}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Frame Padding="10">
+                        <VerticalStackLayout>
+                            <Label Text="{Binding ScheduledDate, StringFormat='Data: {0:dd/MM/yyyy HH:mm}'}" FontAttributes="Bold" />
+                            <Label Text="{Binding Agenda}" LineBreakMode="WordWrap"/>
+                            <Button Text="Download" IsEnabled="{Binding HasDocument}"
+                                    Command="{Binding BindingContext.DownloadCommand, Source={x:Reference Name=PageRoot}}"
+                                    CommandParameter="{Binding DownloadUrl}" />
+                        </VerticalStackLayout>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </VerticalStackLayout>
+</ContentPage>

@@ -1,6 +1,7 @@
 ﻿using CondoSphere.API.Models;
 using CondoSphere.Data;
 using CondoSphere.Data.Interfaces;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -15,6 +16,7 @@ namespace CondoSphere.API
     [AllowAnonymous]
     [Route("api/auth")]
     [ApiController]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class AuthApiController : ControllerBase
     {
         private readonly UserManager<User> _userManager;

@@ -1,4 +1,5 @@
 ﻿using CondoSphere.Data;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -7,9 +8,10 @@ using System.Security.Claims;
 
 namespace CondoSphere.API
 {
+    [Authorize(Roles = "Resident")]
     [Route("api/residents")]
     [ApiController]
-    [AllowAnonymous]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class ResidentsApiController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

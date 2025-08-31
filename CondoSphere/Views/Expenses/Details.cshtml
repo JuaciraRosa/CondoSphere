@@ -1,4 +1,5 @@
-﻿@model CondoSphere.Models.Expense
+﻿@using System.Globalization
+@model CondoSphere.Models.Expense
 
 @{
     ViewData["Title"] = "Expense Details";
@@ -27,7 +28,7 @@
                 </div>
                 <div class="col-md-3">
                     <div class="fw-semibold text-muted">Amount</div>
-                    <div>@Model.Amount.ToString("C2")</div>
+                    <div>@Model.Amount.ToString("C", CultureInfo.GetCultureInfo("pt-PT"))</div>
                 </div>
                 <div class="col-md-3">
                     <div class="fw-semibold text-muted">Date</div>
@@ -35,7 +36,7 @@
                 </div>
                 <div class="col-md-6">
                     <div class="fw-semibold text-muted">Condominium</div>
-                    <div>@Model.Condominium?.Name ?? "-"</div>
+                    <div>@Model.Condominium?.Name</div>
                 </div>
             </div>
             <div class="mt-4 d-flex gap-2">

@@ -8,9 +8,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CondoSphere.API
 {
+    [Authorize(Roles = "Administrator")]
     [Route("api/users")]
     [ApiController]
-    [AllowAnonymous]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class UsersApiController : ControllerBase
     {
         private readonly IUserRepository _userRepo;

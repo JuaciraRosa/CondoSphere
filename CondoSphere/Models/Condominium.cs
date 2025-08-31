@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System.ComponentModel.DataAnnotations;
 
 namespace CondoSphere.Models
 {
@@ -14,14 +15,28 @@ namespace CondoSphere.Models
         [StringLength(200, ErrorMessage = "Address can't exceed 200 characters.")]
         public string Address { get; set; }
 
+
+        // FK -> Company
         [Required]
         public int CompanyId { get; set; }
-        public Company Company { get; set; }
 
+        [ValidateNever]
+        public Company? Company { get; set; }
+
+
+        [ValidateNever]
         public ICollection<Unit> Units { get; set; }
+
+        [ValidateNever]
         public ICollection<Meeting> Meetings { get; set; }
+
+        [ValidateNever]
         public ICollection<MaintenanceRequest> MaintenanceRequests { get; set; }
+
+        [ValidateNever]
         public ICollection<Expense> Expenses { get; set; }
+
+        [ValidateNever]
         public ICollection<Notification> Notifications { get; set; }
     }
 

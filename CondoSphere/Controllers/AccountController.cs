@@ -1,4 +1,5 @@
 ﻿using CondoSphere.Data;
+using CondoSphere.Messaging;
 using CondoSphere.Models.Account;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -15,17 +16,20 @@ namespace CondoSphere.Controllers
         private readonly SignInManager<User> _signInManager;
         private readonly ApplicationDbContext _db;
         private readonly IWebHostEnvironment _env;
+        private readonly IEmailSender _emailSender;
 
         public AccountController(
             UserManager<User> userManager,
             SignInManager<User> signInManager,
             ApplicationDbContext db,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env,
+             IEmailSender emailSender)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _db = db;
             _env = env;
+            _emailSender = emailSender;
         }
 
         [Authorize]
@@ -113,17 +117,39 @@ namespace CondoSphere.Controllers
         public async Task<IActionResult> UpdateProfile(ProfileViewModel model, IFormFile? avatar)
         {
             var user = await _userManager.GetUserAsync(User);
+            if (user == null) return NotFound();
 
-            // Atualiza dados básicos
-            user.FullName = model.FullName;
+            // Detecta se é um POST do formulário de avatar (multipart com ficheiro)
+            bool isPhotoUpload = Request.HasFormContentType && Request.Form.Files?.Count > 0 && avatar != null && avatar.Length > 0;
+            if (isPhotoUpload)
+            {
+                // Evita validação de FullName quando o post é só da foto
+                ModelState.Remove(nameof(ProfileViewModel.FullName));
+            }
+
+            // Atualiza dados básicos SOMENTE se veio no POST (não sobrescreve com null)
+            if (!isPhotoUpload) // post do formulário "Basic Information"
+            {
+                if (model.FullName != null) // veio no form
+                {
+                    var trimmed = model.FullName.Trim();
+                    if (!string.IsNullOrWhiteSpace(trimmed))
+                    {
+                        user.FullName = trimmed;
+                    }
+                    // se veio vazio, mantém o valor atual do banco
+                }
+            }
 
             // Upload de foto (opcional)
-            if (avatar != null && avatar.Length > 0)
+            if (isPhotoUpload)
             {
                 var uploadsRoot = Path.Combine(_env.WebRootPath, "uploads", "avatars");
                 Directory.CreateDirectory(uploadsRoot);
 
-                var fileName = $"{user.Id}_{Path.GetFileNameWithoutExtension(avatar.FileName)}{Path.GetExtension(avatar.FileName)}";
+                var safeNameNoExt = Path.GetFileNameWithoutExtension(avatar!.FileName);
+                var ext = Path.GetExtension(avatar.FileName);
+                var fileName = $"{user.Id}_{safeNameNoExt}{ext}";
                 var filePath = Path.Combine(uploadsRoot, fileName);
 
                 using (var fs = new FileStream(filePath, FileMode.Create))
@@ -139,6 +165,9 @@ namespace CondoSphere.Controllers
                 foreach (var e in res.Errors) ModelState.AddModelError("", e.Description);
                 // Repassa o path atual para não “sumir” o preview na volta
                 model.ProfileImagePath = user.ProfileImagePath ?? "/uploads/avatars/default.png";
+                // Garante que mostramos o nome atual se o post era só foto
+                if (string.IsNullOrWhiteSpace(model.FullName))
+                    model.FullName = user.FullName ?? "";
                 return View("Profile", model);
             }
 
@@ -329,7 +358,6 @@ namespace CondoSphere.Controllers
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user == null || !(await _userManager.IsEmailConfirmedAsync(user)))
             {
-                // Não revela se existe ou não
                 TempData["Success"] = "If that account exists, you will receive an email to reset the password.";
                 return RedirectToAction(nameof(ForgotPassword));
             }
@@ -338,8 +366,17 @@ namespace CondoSphere.Controllers
             var callbackUrl = Url.Action("ResetPassword", "Account",
                 new { token, email = user.Email }, protocol: Request.Scheme);
 
-            // aqui usarias IEmailSender para enviar o link
-            Console.WriteLine($"Reset password link: {callbackUrl}");
+            var body = $@"
+        <p>Hello {System.Net.WebUtility.HtmlEncode(user.Email)},</p>
+        <p>Click the link below to reset your password:</p>
+        <p><a href=""{callbackUrl}"">Reset Password</a></p>
+        <p>If you did not request this, you can ignore this email.</p>";
+
+            await _emailSender.SendAsync(
+                to: user.Email!,
+                subject: "CondoSphere - Reset your password",
+                htmlBody: body
+            );
 
             TempData["Success"] = "Check your email for password reset instructions.";
             return RedirectToAction(nameof(ForgotPassword));

@@ -1,0 +1,25 @@
+﻿@model IEnumerable<CondoSphere.Controllers.PaymentsSummaryDto>
+@{
+    ViewData["Title"] = "Pagamentos por Mês";
+    var year = (int)ViewBag.Year;
+}
+<h2>Pagamentos por Mês - @year</h2>
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th>Mês</th>
+            <th>Total</th>
+            <th>Qtd</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var m in Model)
+        {
+            <tr>
+                <td>@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m.Month)</td>
+                <td>@m.Total.ToString("C")</td>
+                <td>@m.Count</td>
+            </tr>
+        }
+    </tbody>
+</table>

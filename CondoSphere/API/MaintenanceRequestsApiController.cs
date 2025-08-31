@@ -11,6 +11,7 @@ namespace CondoSphere.API
     [Route("api/maintenance-requests")]
     [ApiController]
     [AllowAnonymous]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class MaintenanceRequestsApiController : ControllerBase
     {
         private readonly IMaintenanceRequestRepository _repository;

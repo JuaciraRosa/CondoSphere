@@ -96,53 +96,73 @@ namespace CondoSphere.Services
         public async Task HandleWebhookAsync(string json, string signatureHeader)
         {
             var secret = _cfg["Stripe:WebhookSecret"];
+            if (string.IsNullOrWhiteSpace(secret))
+                throw new InvalidOperationException("Stripe WebhookSecret not configured.");
+
             var stripeEvent = EventUtility.ConstructEvent(json, signatureHeader, secret);
 
-            // Trabalhamos com literais para evitar dependência de Stripe.Events.*
-            if (stripeEvent.Type == "payment_intent.succeeded" ||
-                stripeEvent.Type == "payment_intent.payment_failed" ||
-                stripeEvent.Type == "payment_intent.canceled")
+            // usa as tuas constantes PI_SUCCEEDED/PI_FAILED/PI_CANCELED
+            if (stripeEvent.Type is "payment_intent.succeeded"
+                                or "payment_intent.payment_failed"
+                                or "payment_intent.canceled")
             {
-                var pi = stripeEvent.Data.Object as PaymentIntent;
-                if (pi == null) return;
+                var evtPi = stripeEvent.Data.Object as PaymentIntent;
+                if (evtPi == null) return;
 
-                // Recarrega expandindo latest_charge para obter ReceiptUrl
+                // Recarrega expandindo latest_charge para ter ReceiptUrl
                 var piService = new PaymentIntentService();
-                pi = await piService.GetAsync(pi.Id, new PaymentIntentGetOptions
+                var pi = await piService.GetAsync(evtPi.Id, new PaymentIntentGetOptions
                 {
                     Expand = new List<string> { "latest_charge" }
                 });
 
-                var payment = await _db.Payments.FirstOrDefaultAsync(p => p.ProviderPaymentId == pi.Id);
+                var payment = await _db.Payments
+                    .Include(p => p.Quota)
+                    .FirstOrDefaultAsync(p => p.ProviderPaymentId == pi.Id);
+
                 if (payment == null) return;
+
+                // IDEMPOTÊNCIA: se já marcámos como succeeded, não volta a fazer nada
+                if (payment.Status == PaymentStatusType.Succeeded &&
+                    stripeEvent.Type == "payment_intent.succeeded")
+                {
+                    return;
+                }
+
+                bool changed = false;
 
                 if (stripeEvent.Type == "payment_intent.succeeded")
                 {
                     payment.Status = PaymentStatusType.Succeeded;
                     payment.PaidAt = DateTime.UtcNow;
                     payment.ReceiptUrl = pi.LatestCharge?.ReceiptUrl;
+                    changed = true;
 
-                    if (pi.Metadata != null &&
-                        pi.Metadata.TryGetValue("quota_id", out var qid) &&
-                        int.TryParse(qid, out var quotaId))
-                    {
-                        var quota = await _db.Quotas.FindAsync(quotaId);
-                        if (quota != null) quota.IsPaid = true;
-                    }
+                    if (payment.Quota != null && !payment.Quota.IsPaid)
+                        payment.Quota.IsPaid = true;
                 }
                 else if (stripeEvent.Type == "payment_intent.payment_failed")
                 {
-                    payment.Status = PaymentStatusType.Failed;
+                    if (payment.Status != PaymentStatusType.Failed)
+                    {
+                        payment.Status = PaymentStatusType.Failed;
+                        changed = true;
+                    }
                 }
                 else if (stripeEvent.Type == "payment_intent.canceled")
                 {
-                    payment.Status = PaymentStatusType.Canceled;
+                    if (payment.Status != PaymentStatusType.Canceled)
+                    {
+                        payment.Status = PaymentStatusType.Canceled;
+                        changed = true;
+                    }
                 }
 
-                await _db.SaveChangesAsync();
+                if (changed)
+                    await _db.SaveChangesAsync();
             }
-            // Outros eventos podem ser ignorados ou tratados aqui conforme necessário
         }
+
 
 
 

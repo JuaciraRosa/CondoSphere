@@ -1,0 +1,26 @@
+﻿@model IEnumerable<CondoSphere.Models.Quota>
+@{
+    ViewData["Title"] = "Quotas em Aberto";
+}
+<h2>Quotas em Aberto</h2>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Condomínio</th>
+            <th>Unidade</th>
+            <th>Valor</th>
+            <th>Vencimento</</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var q in Model)
+        {
+            <tr>
+                <td>@q.Unit?.Condominium?.Name</td>
+                <td>@q.Unit?.Number</td>
+                <td>@q.Amount.ToString("C")</td>
+                <td>@q.DueDate.ToString("dd/MM/yyyy")</td>
+            </tr>
+        }
+    </tbody>
+</table>

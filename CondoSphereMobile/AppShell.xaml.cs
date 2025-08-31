@@ -18,6 +18,8 @@ namespace CondoSphereMobile
             Routing.RegisterRoute(nameof(QuotasPage), typeof(QuotasPage));
             Routing.RegisterRoute(nameof(MaintenanceRequestsPage), typeof(MaintenanceRequestsPage));
             Routing.RegisterRoute(nameof(NotificationsPage), typeof(NotificationsPage));
+            Routing.RegisterRoute(nameof(ReceiptsPage), typeof(ReceiptsPage));
+            Routing.RegisterRoute(nameof(MeetingDocumentsPage), typeof(MeetingDocumentsPage));
         }
     }
 

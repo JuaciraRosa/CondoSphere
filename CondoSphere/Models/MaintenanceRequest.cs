@@ -1,4 +1,5 @@
 ﻿using CondoSphere.Data;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 
 namespace CondoSphere.Models
@@ -7,29 +8,36 @@ namespace CondoSphere.Models
     {
         public int Id { get; set; }
 
-        [Required]
-        [StringLength(100, ErrorMessage = "Title can't exceed 100 characters.")]
-        public string Title { get; set; }
+        [Required, StringLength(100)]
+        [Display(Name = "Request Title")]
+        public string Title { get; set; } = string.Empty;
+
+        [Required, StringLength(500)]
+        [Display(Name = "Description")]
+        public string Description { get; set; } = string.Empty;
+
+        [Required, DataType(DataType.DateTime)]
+        [Display(Name = "Submitted At")]
+        public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
 
         [Required]
-        [StringLength(500, ErrorMessage = "Description can't exceed 500 characters.")]
-        public string Description { get; set; }
+        [Display(Name = "Status")]
+        public RequestStatus Status { get; set; } = RequestStatus.Open;
+
 
         [Required]
-        [DataType(DataType.DateTime)]
-        public DateTime SubmittedAt { get; set; }
-
-        [Required]
-        public RequestStatus Status { get; set; }
-
-        [Required]
+        [Display(Name = "Condominium")]
         public int CondominiumId { get; set; }
-        public Condominium Condominium { get; set; }
 
+        [ValidateNever]
+        public Condominium? Condominium { get; set; }
 
         [Required]
-        public string SubmittedById { get; set; }
-        public User SubmittedBy { get; set; }
+        [Display(Name = "Submitted By")]
+        public string SubmittedById { get; set; } = string.Empty;
+
+        [ValidateNever]
+        public User? SubmittedBy { get; set; }
     }
 
 }

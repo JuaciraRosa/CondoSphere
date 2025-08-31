@@ -1,0 +1,107 @@
+﻿using CondoSphere.Data.Interfaces;
+using CondoSphere.Features.Ocurrences;
+using CondoSphere.Messaging;
+using CondoSphere.Services.AppData;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+
+namespace CondoSphere.Controllers
+{
+    [Authorize]
+    public class OccurrencesController : Controller
+    {
+        private readonly JsonFileStore<OccurrenceDto> _store;
+        private readonly DomainNotificationService _notify;
+        private readonly ICondominiumRepository _condos;
+        public OccurrencesController(IWebHostEnvironment env,
+                                     DomainNotificationService notify,
+                                      ICondominiumRepository condos)
+        {
+            _store = new JsonFileStore<OccurrenceDto>(env, "appdata/occurrences.json");
+            _notify = notify;
+            _condos = condos;
+        }
+
+        public async Task<IActionResult> Index(int? condominiumId)
+        {
+            var list = await _store.ReadAllAsync();
+            if (condominiumId.HasValue)
+                list = list.Where(x => x.CondominiumId == condominiumId.Value).ToList();
+
+            // Mapa para mostrar nomes em vez do Id (Company)                       
+            var lookup = (await _condos.GetAllWithCompanyAsync())
+                .ToDictionary(c => c.Id, c => (Condo: c.Name, Company: c.Company?.Name));
+            ViewBag.CondoLookup = lookup;
+
+            return View(list.OrderByDescending(x => x.CreatedAt).ToList());
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Create(int? condominiumId)
+        {
+            ViewBag.CondoId = condominiumId;
+            await LoadCondominiumsSelectAsync(condominiumId);              
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(OccurrenceDto model)
+        {
+            if (!ModelState.IsValid)                                      
+            {
+                await LoadCondominiumsSelectAsync(model.CondominiumId);
+                return View(model);
+            }
+
+            var list = await _store.ReadAllAsync();
+            model.CreatedAt = DateTime.UtcNow;
+            list.Add(model);
+            await _store.WriteAllAsync(list);
+
+            // e-mail de confirmação
+            if (!string.IsNullOrWhiteSpace(model.CreatedBy))
+                await _notify.OccurrenceStatusChangedAsync(model.CreatedBy, model.Title, "Open");
+
+            TempData["ok"] = "Ocorrência registada.";
+            return RedirectToAction(nameof(Index), new { condominiumId = model.CondominiumId });
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Administrator,Manager")]
+        public async Task<IActionResult> ChangeStatus(string id, string status)
+        {
+            var list = await _store.ReadAllAsync();
+            var oc = list.FirstOrDefault(x => x.Id == id);
+            if (oc == null) return NotFound();
+
+            oc.Status = status;
+            if (status == "Resolved") oc.ClosedAt = DateTime.UtcNow;
+            await _store.WriteAllAsync(list);
+
+            // notificar autor sobre a alteração de estado
+            if (!string.IsNullOrWhiteSpace(oc.CreatedBy))
+                await _notify.OccurrenceStatusChangedAsync(oc.CreatedBy, oc.Title, oc.Status);
+
+            TempData["ok"] = "Estado atualizado e e-mail enviado.";
+            return RedirectToAction(nameof(Index), new { condominiumId = oc.CondominiumId });
+        }
+
+
+        // ---------------- helpers ----------------                                  <-- NOVO
+        private async Task LoadCondominiumsSelectAsync(int? selectedId = null)
+        {
+            var items = (await _condos.GetAllWithCompanyAsync())
+                .OrderBy(c => c.Name)
+                .Select(c => new SelectListItem
+                {
+                    Value = c.Id.ToString(),
+                    Text = c.Company != null ? $"{c.Name} — {c.Company.Name}" : c.Name
+                })
+                .ToList();
+
+            ViewBag.CondominiumId = new SelectList(items, "Value", "Text", selectedId?.ToString());
+        }
+    }
+}

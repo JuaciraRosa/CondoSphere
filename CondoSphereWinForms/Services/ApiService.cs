@@ -11,7 +11,8 @@ namespace CondoSphereWinForms.Services
     public static class ApiClient
     {
         // >>> Aponte para a SUA API (a que retorna JSON)
-        public static readonly Uri BaseUri = new Uri("https://condospheresite.azurewebsites.net/api/");
+        public static readonly Uri BaseUri = new Uri("https://condosphere-web-app.somee.com/api/");
+
         // Se publicar a API no Azure, troque aqui.
 
         private static readonly HttpClient _http = new HttpClient { BaseAddress = BaseUri };

@@ -7,6 +7,9 @@ namespace CondoSphere.Data.Interfaces
         Task<IEnumerable<Quota>> GetByUnitIdAsync(int unitId);
 
         Task<bool> ExistsAsync(int unitId, int year, int month);
+
+        Task<IEnumerable<Quota>> GetAllWithUnitAsync();
+        Task<Quota?> GetByIdWithUnitAsync(int id);
     }
 
 }

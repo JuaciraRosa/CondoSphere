@@ -1,5 +1,6 @@
 ﻿using CondoSphere.Data.Interfaces;
 using CondoSphere.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,7 @@ namespace CondoSphere.API
     [AllowAnonymous]
     [Route("api/companies")]
     [ApiController]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class CompaniesApiController : ControllerBase
     {
         private readonly ICompanyRepository _repository;

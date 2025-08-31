@@ -26,17 +26,19 @@ namespace CondoSphere.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var condos = await _condoRepo.GetAllAsync();
+            var condos = await _condoRepo.GetAllWithCompanyAsync();
             return View(condos);
         }
 
         public async Task<IActionResult> Details(int id)
         {
-            var condo = await _condoRepo.GetDetailsAsync(id); // inclui Units/Expenses/Requests
+            var condo = await _condoRepo.GetDetailsAsync(id);  // inclui Units/Expenses/Requests
             if (condo == null) return NotFound();
             return View(condo);
         }
 
+
+     
         public async Task<IActionResult> Create()
         {
             await LoadCompaniesSelectAsync();

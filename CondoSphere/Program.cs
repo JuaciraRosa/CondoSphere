@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using CondoSphere.Services;
+using System;
+using CondoSphere.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,8 +19,18 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 
 // DB
-builder.Services.AddDbContext<ApplicationDbContext>(opts =>
-    opts.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions =>
+        {
+            // habilita resiliencia de conexão
+            sqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 5,                      // tenta até 5 vezes
+                maxRetryDelay: TimeSpan.FromSeconds(10), // espera até 10s entre tentativas
+                errorNumbersToAdd: null);              // deixa null para padrão
+        }));
+
 
 builder.Services.AddIdentity<User, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
@@ -38,6 +50,9 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 
 // JWT (for API)
+var stripeKey = builder.Configuration["Stripe:SecretKey"];
+Stripe.StripeConfiguration.ApiKey = stripeKey;
+
 var jwtKey = builder.Configuration["Jwt:Key"];
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
 var jwtAudience = builder.Configuration["Jwt:Audience"];
@@ -47,6 +62,8 @@ builder.Services.AddScoped<IUserClaimsPrincipalFactory<User>, AppClaimsPrincipal
 builder.Services.AddScoped<ITenantProvider, HttpTenantProvider>();
 builder.Services.AddScoped<IQuotaService, QuotaService>();
 builder.Services.AddScoped<IPaymentService, PaymentServiceStripe>();
+builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
+builder.Services.AddScoped<DomainNotificationService>();
 
 
 
@@ -165,16 +182,35 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-
-
 using (var scope = app.Services.CreateScope())
 {
-    var ctx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var sp = scope.ServiceProvider;
+    var ctx = sp.GetRequiredService<ApplicationDbContext>();
 
-    // 1) Cria as tabelas (inclui AspNetUsers/AspNetRoles)
-    await ctx.Database.MigrateAsync();
+    try
+    {
+        // 1) Aplica migrações
+        await ctx.Database.MigrateAsync();
 
-    // 2) Só depois faz o seed
-    await DbSeeder.SeedAsync(scope.ServiceProvider);
+        // 2) Seed (cria roles e usuários iniciais, SEMPRE setando ProfileImagePath)
+        await DbSeeder.SeedAsync(sp);
+
+      
+        var afetados = await ctx.Users
+            .Where(u => u.ProfileImagePath == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(u => u.ProfileImagePath, ""));
+
+        if (afetados > 0)
+        {
+            app.Logger.LogInformation("Corrigidos {Afetados} usuários com ProfileImagePath NULL.", afetados);
+        }
+    }
+    catch (Exception ex)
+    {
+        var logger = sp.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Falha ao migrar/seedar o banco.");
+        throw; // deixe falhar no startup para você ver o erro
+    }
 }
+
 app.Run();

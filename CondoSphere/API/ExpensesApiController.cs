@@ -7,9 +7,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CondoSphere.API
 {
+    [Authorize(Roles = "Administrator,Manager")]
     [Route("api/expenses")]
     [ApiController]
-    [AllowAnonymous]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class ExpensesApiController : ControllerBase
     {
         private readonly IExpenseRepository _repository;

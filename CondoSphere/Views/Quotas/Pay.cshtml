@@ -1,4 +1,5 @@
-﻿@model CondoSphere.ModelTest.QuotaPayVM
+﻿@using System.Globalization
+@model CondoSphere.ModelTest.QuotaPayVM
 
 @{
     ViewData["Title"] = "Pay quota";
@@ -7,7 +8,7 @@
     <div class="container">
         <h3>Pay quota</h3>
         <p class="text-muted mb-1">@Model.Description</p>
-        <p class="fs-5 fw-semibold">Amount: @Model.Amount.ToString("C")</p>
+        <p class="fs-5 fw-semibold">Amount: @Model.Amount.ToString("C", new CultureInfo("pt-PT"))</p>
 
         <div class="card p-3 shadow-sm">
             <div id="card-element" class="form-control mb-3"></div>

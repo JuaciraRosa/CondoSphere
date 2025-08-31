@@ -1,0 +1,25 @@
+﻿@model IEnumerable<CondoSphere.Controllers.ExpenseCategorySummaryDto>
+@{
+    ViewData["Title"] = "Despesas por Categoria";
+    var year = (int)ViewBag.Year;
+}
+<h2>Despesas por Categoria - @year</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Categoria</th>
+            <th>Total</th>
+            <th>Quantidade</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Category</td>
+                <td>@item.Total.ToString("C")</td>
+                <td>@item.Count</td>
+            </tr>
+        }
+    </tbody>
+</table>

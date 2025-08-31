@@ -4,8 +4,10 @@ namespace CondoSphere.Data.Interfaces
 {
     public interface ICondominiumRepository : IGenericRepository<Condominium>
     {
-        Task<Condominium> GetDetailsAsync(int id);
-       
+        Task<Condominium?> GetDetailsAsync(int id);
+
+        Task<List<Condominium>> GetAllWithCompanyAsync();
+
     }
 
 }

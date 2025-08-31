@@ -1,5 +1,4 @@
 ﻿@model CondoSphere.Models.Meeting
-
 @{
     ViewData["Title"] = "Create";
 }
@@ -10,8 +9,10 @@
             <h3 class="card-title"><i class="ti ti-plus"></i> Create Meeting</h3>
         </div>
         <div class="card-body">
-            <form asp-action="Create">
-                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <form asp-action="Create" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="All" class="text-danger mb-2"></div>
 
                 <div class="mb-3">
                     <label asp-for="ScheduledDate" class="form-label"></label>
@@ -26,26 +27,29 @@
                 </div>
 
                 <div class="mb-3">
-                    <label asp-for="MinutesDocumentPath" class="form-label"></label>
-                    <input asp-for="MinutesDocumentPath" class="form-control" />
-                    <span asp-validation-for="MinutesDocumentPath" class="text-danger"></span>
+                    <label asp-for="MinutesFile" class="form-label">Attach Minutes (PDF/DOC/DOCX)</label>
+                    <input asp-for="MinutesFile" type="file" class="form-control" accept=".pdf,.doc,.docx" />
+                    <span class="form-text">Até 5 MB.</span>
+                    <span asp-validation-for="MinutesFile" class="text-danger"></span>
                 </div>
 
                 <div class="mb-3">
                     <label asp-for="CondominiumId" class="form-label"></label>
                     <select asp-for="CondominiumId" class="form-select" asp-items="ViewBag.CondominiumId"></select>
+                    <span asp-validation-for="CondominiumId" class="text-danger"></span>
                 </div>
 
-                <div>
-                    <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy"></i> Save</button>
-                    <a asp-action="Index" class="btn btn-secondary"><i class="ti ti-arrow-left"></i> Cancel</a>
+                 <div class="mt-4 d-flex gap-2">
+                    <button class="btn btn-primary"><i class="bi bi-check2"></i> Save</button>
+                    <a class="btn btn-outline-secondary" asp-action="Index"><i class="bi bi-arrow-left"></i> Cancel</a>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-}
+ }

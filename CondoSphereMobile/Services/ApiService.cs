@@ -11,55 +11,50 @@ namespace CondoSphereMobile.Services
 {
     public class ApiService
     {
-        private readonly HttpClient _httpClient;
+        private readonly HttpClient _http;
 
         public ApiService()
         {
-            _httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(AppConstants.BaseApiUrl)
-            };
+            _http = new HttpClient { BaseAddress = new Uri(AppConstants.BaseApiUrl) };
+            _http.DefaultRequestHeaders.Accept.Clear();
+            _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
         public void SetAuthToken(string token)
         {
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", token);
+            _http.DefaultRequestHeaders.Authorization =
+                string.IsNullOrWhiteSpace(token) ? null : new AuthenticationHeaderValue("Bearer", token);
         }
 
         public async Task<T> GetAsync<T>(string endpoint)
         {
-            var resp = await _httpClient.GetAsync(endpoint);
+            var resp = await _http.GetAsync(endpoint);
             var body = await resp.Content.ReadAsStringAsync();
 
-            // se a API mandar HTML (erro 401/403/500), evita “< inválido no JSON”
+            if ((int)resp.StatusCode == 401) throw new UnauthorizedAccessException();
+
             var ct = resp.Content.Headers.ContentType?.MediaType;
             if (!resp.IsSuccessStatusCode || (ct != null && !ct.Contains("json")) || body.TrimStart().StartsWith("<"))
                 throw new Exception($"GET {resp.RequestMessage?.RequestUri} → {(int)resp.StatusCode} {resp.ReasonPhrase}\n{body}");
 
-            return JsonSerializer.Deserialize<T>(body, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            return JsonSerializer.Deserialize<T>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 
-
-        public async Task<TResponse> PostAsync<TRequest, TResponse>(string endpoint, TRequest data)
+        public async Task<TOut> PostAsync<TIn, TOut>(string endpoint, TIn payload)
         {
-            var json = JsonSerializer.Serialize(data);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            var resp = await _httpClient.PostAsync(endpoint, content);
+            var json = JsonSerializer.Serialize(payload);
+            var resp = await _http.PostAsync(endpoint, new StringContent(json, Encoding.UTF8, "application/json"));
             var body = await resp.Content.ReadAsStringAsync();
 
-            if (!resp.IsSuccessStatusCode)
-                throw new Exception($"HTTP {(int)resp.StatusCode} {resp.ReasonPhrase}: {body}");
+            if ((int)resp.StatusCode == 401) throw new UnauthorizedAccessException();
 
-            return JsonSerializer.Deserialize<TResponse>(body, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var ct = resp.Content.Headers.ContentType?.MediaType;
+            if (!resp.IsSuccessStatusCode || (ct != null && !ct.Contains("json")) || body.TrimStart().StartsWith("<"))
+                throw new Exception($"POST {resp.RequestMessage?.RequestUri} → {(int)resp.StatusCode} {resp.ReasonPhrase}\n{body}");
+
+            return JsonSerializer.Deserialize<TOut>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
-
     }
+
 }
+

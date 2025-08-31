@@ -1,0 +1,11 @@
+﻿@model CondoSphere.Features.Voting.MeetingVoteResultDto
+@{
+    ViewData["Title"] = "Votação — Resultado";
+}
+<h2>Resultado — Reunião #@Model.MeetingId</h2>
+<table class="table table-bordered w-auto">
+    <tr><th>Total</th><td>@Model.Total</td></tr>
+    <tr><th>A favor</th><td>@Model.AFavor</td></tr>
+    <tr><th>Contra</th><td>@Model.Contra</td></tr>
+    <tr><th>Abstenção</th><td>@Model.Abstencao</td></tr>
+</table>

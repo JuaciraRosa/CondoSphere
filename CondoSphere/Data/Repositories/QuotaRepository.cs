@@ -24,6 +24,22 @@ namespace CondoSphere.Data.Repositories
                 q.DueDate >= first && q.DueDate < next
             );
         }
+
+
+        public async Task<IEnumerable<Quota>> GetAllWithUnitAsync()
+        {
+            return await _context.Quotas
+                .Include(q => q.Unit)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public async Task<Quota?> GetByIdWithUnitAsync(int id)
+        {
+            return await _context.Quotas
+                .Include(q => q.Unit)
+                .FirstOrDefaultAsync(q => q.Id == id);
+        }
     }
 
 }

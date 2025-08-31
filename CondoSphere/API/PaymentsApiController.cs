@@ -1,6 +1,7 @@
 ﻿using CondoSphere.Data.Interfaces;
 using CondoSphere.Models;
 using CondoSphere.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -12,6 +13,7 @@ namespace CondoSphere.API
     [ApiController]
     [Route("api/payments")]
     [AllowAnonymous]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class PaymentsApiController : ControllerBase
     {
         private readonly IPaymentService _payments;

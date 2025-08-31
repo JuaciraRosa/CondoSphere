@@ -68,7 +68,10 @@
                             <li><a asp-controller="Quotas" asp-action="Index">Quotas</a></li>
                             <li><a asp-controller="Payments" asp-action="Index">Payments</a></li>
                             <li><a asp-controller="Notifications" asp-action="Index">Notifications</a></li>
+                            <li><a asp-controller="Occurrences" asp-action="Index">Occurrences</a></li>
+                            <li><a asp-controller="Votes" asp-action="Index">Voting</a></li>
                         }
+                      
 
                         @* Resident *@
                         @if (role == "Resident")
@@ -76,6 +79,9 @@
                             <li><a asp-controller="Units" asp-action="Index">My Unit</a></li>
                             <li><a asp-controller="Meetings" asp-action="Index">Meetings</a></li>
                             <li><a asp-controller="Notifications" asp-action="Index">Notifications</a></li>
+                            <li><a asp-controller="Occurrences" asp-action="Index">Occurrences</a></li>
+                            <li><a asp-controller="Voting" asp-action="Index">Votes</a></li>
+
                         }
 
                         @* Account dropdown *@
@@ -85,7 +91,6 @@
                                 <li><a asp-controller="Account" asp-action="Profile">Profile</a></li>
                                 <li><a asp-controller="Account" asp-action="ChangePassword">Change Password</a></li>
                                 <li><a asp-controller="Account" asp-action="DownloadData">Download My Data (JSON)</a></li>
-                                <li><a asp-controller="Account" asp-action="ForgotPassword">Forgot Password</a></li>
                                 <li>
                                     <form asp-controller="Account" asp-action="Deactivate" method="post" style="display:inline;">
                                         @Html.AntiForgeryToken()
@@ -113,6 +118,9 @@
                     <a class="btn btn-primary btn-sm" href="@Url.Action("Login","Auth")">Login</a>
                 }
             </div>
+
+       
+
         </div>
     </header>
 
