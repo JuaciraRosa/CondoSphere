@@ -1,9 +1,18 @@
 [
   {
+    "Id": "383aa876-a24f-4030-89f7-ccfc10dc1e0c",
     "MeetingId": 0,
     "UnitNumber": "2BBBB",
     "VoterEmail": "helo@yopmail.com",
     "Choice": "A favor",
     "CreatedAt": "2025-09-01T03:41:41.5499459Z"
+  },
+  {
+    "Id": "32fafcb3-15cf-489e-ac6e-a415ec66af0d",
+    "MeetingId": 0,
+    "UnitNumber": "A101",
+    "VoterEmail": "condosphere.reset.test@yopmail.com",
+    "Choice": "Absten\u00E7\u00E3o",
+    "CreatedAt": "2025-09-01T04:51:45.2449229Z"
   }
 ]

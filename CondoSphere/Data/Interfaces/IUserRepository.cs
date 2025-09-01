@@ -12,6 +12,8 @@
         Task<User> GetByIdStringAsync(string id);
         Task DeleteByIdStringAsync(string id);
 
+        Task<User?> GetByIdAsync(string id);
+
 
 
     }

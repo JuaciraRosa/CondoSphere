@@ -1,28 +1,62 @@
-﻿@model CondoSphere.Features.Voting.MeetingVoteDto
+﻿@model CondoSphere.ViewModels.VoteCastVM
 @{
-    ViewData["Title"] = "Votação — Lançar Voto";
-    var meetingId = (int)ViewBag.MeetingId;
+    ViewData["Title"] = $"Votação — Reunião {Model.MeetingId}";
 }
-<h2>Votação — Reunião #@meetingId</h2>
 
-<form asp-action="Cast" method="post">
-    <div asp-validation-summary="All" class="text-danger mb-2"></div>
-    <input type="hidden" asp-for="MeetingId" value="@meetingId" />
-    <div class="mb-3">
-        <label class="form-label">Email</label>
-        <input asp-for="VoterEmail" class="form-control" placeholder="o.seu@email.com" required />
-    </div>
-    <div class="mb-3">
-        <label class="form-label">Unidade (fração)</label>
-        <input asp-for="UnitNumber" class="form-control" placeholder="A1" required />
-    </div>
-    <div class="mb-3">
-        <label class="form-label">Voto</label>
-        <select asp-for="Choice" class="form-select" required>
-            <option>A favor</option>
-            <option>Contra</option>
-            <option>Abstenção</option>
-        </select>
-    </div>
-    <button class="btn btn-primary">Submeter Voto</button>
-</form>
+@if (TempData["ok"] is string ok && !string.IsNullOrWhiteSpace(ok))
+{
+    <div class="alert alert-success">@ok</div>
+}
+
+<div class="card p-4 shadow-sm">
+    <h3 class="mb-3">Votação — Reunião</h3>
+
+    @if (Model.AlreadyVoted)
+    {
+        <div class="alert alert-info">
+            Você já participou nesta votação.
+        </div>
+    }
+
+    <form asp-action="Cast" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="MeetingId" />
+
+        <div class="mb-3">
+            <label asp-for="Email" class="form-label">Email</label>
+            <input asp-for="Email" class="form-control" readonly="@Model.AlreadyVoted" />
+            <span asp-validation-for="Email" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="UnitNumber" class="form-label">Unidade (fração)</label>
+            <select asp-for="UnitNumber"
+                    class="form-select"
+                    asp-items="Model.Units"
+                    disabled="@Model.AlreadyVoted">
+                <option value="">-- selecione --</option>
+            </select>
+            <span asp-validation-for="UnitNumber" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Choice" class="form-label">Voto</label>
+            <select asp-for="Choice" class="form-select" disabled="@Model.AlreadyVoted">
+                <option value="">-- selecione --</option>
+                <option>A favor</option>
+                <option>Contra</option>
+                <option>Abstenção</option>
+            </select>
+            <span asp-validation-for="Choice" class="text-danger"></span>
+        </div>
+
+        @if (!Model.AlreadyVoted)
+        {
+            <button class="btn btn-primary">Submeter Voto</button>
+        }
+    </form>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

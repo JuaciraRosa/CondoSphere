@@ -1,4 +1,5 @@
-﻿using CondoSphere.Services.AppData;
+﻿using CondoSphere.Features.Voting;
+using CondoSphere.Services.AppData;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -20,15 +21,27 @@ namespace CondoSphere.API
         }
 
         [HttpPost("cast")]
-        public async Task<IActionResult> Cast([FromBody] CondoSphere.Features.Voting.MeetingVoteDto model)
+        public async Task<IActionResult> Cast([FromBody] MeetingVoteDto model)
         {
             var list = await _store.ReadAllAsync();
-            list.RemoveAll(v => v.MeetingId == model.MeetingId && v.VoterEmail.Equals(model.VoterEmail, StringComparison.OrdinalIgnoreCase));
-            model.CreatedAt = DateTime.UtcNow;
-            list.Add(model);
+
+            list.RemoveAll(v => v.MeetingId == model.MeetingId &&
+                                v.VoterEmail.Equals(model.VoterEmail, StringComparison.OrdinalIgnoreCase));
+
+            var vote = new MeetingVoteDto
+            {
+                MeetingId = model.MeetingId,
+                VoterEmail = model.VoterEmail?.Trim(),
+                UnitNumber = model.UnitNumber?.Trim(),
+                Choice = model.Choice,
+                CreatedAt = DateTime.UtcNow   // ✅ permitido no inicializador
+            };
+
+            list.Add(vote);
             await _store.WriteAllAsync(list);
-            return Ok(new { ok = true });
+            return Ok(vote);
         }
+
 
         [HttpGet("result/{meetingId:int}")]
         public async Task<IActionResult> Result(int meetingId)

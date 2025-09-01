@@ -26,10 +26,12 @@ namespace CondoSphere.Data.Repositories
           .ToListAsync();
 
         public async Task<MaintenanceRequest?> GetByIdDetailedAsync(int id)
-            => await _context.MaintenanceRequests
-                .Include(m => m.Condominium)
-                .Include(m => m.SubmittedBy)
-                .FirstOrDefaultAsync(m => m.Id == id);
+        => await _context.MaintenanceRequests
+            .AsNoTracking() 
+            .Include(m => m.Condominium)
+            .Include(m => m.SubmittedBy)
+            .FirstOrDefaultAsync(m => m.Id == id);
+
     }
 
 }

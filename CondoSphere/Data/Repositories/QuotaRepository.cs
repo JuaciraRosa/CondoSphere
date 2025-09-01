@@ -40,6 +40,17 @@ namespace CondoSphere.Data.Repositories
                 .Include(q => q.Unit)
                 .FirstOrDefaultAsync(q => q.Id == id);
         }
+
+
+        // ➕ carrega Unidade e Condomínio
+        public async Task<List<Quota>> GetAllDetailedAsync()
+        {
+            return await _context.Quotas
+                .Include(q => q.Unit)
+                    .ThenInclude(u => u.Condominium)
+                .AsNoTracking()
+                .ToListAsync();
+        }
     }
 
 }

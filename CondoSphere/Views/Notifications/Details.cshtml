@@ -11,18 +11,18 @@
             </div>
             <div class="card-body">
                 <dl class="row">
-                    <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Message)</dt>
-                    <dd class="col-sm-9">@Html.DisplayFor(m => m.Message)</dd>
+                    <dt class="col-sm-3">Message</dt>
+                    <dd class="col-sm-9">@Model.Message</dd>
 
-                    <dt class="col-sm-3">@Html.DisplayNameFor(m => m.SentAt)</dt>
-                    <dd class="col-sm-9">@Model.SentAt.ToString("dd/MM/yyyy HH:mm")</dd>
+                    <dt class="col-sm-3">Sent At</dt>
+                    <dd class="col-sm-9">@((Model.SentAt.ToString("dd/MM/yyyy HH:mm")))</dd>
 
-                    <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Condominium)</dt>
-                    <dd class="col-sm-9">@Model.Condominium?.Id</dd>
+                    <dt class="col-sm-3">Condominium</dt>
+                    <dd class="col-sm-9">@((Model.Condominium?.Name) ?? $"{Model.CondominiumId}")</dd>
                 </dl>
             </div>
-            <div class="card-footer">
-                <a asp-action="Edit" asp-route-id="@Model?.Id" class="btn btn-warning">Edit</a>
+            <div class="card-footer d-flex gap-2">
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">Edit</a>
                 <a asp-action="Index" class="btn btn-secondary">Back to List</a>
             </div>
         </div>
@@ -30,7 +30,5 @@
 </div>
 
 @section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
 }

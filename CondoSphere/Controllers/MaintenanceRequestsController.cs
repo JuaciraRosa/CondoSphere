@@ -1,4 +1,5 @@
 ﻿using CondoSphere.Data.Interfaces;
+using CondoSphere.Messaging;
 using CondoSphere.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,15 +14,18 @@ namespace CondoSphere.Controllers
         private readonly IMaintenanceRequestRepository _requests;
         private readonly ICondominiumRepository _condos;
         private readonly IUserRepository _users;
+        private readonly DomainNotificationService _notify;
 
         public MaintenanceRequestsController(
             IMaintenanceRequestRepository requests,
             ICondominiumRepository condos,
-            IUserRepository users)
+            IUserRepository users,
+            DomainNotificationService notify)
         {
             _requests = requests;
             _condos = condos;
             _users = users;
+            _notify = notify;
         }
 
         // GET: MaintenanceRequests
@@ -60,11 +64,11 @@ namespace CondoSphere.Controllers
         }
 
         // POST: MaintenanceRequests/Create
+      
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(MaintenanceRequest model)
         {
-            // Resident só pode criar em seu nome
             if (User.IsInRole("Resident"))
                 model.SubmittedById = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -79,8 +83,20 @@ namespace CondoSphere.Controllers
 
             await _requests.AddAsync(model);
             await _requests.SaveChangesAsync();
+
+            // e-mail de confirmação
+            var submitter = await _users.GetByIdAsync(model.SubmittedById);
+            var condo = await _condos.GetByIdAsync(model.CondominiumId);
+            await _notify.MaintenanceRequestReceivedAsync(
+                to: submitter?.Email ?? string.Empty,
+                title: model.Title,
+                requestId: model.Id,
+                condoName: condo?.Name ?? "#"
+            );
+
             return RedirectToAction(nameof(Index));
         }
+
 
         // GET: MaintenanceRequests/Edit/5
         public async Task<IActionResult> Edit(int id)
@@ -102,12 +118,13 @@ namespace CondoSphere.Controllers
         {
             if (id != model.Id) return NotFound();
 
-            var original = await _requests.GetByIdDetailedAsync(id);
-            if (original == null) return NotFound();
+            // carrega a entidade rastreada SEM Includes (não precisamos deles para editar)
+            var entity = await _requests.GetByIdAsync(id);
+            if (entity == null) return NotFound();
 
-            // Resident não pode trocar o SubmittedById
+            // Resident não pode trocar SubmittedById
             if (User.IsInRole("Resident"))
-                model.SubmittedById = original.SubmittedById;
+                model.SubmittedById = entity.SubmittedById;
 
             if (!ModelState.IsValid)
             {
@@ -115,10 +132,20 @@ namespace CondoSphere.Controllers
                 return View(model);
             }
 
-            _requests.Update(model);
+            // mapeia apenas os campos que podem mesmo ser alterados
+            entity.Title = model.Title;
+            entity.Description = model.Description;
+            entity.Status = model.Status;
+            entity.SubmittedAt = model.SubmittedAt;   // ou preserve entity.SubmittedAt se não quiser editar
+            entity.CondominiumId = model.CondominiumId;
+            entity.SubmittedById = model.SubmittedById; // só Admin/Manager; Resident já foi travado acima
+
+            // como 'entity' já está rastreada, só gravar
             await _requests.SaveChangesAsync();
+
             return RedirectToAction(nameof(Index));
         }
+
 
         // GET: MaintenanceRequests/Delete/5
         public async Task<IActionResult> Delete(int id)

@@ -48,15 +48,16 @@ namespace CondoSphere.Controllers
 
             return View(); // cria uma View simples que lê ViewBag.Items
         }
-    
+
 
         // /Reports/OutstandingQuotas
         public async Task<IActionResult> OutstandingQuotas()
         {
-            var data = (await _quotas.GetAllAsync())
+            var data = (await _quotas.GetAllDetailedAsync())
                 .Where(q => !q.IsPaid)
                 .OrderBy(q => q.DueDate)
                 .ToList();
+
             return View(data);
         }
 

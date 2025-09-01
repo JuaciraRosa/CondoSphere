@@ -8,6 +8,14 @@ namespace CondoSphere.Data.Repositories
     {
         public NotificationRepository(ApplicationDbContext context) : base(context) { }
 
+        public async Task<List<Notification>> GetAllDetailedAsync()
+        {
+            return await _context.Notifications
+           .Include(n => n.Condominium)
+           .AsNoTracking()
+           .ToListAsync();
+        }
+
         public async Task<IEnumerable<Notification>> GetRecentAsync(int condominiumId, int count)
         {
             return await _context.Notifications
@@ -16,6 +24,9 @@ namespace CondoSphere.Data.Repositories
                 .Take(count)
                 .ToListAsync();
         }
+
+
+
     }
 
 }

@@ -1,73 +1,51 @@
 ﻿@model CondoSphere.Models.MaintenanceRequest
-
 @{
     ViewData["Title"] = "Request Details";
-}
-
-@section PageHeader {
-    <section class="page-title">
-        <div class="container">
-            <h1>Request Details</h1>
-            <div class="breadcrumbs">
-                <ol>
-                    <li><a asp-controller="Home" asp-action="Index">Home</a></li>
-                    <li><a asp-controller="MaintenanceRequests" asp-action="Index">Maintenance</a></li>
-                    <li>Details</li>
-                </ol>
-            </div>
-        </div>
-    </section>
+    string badge = Model.Status switch
+    {
+        CondoSphere.Models.RequestStatus.Open        => "bg-warning text-dark",
+        CondoSphere.Models.RequestStatus.InProgress  => "bg-info text-dark",
+        CondoSphere.Models.RequestStatus.Resolved    => "bg-success",
+        _                                            => "bg-secondary"
+    };
 }
 
 <section class="section">
-    <div class="container">
-        <div class="card shadow-sm p-4">
-            <div class="row gy-3">
-                <div class="col-md-6">
-                    <div class="fw-semibold text-muted">Title</div>
-                    <div>@Model.Title</div>
-                </div>
-                <div class="col-md-6">
-                    <div class="fw-semibold text-muted">Submitted At</div>
-                    <div>@Model.SubmittedAt.ToString("yyyy-MM-dd HH:mm")</div>
-                </div>
-                <div class="col-md-12">
-                    <div class="fw-semibold text-muted">Description</div>
-                    <div>@Model.Description</div>
-                </div>
-                <div class="col-md-4">
-                    <div class="fw-semibold text-muted">Status</div>
-                    @{
-                        var badge = Model.Status switch
-                        {
-                            CondoSphere.Models.RequestStatus.Open => "bg-warning",
-                            CondoSphere.Models.RequestStatus.InProgress => "bg-info",
-                            CondoSphere.Models.RequestStatus.Resolved => "bg-success",
-                            _ => "bg-secondary"
-                        };
-                    }
-                    <div><span class="badge @badge">@Model.Status</span></div>
-                </div>
-                <div class="col-md-4">
-                    <div class="fw-semibold text-muted">Condominium</div>
-                    <div>@Model.Condominium?.Name</div>
-                </div>
-                <div class="col-md-4">
-                    <div class="fw-semibold text-muted">Submitted By</div>
-                    <div>@Model.SubmittedBy?.FullName</div>
-                </div>
-            </div>
+  <div class="container">
+    <div class="card shadow-sm p-4">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h4 class="mb-0">
+          <i class="bi bi-wrench-adjustable"></i>
+          Pedido #@Model.Id — @Model.Title
+        </h4>
+        <span class="badge @badge px-3 py-2">@Model.Status</span>
+      </div>
 
-            <div class="mt-4 d-flex gap-2">
-                <a class="btn btn-outline-secondary" asp-action="Index"><i class="bi bi-arrow-left"></i> Back</a>
-                <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model.Id"><i class="bi bi-pencil"></i> Edit</a>
-            </div>
+      <div class="row gy-3">
+        <div class="col-md-8">
+          <div class="fw-semibold text-muted mb-1">Descrição</div>
+          <div class="border rounded p-3 bg-light">@Model.Description</div>
         </div>
-    </div>
-</section>
+        <div class="col-md-4">
+          <div class="fw-semibold text-muted">Condomínio</div>
+          <div>@Model.Condominium?.Name</div>
 
-@section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
-}
+          <div class="fw-semibold text-muted mt-3">Submetido por</div>
+          <div>@(string.IsNullOrWhiteSpace(Model.SubmittedBy?.FullName) ? Model.SubmittedBy?.Email : Model.SubmittedBy?.FullName)</div>
+
+          <div class="fw-semibold text-muted mt-3">Submetido em</div>
+          <div>@Model.SubmittedAt.ToString("yyyy-MM-dd HH:mm")</div>
+        </div>
+      </div>
+
+      <div class="mt-4 d-flex gap-2">
+        <a class="btn btn-outline-secondary" asp-action="Index">
+          <i class="bi bi-arrow-left"></i> Back
+        </a>
+        <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model.Id">
+          <i class="bi bi-pencil"></i> Edit
+        </a>
+      </div>
+    </div>
+  </div>
+</section>

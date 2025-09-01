@@ -3,7 +3,6 @@
     ViewData["Title"] = "Notifications";
 }
 
-
 @section PageHeader {
     <section class="page-title">
         <div class="container">
@@ -17,6 +16,7 @@
         </div>
     </section>
 }
+
 <div class="page-header d-print-none">
     <div class="container-xl">
         <div class="row g-2 align-items-center">
@@ -39,9 +39,9 @@
                 <table class="table card-table table-vcenter text-nowrap datatable">
                     <thead>
                         <tr>
-                            <th>@Html.DisplayNameFor(model => model.Message)</th>
-                            <th>@Html.DisplayNameFor(model => model.SentAt)</th>
-                            <th>@Html.DisplayNameFor(model => model.Condominium)</th>
+                            <th>@Html.DisplayNameFor(_ => Model.First().Message)</th>
+                            <th>@Html.DisplayNameFor(_ => Model.First().SentAt)</th>
+                            <th>Condominium</th>
                             <th class="w-1"></th>
                         </tr>
                     </thead>
@@ -49,10 +49,10 @@
                         @foreach (var item in Model)
                         {
                             <tr>
-                                <td>@Html.DisplayFor(m => item.Message)</td>
-                                <td>@item.SentAt.ToString("dd/MM/yyyy HH:mm")</td>
-                                <td>@item.Condominium?.Id</td>
-                                <td>
+                                <td>@item.Message</td>
+                                <td>@(item.SentAt.ToString("dd/MM/yyyy HH:mm") )</td>
+                                <td>@(item.Condominium?.Name ?? $"#{item.CondominiumId}")</td>
+                                <td class="text-end">
                                     <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">Edit</a>
                                     <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">Details</a>
                                     <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger">Delete</a>
@@ -67,7 +67,5 @@
 </div>
 
 @section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
 }
