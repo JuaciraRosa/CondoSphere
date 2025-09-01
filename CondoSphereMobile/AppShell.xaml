@@ -7,24 +7,44 @@
     Shell.FlyoutBehavior="Disabled"
     Title="CondoSphereMobile">
 
-    <!-- Login -->
-    <ShellContent Route="LoginPage" ContentTemplate="{DataTemplate views:LoginPage}" />
+    <!-- DASHBOARD (comum a todos) -->
+    <FlyoutItem Title="Dashboard" Route="dashboard" x:Name="DashboardFlyout">
+        <ShellContent Title="Dashboard" ContentTemplate="{DataTemplate local:DashboardPage}" />
+    </FlyoutItem>
 
-    <!-- Dashboard -->
-    <ShellContent Route="DashboardPage" ContentTemplate="{DataTemplate views:DashboardPage}" />
+    <!-- RESIDENT -->
+    <FlyoutItem Title="My Area" Route="resident" x:Name="ResidentFlyout">
+        <ShellContent Title="My Unit"        ContentTemplate="{DataTemplate local:MyUnitPage}" />
+        <ShellContent Title="Quotas"         ContentTemplate="{DataTemplate local:QuotasPage}" />
+        <ShellContent Title="Meetings"       ContentTemplate="{DataTemplate local:MeetingsPage}" />
+        <ShellContent Title="Occurrences"    ContentTemplate="{DataTemplate local:OccurrencesPage}" />
+        <ShellContent Title="Notifications"  ContentTemplate="{DataTemplate local:NotificationsPage}" />
+        <ShellContent Title="Voting"         ContentTemplate="{DataTemplate local:VotingPage}" />
+    </FlyoutItem>
 
-    <ShellContent Route="UsersPage" ContentTemplate="{DataTemplate views:UsersPage}" />
-    <ShellContent Route="CompaniesPage" ContentTemplate="{DataTemplate views:CompaniesPage}" />
-    <ShellContent Route="CondominiumsPage" ContentTemplate="{DataTemplate views:CondominiumsPage}" />
-    <ShellContent Route="MeetingsPage" ContentTemplate="{DataTemplate views:MeetingsPage}" />
-    <ShellContent Route="ExpensesPage" ContentTemplate="{DataTemplate views:ExpensesPage}" />
-    <ShellContent Route="UnitsPage" ContentTemplate="{DataTemplate views:UnitsPage}" />
-    <ShellContent Route="PaymentsPage" ContentTemplate="{DataTemplate views:PaymentsPage}" />
-    <ShellContent Route="QuotasPage" ContentTemplate="{DataTemplate views:QuotasPage}" />
-    <ShellContent Route="MaintenanceRequestsPage" ContentTemplate="{DataTemplate views:MaintenanceRequestsPage}" />
-    <ShellContent Route="NotificationsPage" ContentTemplate="{DataTemplate views:NotificationsPage}" />
-    <ShellContent Route="ReceiptsPage" ContentTemplate="{DataTemplate views:ReceiptsPage}" />
-    <ShellContent Route="MeetingDocumentsPage" ContentTemplate="{DataTemplate views:MeetingDocumentsPage}" />
+    <!-- MANAGER -->
+    <FlyoutItem Title="Operations" Route="manager" x:Name="ManagerFlyout">
+        <ShellContent Title="Condominiums"   ContentTemplate="{DataTemplate local:CondominiumsPage}" />
+        <ShellContent Title="Meetings"       ContentTemplate="{DataTemplate local:MeetingsPage}" />
+        <ShellContent Title="Expenses"       ContentTemplate="{DataTemplate local:ExpensesPage}" />
+        <ShellContent Title="Quotas"         ContentTemplate="{DataTemplate local:QuotasPage}" />
+        <ShellContent Title="Payments"       ContentTemplate="{DataTemplate local:PaymentsPage}" />
+        <ShellContent Title="Notifications"  ContentTemplate="{DataTemplate local:NotificationsPage}" />
+        <ShellContent Title="Occurrences"    ContentTemplate="{DataTemplate local:OccurrencesPage}" />
+        <ShellContent Title="Voting"         ContentTemplate="{DataTemplate local:VotingPage}" />
+    </FlyoutItem>
 
+    <!-- ADMIN -->
+    <FlyoutItem Title="Administration" Route="admin" x:Name="AdminFlyout">
+        <ShellContent Title="Users"      ContentTemplate="{DataTemplate local:UsersPage}" />
+        <ShellContent Title="Companies"  ContentTemplate="{DataTemplate local:CompaniesPage}" />
+    </FlyoutItem>
+
+    <!-- Rodapé com logout -->
+    <Shell.FlyoutFooter>
+        <Grid Padding="16">
+            <Button Text="Logout" Clicked="OnLogoutClicked"/>
+        </Grid>
+    </Shell.FlyoutFooter>
 
 </Shell>

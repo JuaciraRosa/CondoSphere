@@ -3,7 +3,6 @@ using CondoSphereMobile.ViewModels;
 
 namespace CondoSphereMobile.Views;
 
-
 public partial class MeetingDocumentsPage : ContentPage
 {
     public MeetingDocumentsViewModel VM { get; }

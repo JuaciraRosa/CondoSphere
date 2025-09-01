@@ -2,7 +2,6 @@ using CondoSphereMobile.ViewModels;
 
 namespace CondoSphereMobile.Views;
 
-
 public partial class ReceiptsPage : ContentPage
 {
     public ReceiptsViewModel VM { get; }

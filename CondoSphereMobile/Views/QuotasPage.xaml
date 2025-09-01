@@ -1,31 +1,41 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:vm="clr-namespace:CondoSphereMobile.ViewModels"
-             x:Class="CondoSphereMobile.Views.QuotasPage"
-             Title="Quotas">
-    <ContentPage.ToolbarItems>
-        <ToolbarItem Text="Dashboard" Priority="0" Order="Primary" Clicked="OnBackToDashboardClicked" />
-    </ContentPage.ToolbarItems>
+<ContentPage
+    x:Class="CondoSphereMobile.Views.QuotasPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Quotas">
 
-    <ContentPage.BindingContext>
-        <vm:QuotasViewModel/>
-    </ContentPage.BindingContext>
+    <Grid RowDefinitions="Auto, *" Padding="12">
+        <HorizontalStackLayout Spacing="12">
+            <Button Text="Recarregar" Clicked="OnReloadClicked" />
+            <ActivityIndicator x:Name="Busy" IsRunning="False" IsVisible="False" />
+        </HorizontalStackLayout>
 
-    <RefreshView IsRefreshing="{Binding IsBusy}" Command="{Binding LoadQuotasCommand}">
-        <CollectionView ItemsSource="{Binding Quotas}" Margin="12">
+        <CollectionView
+            x:Name="List"
+            Grid.Row="1"
+            SelectionMode="None">
             <CollectionView.ItemTemplate>
-                <DataTemplate>
-                    <Frame Padding="10" Margin="0,0,0,12" BorderColor="#ddd" HasShadow="False">
-                        <VerticalStackLayout Spacing="4">
-                            <Label Text="{Binding Amount, StringFormat='€ {0:F2}'}" FontAttributes="Bold"/>
-                            <Label Text="{Binding DueDate, StringFormat='{0:yyyy-MM-dd}'}"/>
-                            <Label Text="{Binding IsPaid, StringFormat='Paid: {0}'}"/>
-                            <Label Text="{Binding UnitId, StringFormat='Unit: {0}'}" FontSize="12"/>
+                <DataTemplate x:DataType="models:QuotaDto"
+                              xmlns:models="clr-namespace:CondoSphereMobile.Models">
+                    <Grid Padding="12" ColumnDefinitions="*, Auto" BackgroundColor="{AppThemeBinding Light=#ffffff, Dark=#222}" Margin="0,6" >
+                        <VerticalStackLayout>
+                            <Label Text="{Binding UnitNumber}" FontAttributes="Bold" />
+                            <Label Text="{Binding DueDateStr}" Opacity="0.7" FontSize="12" />
+                            <Label Text="{Binding AmountPt}" />
+                            <Label Text="{Binding IsPaid, StringFormat='Pago: {0}'}" />
                         </VerticalStackLayout>
-                    </Frame>
+
+                        <StackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                            <Button Text="Detalhes" Clicked="OnDetailsClicked" CommandParameter="{Binding .}" />
+                            <Button Text="Pagar"
+                                    IsEnabled="{Binding IsPaid, Converter={StaticResource invertBoolConverter}}"
+                                    Clicked="OnPayClicked"
+                                    CommandParameter="{Binding .}" />
+                        </StackLayout>
+                    </Grid>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
-    </RefreshView>
+    </Grid>
 </ContentPage>

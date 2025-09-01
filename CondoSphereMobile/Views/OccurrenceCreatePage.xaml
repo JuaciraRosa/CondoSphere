@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="CondoSphereMobile.Views.OccurrenceCreatePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Nova Ocorrência">
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+            <Entry x:Name="CondoId" Placeholder="Condomínio Id" Keyboard="Numeric" />
+            <Entry x:Name="UnitNumber" Placeholder="Unidade (ex: A1)" />
+            <Entry x:Name="TitleEntry" Placeholder="Título" />
+            <Editor x:Name="DescEntry" Placeholder="Descrição" AutoSize="TextChanges" />
+            <Entry x:Name="EmailEntry" Placeholder="Seu e-mail" Keyboard="Email" />
+            <Button Text="Criar" Clicked="OnCreateClicked" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

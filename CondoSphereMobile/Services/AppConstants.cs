@@ -9,6 +9,6 @@ namespace CondoSphereMobile.Services
     public static class AppConstants
     {
         // URL pública da API CondoSphere
-        public const string BaseApiUrl = "http://condosphere-web-app.somee.com/api/";
+        public const string BaseApiUrl = "https://condosphere-web-app.somee.com/api/";
     }
 }

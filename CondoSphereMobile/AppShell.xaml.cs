@@ -1,26 +1,56 @@
-﻿using CondoSphereMobile.Views;
+﻿
+using CondoSphereMobile.Services;
+using CondoSphereMobile.Views;
 
 namespace CondoSphereMobile
 {
     public partial class AppShell : Shell
     {
+        private bool _menuApplied;
+
         public AppShell()
         {
             InitializeComponent();
-
-            Routing.RegisterRoute(nameof(UsersPage), typeof(UsersPage));
-            Routing.RegisterRoute(nameof(CompaniesPage), typeof(CompaniesPage));
-            Routing.RegisterRoute(nameof(CondominiumsPage), typeof(CondominiumsPage));
-            Routing.RegisterRoute(nameof(MeetingsPage), typeof(MeetingsPage));
-            Routing.RegisterRoute(nameof(ExpensesPage), typeof(ExpensesPage));
-            Routing.RegisterRoute(nameof(UnitsPage), typeof(UnitsPage));
-            Routing.RegisterRoute(nameof(PaymentsPage), typeof(PaymentsPage));
-            Routing.RegisterRoute(nameof(QuotasPage), typeof(QuotasPage));
-            Routing.RegisterRoute(nameof(MaintenanceRequestsPage), typeof(MaintenanceRequestsPage));
-            Routing.RegisterRoute(nameof(NotificationsPage), typeof(NotificationsPage));
-            Routing.RegisterRoute(nameof(ReceiptsPage), typeof(ReceiptsPage));
-            Routing.RegisterRoute(nameof(MeetingDocumentsPage), typeof(MeetingDocumentsPage));
         }
-    }
 
+        protected override async void OnAppearing()
+        {
+            base.OnAppearing();
+
+            if (_menuApplied) return;
+            _menuApplied = true;
+
+            var role = await SecureStorage.GetAsync("user_role") ?? "";
+
+            // Por padrão, mostra só Dashboard + Resident
+            // Remove o que não se aplica
+            if (role == "Administrator")
+            {
+                // Admin vê tudo (Manager + Admin + Resident se quiseres)
+            }
+            else if (role == "Manager")
+            {
+                // Manager não vê Admin
+                if (Items.Contains(AdminFlyout)) Items.Remove(AdminFlyout);
+            }
+            else
+            {
+                // Resident não vê Manager nem Admin
+                if (Items.Contains(ManagerFlyout)) Items.Remove(ManagerFlyout);
+                if (Items.Contains(AdminFlyout)) Items.Remove(AdminFlyout);
+            }
+
+            // Define a página inicial (Dashboard)
+            CurrentItem = DashboardFlyout;
+        }
+
+        private async void OnLogoutClicked(object sender, EventArgs e)
+        {
+            SecureStorage.Remove("jwt_token");
+            SecureStorage.Remove("user_role");
+            SecureStorage.Remove("user_name");
+            Application.Current.MainPage = new NavigationPage(new LoginPage());
+        }
+
+    }
 }

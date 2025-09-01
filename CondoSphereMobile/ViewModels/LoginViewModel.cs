@@ -27,35 +27,30 @@ namespace CondoSphereMobile.ViewModels
         {
             try
             {
-                var loginRequest = new LoginRequest
+                var req = new LoginRequest { Email = Email, Password = Password };
+                var resp = await _apiService.PostAsync<LoginRequest, LoginResponse>("auth/login", req);
+
+                if (!string.IsNullOrEmpty(resp.Token))
                 {
-                    Email = Email,
-                    Password = Password
-                };
+                    await SecureStorage.SetAsync("jwt_token", resp.Token);
+                    await SecureStorage.SetAsync("user_role", resp.Role ?? "");
+                    await SecureStorage.SetAsync("user_name", resp.FullName ?? "");
+                    // segue com o token no ApiService se quiseres
+                    _apiService.SetAuthToken(resp.Token);
 
-                var response = await _apiService.PostAsync<LoginRequest, LoginResponse>("auth/login", loginRequest);
-
-                if (!string.IsNullOrEmpty(response.Token))
-                {
-                    await SecureStorage.SetAsync("jwt_token", response.Token);
-                    await SecureStorage.SetAsync("user_role", response.Role);
-                    await SecureStorage.SetAsync("user_name", response.FullName);
-
-
-                    _apiService.SetAuthToken(response.Token);
-
-                    // Ir para o dashboard
-                    await Shell.Current.GoToAsync("//DashboardPage");
+                    // abre o Shell simples
+                    Application.Current.MainPage = new AppShell();
                 }
                 else
                 {
-                    await Application.Current.MainPage.DisplayAlert("Erro", "Login inválido", "OK");
+                    await Application.Current.MainPage.DisplayAlert("Erro", "Resposta sem token.", "OK");
                 }
             }
             catch (Exception ex)
             {
-                await Application.Current.MainPage.DisplayAlert("Erro", ex.Message, "OK");
+                await Application.Current.MainPage.DisplayAlert("Erro", ex.ToString(), "OK"); // mostra stack/body
             }
         }
+
     }
 }

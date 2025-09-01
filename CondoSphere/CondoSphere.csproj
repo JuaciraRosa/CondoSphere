@@ -36,6 +36,8 @@
     <PackageReference Include="QuestPDF" Version="2025.7.1" />
     <PackageReference Include="Stripe.net" Version="48.4.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="8.1.4" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
+    <PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
   </ItemGroup>
 
 </Project>

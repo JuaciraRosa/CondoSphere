@@ -5,7 +5,11 @@ public partial class DashboardPage : ContentPage
     public DashboardPage()
     {
         InitializeComponent();
-     
+        Content = new VerticalStackLayout
+        {
+            Padding = 16,
+            Children = { new Label { Text = "Dashboard", FontSize = 24, FontAttributes = FontAttributes.Bold } }
+        };
     }
     private async void OnUsersClicked(object sender, EventArgs e)
     {

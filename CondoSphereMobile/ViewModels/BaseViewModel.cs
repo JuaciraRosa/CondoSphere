@@ -34,5 +34,4 @@ namespace CondoSphereMobile.ViewModels
             }
         }
     }
-
 }
