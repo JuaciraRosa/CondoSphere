@@ -45,7 +45,7 @@ namespace CondoSphereMobile.ViewModels
                 IsBusy = true;
                 await EnsureAuthAsync();
 
-                var list = await _api.GetAsync<List<Meeting>>("meetings");
+                var list = await _api.GetAsync<List<Meeting>>("meeting-documents?condominiumId={id}");
                 Meetings.Clear();
                 foreach (var m in list) Meetings.Add(m);
             }

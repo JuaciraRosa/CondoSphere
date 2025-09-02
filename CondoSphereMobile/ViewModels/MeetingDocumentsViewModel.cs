@@ -9,21 +9,38 @@ using System.Threading.Tasks;
 
 namespace CondoSphereMobile.ViewModels
 {
-    public class MeetingDocumentsViewModel : BaseViewModel
+    public class MeetingDocumentsViewModel : BindableObject
     {
-        public ObservableCollection<MeetingDocumentItem> Items { get; } = new ObservableCollection<MeetingDocumentItem>();
-        private readonly ApiService _api;
-
-        public MeetingDocumentsViewModel()
-        {
-            _api = new ApiService();
-        }
+        private readonly ApiService _api = new();
+        public ObservableCollection<MeetingDocumentItem> Documents { get; } = new();
 
         public async Task LoadAsync(int condominiumId)
         {
-            var data = await _api.GetAsync<MeetingDocumentItem[]>($"api/meeting-documents?condominiumId={condominiumId}");
-            Items.Clear();
-            foreach (var it in data) Items.Add(it);
+            try
+            {
+                var token = await SecureStorage.GetAsync("jwt_token");
+                if (!string.IsNullOrEmpty(token)) _api.SetAuthToken(token);
+
+                var url = $"meeting-documents?condominiumId={condominiumId}"; // ✅ sem {id} literal
+                var list = await _api.GetAsync<List<MeetingDocumentItem>>(url);
+
+                Documents.Clear();
+                foreach (var d in list) Documents.Add(d);
+            }
+            catch (Exception ex)
+            {
+                await Application.Current.MainPage.DisplayAlert("Error", ex.Message, "OK");
+            }
         }
     }
+
+    public class MeetingDocumentItem
+    {
+        public int Id { get; set; }
+        public int CondominiumId { get; set; }
+        public string Title { get; set; } = "";
+        public string Url { get; set; } = "";
+        public DateTime PublishedAt { get; set; }
+    }
 }
+

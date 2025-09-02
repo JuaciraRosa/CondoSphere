@@ -1,87 +1,131 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using CondoSphere.Data;
+using CondoSphere.Data.Interfaces;
+using CondoSphere.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using CondoSphere.Data;
-using CondoSphere.Models;
-using CondoSphere.Data.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace CondoSphere.Controllers
 {
+    [Authorize]
     public class UnitsController : Controller
     {
-        private readonly IUnitRepository _unitRepo;
+        private readonly IUnitRepository _units;
+        private readonly ICondominiumRepository _condos;
+        private readonly IUserRepository _users;
 
-        public UnitsController(IUnitRepository unitRepo)
+        public UnitsController(
+            IUnitRepository units,
+            ICondominiumRepository condos,
+            IUserRepository users)
         {
-            _unitRepo = unitRepo;
+            _units = units;
+            _condos = condos;
+            _users = users;
         }
 
         public async Task<IActionResult> Index()
         {
-            var units = await _unitRepo.GetAllAsync();
-            return View(units);
+            var items = await _units.GetAllDetailedAsync(); // inclui Condominium + Owner
+            return View(items);
         }
 
-        // GET: Units/Details/5
         public async Task<IActionResult> Details(int id)
         {
-            var unit = await _unitRepo.GetByIdAsync(id);
-            if (unit == null)
-                return NotFound();
-
+            var unit = await _units.GetByIdDetailedAsync(id);
+            if (unit is null) return NotFound();
             return View(unit);
         }
 
+        // GET: Units/Create
+        public async Task<IActionResult> Create()
+        {
+            await PopulateSelectsAsync();
+            return View(new Unit());
+        }
 
-        public IActionResult Create() => View();
-
-        [HttpPost]
+        // POST: Units/Create
+        [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Unit unit)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                await _unitRepo.AddAsync(unit);
-                return RedirectToAction(nameof(Index));
+                await PopulateSelectsAsync(unit.CondominiumId, unit.OwnerId);
+                return View(unit);
             }
-            return View(unit);
+
+            await _units.AddAsync(unit);
+            await _units.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
 
+        // GET: Units/Edit/5
         public async Task<IActionResult> Edit(int id)
         {
-            var unit = await _unitRepo.GetByIdAsync(id);
-            if (unit == null) return NotFound();
+            var unit = await _units.GetByIdAsync(id); // para editar basta o “simples”
+            if (unit is null) return NotFound();
+
+            await PopulateSelectsAsync(unit.CondominiumId, unit.OwnerId);
             return View(unit);
         }
 
-        [HttpPost]
+        // POST: Units/Edit/5
+        [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Unit unit)
         {
             if (id != unit.Id) return NotFound();
-            if (ModelState.IsValid)
+
+            if (!ModelState.IsValid)
             {
-                _unitRepo.Update(unit);
-                await _unitRepo.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                await PopulateSelectsAsync(unit.CondominiumId, unit.OwnerId);
+                return View(unit);
             }
-            return View(unit);
-        }
 
-        public async Task<IActionResult> Delete(int id)
-        {
-            var unit = await _unitRepo.GetByIdAsync(id);
-            if (unit == null) return NotFound();
-            return View(unit);
-        }
-
-        [HttpPost, ActionName("Delete")]
-        public async Task<IActionResult> DeleteConfirmed(int id)
-        {
-            await _unitRepo.DeleteAsync(id);
+            _units.Update(unit);
+            await _units.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
+
+        // GET: Units/Delete/5
+        public async Task<IActionResult> Delete(int id)
+        {
+            var unit = await _units.GetByIdDetailedAsync(id); // com nomes para mostrar
+            if (unit is null) return NotFound();
+            return View(unit);
+        }
+
+        // POST: Units/Delete/5
+        [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            await _units.DeleteAsync(id);
+            await _units.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
+        // -------- helpers --------
+        private static string OwnerDisplay(User u)
+            => string.IsNullOrWhiteSpace(u.FullName) ? u.Email : u.FullName;
+
+        private async Task PopulateSelectsAsync(int? condominiumId = null, string? ownerId = null)
+        {
+            var condos = await _condos.GetAllAsync();
+            ViewBag.CondominiumId = new SelectList(condos.OrderBy(c => c.Name), "Id", "Name", condominiumId);
+
+            var users = await _users.GetAllAsync();
+            var ownerItems = users
+                .Select(u => new { u.Id, Name = OwnerDisplay(u) })
+                .OrderBy(x => x.Name)
+                .ToList();
+
+            ViewBag.OwnerId = new SelectList(ownerItems, "Id", "Name", ownerId);
+        }
     }
+
+
 }

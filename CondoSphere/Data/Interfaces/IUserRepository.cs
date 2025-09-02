@@ -3,19 +3,12 @@
     public interface IUserRepository : IGenericRepository<User>
     {
         Task<User> GetByEmailAsync(string email);
-  
         IQueryable<User> Query();
 
-        // Sobrecarga para deletar por string (porque User.Id é string)
-     
-
-        Task<User> GetByIdStringAsync(string id);
-        Task DeleteByIdStringAsync(string id);
-
-        Task<User?> GetByIdAsync(string id);
-
-
-
+        // helpers por string
+        Task<User?> GetByIdAsync(string id);          // overload para Identity
+        Task<User> GetByIdStringAsync(string id);     // opcional
+        Task DeleteByIdStringAsync(string id);        // opcional
     }
 
 }

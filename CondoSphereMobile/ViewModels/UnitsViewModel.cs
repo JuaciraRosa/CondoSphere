@@ -12,48 +12,95 @@ namespace CondoSphereMobile.ViewModels
 {
     public class UnitsViewModel : BindableObject
     {
-        private readonly ApiService _api;
+        private readonly ApiService _api = new();
+
         private bool _isBusy;
-
-        public ObservableCollection<Unit> Units { get; } = new();
-
         public bool IsBusy
         {
             get => _isBusy;
-            set { _isBusy = value; OnPropertyChanged(); }
+            set
+            {
+                if (_isBusy == value) return;
+                _isBusy = value;
+                OnPropertyChanged();
+                (LoadUnitsCommand as Command)?.ChangeCanExecute();
+            }
         }
+
+        public ObservableCollection<UnitItem> Units { get; } = new();
 
         public ICommand LoadUnitsCommand { get; }
 
         public UnitsViewModel()
         {
-            _api = new ApiService();
-            LoadUnitsCommand = new Command(async () => await LoadAsync());
+            LoadUnitsCommand = new Command(
+                execute: async () => await LoadUnitsAsync(),
+                canExecute: () => !IsBusy
+            );
         }
 
-        private async Task EnsureAuthAsync()
-        {
-            var token = await SecureStorage.GetAsync("jwt_token");
-            if (!string.IsNullOrEmpty(token)) _api.SetAuthToken(token);
-        }
-
-        private async Task LoadAsync()
+        public async Task LoadUnitsAsync()
         {
             if (IsBusy) return;
+
             try
             {
                 IsBusy = true;
-                await EnsureAuthAsync();
 
-                var list = await _api.GetAsync<List<Unit>>("units");
+                // JWT
+                var token = await SecureStorage.GetAsync("jwt_token");
+                if (!string.IsNullOrEmpty(token))
+                    _api.SetAuthToken(token);
+
+                // Precisa estar logado como RESIDENT
+                dynamic me = await _api.GetAsync<dynamic>("residents/me");
+
+                // A API pode devolver "ownedUnits" ou "OwnedUnits"
+                var ownedUnits = me?.ownedUnits ?? me?.OwnedUnits;
+
                 Units.Clear();
-                foreach (var u in list) Units.Add(u);
+
+                if (ownedUnits != null)
+                {
+                    foreach (var u in ownedUnits)
+                    {
+                        Units.Add(new UnitItem
+                        {
+                            Id = (int)(u.id ?? u.Id ?? 0),
+                            Number = (string)(u.number ?? u.Number ?? ""),
+                            Area = Convert.ToDecimal(u.area ?? u.Area ?? 0m),
+                            CondominiumId = (int)(u.condominiumId ?? u.CondominiumId ?? 0),
+                            OwnerId = (string)(u.ownerId ?? u.OwnerId ?? "")
+                        });
+                    }
+                }
+                else
+                {
+                    // Se não for Resident (Admin/Manager), não há "minhas" unidades para listar.
+                    // Opcional: mostrar aviso.
+                    await Application.Current.MainPage.DisplayAlert(
+                        "Info", "Esta lista mostra as unidades do residente autenticado.", "OK");
+                }
             }
             catch (Exception ex)
             {
-                await Application.Current.MainPage.DisplayAlert("Error", ex.Message, "OK");
+                await Application.Current.MainPage.DisplayAlert("Erro", ex.Message, "OK");
             }
-            finally { IsBusy = false; }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        // DTO usado só para o XAML desta página
+        public class UnitItem
+        {
+            public int Id { get; set; }
+            public string Number { get; set; } = "";
+            public decimal Area { get; set; }
+            public int CondominiumId { get; set; }
+            public string OwnerId { get; set; } = "";
         }
     }
 }
+

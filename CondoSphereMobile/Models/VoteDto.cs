@@ -9,8 +9,8 @@ namespace CondoSphereMobile.Models
     public class VoteDto
     {
         public int PollId { get; set; }
-        public string Question { get; set; }
+        public string Question { get; set; } = "";
         public List<string> Options { get; set; } = new();
-        public string Selected { get; set; }     // para binding local
+        public string? Selected { get; set; }
     }
 }

@@ -33,7 +33,7 @@ namespace CondoSphereMobile.ViewModels
         {
             var token = await SecureStorage.GetAsync("jwt_token");
             var downloader = new FileDownloadService(BaseApiUrl, token);
-            var bytes = await downloader.GetBytesAsync($"api/payment-receipts/{paymentId}");
+            var bytes = await downloader.GetBytesAsync($"payment-receipts/{paymentId}");
 
             var fileName = $"recibo_{paymentId:D6}.pdf";
             var path = Path.Combine(FileSystem.CacheDirectory, fileName);

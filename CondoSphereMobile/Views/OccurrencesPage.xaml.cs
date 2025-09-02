@@ -1,26 +1,34 @@
 using CondoSphereMobile.Models;
 using CondoSphereMobile.Services;
+using System.Collections.ObjectModel;
 
 namespace CondoSphereMobile.Views;
 
 public partial class OccurrencesPage : ContentPage
 {
     private readonly ApiService _api = new();
+    public ObservableCollection<OccurrenceDto> Items { get; } = new();
 
     public OccurrencesPage()
     {
         InitializeComponent();
+        List.ItemsSource = Items;
         Appearing += async (_, __) => await LoadAsync();
     }
 
     private async Task LoadAsync()
     {
+        if (Busy.IsRunning) return;
         try
         {
-            Busy.IsRunning = Busy.IsVisible = true;
-            // usa o teu endpoint. Se ainda não tens API, podes apontar para MVC/JSON fake temporário
-            var data = await _api.GetAsync<List<OccurrenceDto>>("occurrences/mine"); // <-- ajusta
-            List.ItemsSource = data.OrderByDescending(o => o.CreatedAt).ToList();
+            Busy.IsVisible = Busy.IsRunning = true;
+
+            var token = await SecureStorage.GetAsync("jwt_token");
+            if (!string.IsNullOrEmpty(token)) _api.SetAuthToken(token);
+
+            var data = await _api.GetAsync<List<OccurrenceDto>>("occurrences"); // ?
+            Items.Clear();
+            foreach (var o in data) Items.Add(o);
         }
         catch (Exception ex)
         {
@@ -28,7 +36,7 @@ public partial class OccurrencesPage : ContentPage
         }
         finally
         {
-            Busy.IsRunning = Busy.IsVisible = false;
+            Busy.IsVisible = Busy.IsRunning = false;
         }
     }
 

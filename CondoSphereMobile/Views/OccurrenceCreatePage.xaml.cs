@@ -14,19 +14,28 @@ public partial class OccurrenceCreatePage : ContentPage
 
     private async void OnCreateClicked(object sender, EventArgs e)
     {
+        if (string.IsNullOrWhiteSpace(TitleEntry.Text) ||
+            string.IsNullOrWhiteSpace(DescEntry.Text) ||
+            string.IsNullOrWhiteSpace(EmailEntry.Text))
+        {
+            await DisplayAlert("Atenção", "Preenche Título, Descrição e Email.", "OK");
+            return;
+        }
+
         try
         {
+            var token = await SecureStorage.GetAsync("jwt_token");
+            if (!string.IsNullOrEmpty(token)) _api.SetAuthToken(token);
+
             var payload = new
             {
-                CondominiumId = int.TryParse(CondoId.Text, out var cid) ? cid : 0,
-                UnitNumber = UnitNumber.Text?.Trim(),
                 Title = TitleEntry.Text?.Trim(),
                 Description = DescEntry.Text?.Trim(),
                 CreatedBy = EmailEntry.Text?.Trim()
             };
 
-            // endpoint do teu backend para criar ocorrência
-            var _ = await _api.PostAsync<object, object>("occurrences", payload); // <-- ajusta
+            await _api.PostAsync<object, object>("occurrences", payload); // ? POST
+            await DisplayAlert("Sucesso", "Ocorrência criada.", "OK");
 
             if (Created != null) await Created();
         }

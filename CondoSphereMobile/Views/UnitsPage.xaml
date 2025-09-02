@@ -4,24 +4,46 @@
              xmlns:vm="clr-namespace:CondoSphereMobile.ViewModels"
              x:Class="CondoSphereMobile.Views.UnitsPage"
              Title="Units">
+
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="Dashboard" Priority="0" Order="Primary" Clicked="OnBackToDashboardClicked" />
+        <ToolbarItem Text="Dashboard"
+                     Priority="0"
+                     Order="Primary"
+                     Clicked="OnBackToDashboardClicked" />
     </ContentPage.ToolbarItems>
 
+    <!-- VM ligado à página -->
     <ContentPage.BindingContext>
-        <vm:UnitsViewModel/>
+        <vm:UnitsViewModel />
     </ContentPage.BindingContext>
 
-    <RefreshView IsRefreshing="{Binding IsBusy}" Command="{Binding LoadUnitsCommand}">
-        <CollectionView ItemsSource="{Binding Units}" Margin="12">
+    <!-- Puxa-para-atualizar ligado ao IsBusy e ao comando do VM -->
+    <RefreshView IsRefreshing="{Binding IsBusy}"
+                 Command="{Binding LoadUnitsCommand}">
+        <CollectionView ItemsSource="{Binding Units}"
+                        Margin="12">
+            <CollectionView.EmptyView>
+                <Grid Padding="24">
+                    <Label Text="Sem unidades para mostrar."
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center" />
+                </Grid>
+            </CollectionView.EmptyView>
+
             <CollectionView.ItemTemplate>
                 <DataTemplate>
-                    <Frame Padding="10" Margin="0,0,0,12" BorderColor="#ddd" HasShadow="False">
+                    <Frame Padding="10"
+                           Margin="0,0,0,12"
+                           BorderColor="#ddd"
+                           HasShadow="False">
                         <VerticalStackLayout Spacing="4">
-                            <Label Text="{Binding Number}" FontAttributes="Bold"/>
-                            <Label Text="{Binding Area, StringFormat='{0} m²'}"/>
-                            <Label Text="{Binding CondominiumId, StringFormat='Condo: {0}'}" FontSize="12"/>
-                            <Label Text="{Binding OwnerId, StringFormat='Owner: {0}'}" FontSize="12"/>
+                            <Label Text="{Binding Number}"
+                                   FontAttributes="Bold" />
+                            <Label Text="{Binding Area, StringFormat='{0} m²'}" />
+                            <Label Text="{Binding CondominiumId, StringFormat='Condo: {0}'}"
+                                   FontSize="12" />
+                            <Label Text="{Binding OwnerId, StringFormat='Owner: {0}'}"
+                                   FontSize="12" />
                         </VerticalStackLayout>
                     </Frame>
                 </DataTemplate>

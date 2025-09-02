@@ -9,11 +9,23 @@ namespace CondoSphere.Data.Repositories
         public UnitRepository(ApplicationDbContext context) : base(context) { }
 
         public async Task<IEnumerable<Unit>> GetByCondominiumIdAsync(int condominiumId)
-        {
-            return await _context.Units
-                .Where(u => u.CondominiumId == condominiumId)
-                .ToListAsync();
-        }
+            => await _context.Units.Where(u => u.CondominiumId == condominiumId).ToListAsync();
+
+
+
+        public async Task<IEnumerable<Unit>> GetAllDetailedAsync()
+       => await _context.Units
+           .AsNoTracking()
+           .Include(u => u.Condominium)
+           .Include(u => u.Owner)
+           .OrderBy(u => u.Number)
+           .ToListAsync();
+
+        public async Task<Unit?> GetByIdDetailedAsync(int id)
+            => await _context.Units
+                .Include(u => u.Condominium)
+                .Include(u => u.Owner)
+                .FirstOrDefaultAsync(u => u.Id == id);
     }
 
 }

@@ -7,12 +7,18 @@ namespace CondoSphereMobile
     public partial class AppShell : Shell
     {
         private bool _menuApplied;
+        private readonly SessionService? _session;
 
         public AppShell()
         {
             InitializeComponent();
         }
 
+        public AppShell(SessionService session) : this()  
+        {
+            _session = session;
+           
+        }
         protected override async void OnAppearing()
         {
             base.OnAppearing();

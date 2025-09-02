@@ -45,7 +45,7 @@ namespace CondoSphereMobile.ViewModels
                 IsBusy = true;
                 await EnsureAuthAsync();
 
-                var list = await _api.GetAsync<List<Quota>>("quotas");
+                var list = await _api.GetAsync<List<Quota>>("residents/me");
                 Quotas.Clear();
                 foreach (var q in list) Quotas.Add(q);
             }

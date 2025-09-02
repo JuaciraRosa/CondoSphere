@@ -45,7 +45,7 @@ namespace CondoSphereMobile.ViewModels
                 IsBusy = true;
                 await EnsureAuthAsync();
 
-                var list = await _api.GetAsync<List<Payment>>("payments");
+                var list = await _api.GetAsync<List<Payment>>("payment-receipts/{id}");
                 Payments.Clear();
                 foreach (var p in list) Payments.Add(p);
             }

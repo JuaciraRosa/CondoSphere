@@ -4,19 +4,15 @@ namespace CondoSphereMobile.Views;
 
 public partial class NotificationsPage : ContentPage
 {
+ 
+
     public NotificationsPage()
     {
         InitializeComponent();
-    }
-
-    protected override void OnAppearing()
-    {
-        base.OnAppearing();
-        if (BindingContext is NotificationsViewModel vm &&
-            vm.LoadNotificationsCommand.CanExecute(null))
+        Appearing += (_, __) =>
         {
-            vm.LoadNotificationsCommand.Execute(null);
-        }
+            DisplayAlert("Info", "Ainda não há endpoint para listar notificações. Esta página apenas ilustra o layout.", "OK");
+        };
     }
 
     private async void OnBackToDashboardClicked(object sender, EventArgs e)

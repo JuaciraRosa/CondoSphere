@@ -7,25 +7,16 @@ namespace CondoSphere.Data.Repositories
     {
         public UserRepository(ApplicationDbContext context) : base(context) { }
 
-        public async Task<User> GetByEmailAsync(string email)
-        {
-            return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
-        }
+        public Task<User> GetByEmailAsync(string email) =>
+            _context.Users.FirstOrDefaultAsync(u => u.Email == email)!;
 
+        public Task<User?> GetByIdAsync(string id) =>
+            _context.Users.FirstOrDefaultAsync(u => u.Id == id);
 
-        public async Task<User?> GetByIdAsync(string id)
-        {
-            return await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
-        }
-
-        public IQueryable<User> Query()
-        {
-            return _context.Users.AsQueryable();
-        }
-
+        public IQueryable<User> Query() => _context.Users.AsQueryable();
 
         public Task<User> GetByIdStringAsync(string id) =>
-         _context.Users.FindAsync(id).AsTask();
+            _context.Users.FindAsync(id).AsTask()!;
 
         public async Task DeleteByIdStringAsync(string id)
         {
@@ -36,9 +27,9 @@ namespace CondoSphere.Data.Repositories
                 await _context.SaveChangesAsync();
             }
         }
-
-       
-
     }
 
+
 }
+
+

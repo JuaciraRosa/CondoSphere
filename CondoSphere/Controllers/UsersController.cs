@@ -17,7 +17,7 @@ namespace CondoSphere.Controllers
         private readonly UserManager<User> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ICompanyRepository _companyRepo;
-        private readonly IUserRepository _userRepo; // ainda usamos para Query() em checks
+        private readonly IUserRepository _userRepo;
 
         public UsersController(
             IUserRepository userRepo,
@@ -34,33 +34,31 @@ namespace CondoSphere.Controllers
         // GET: Users
         public async Task<IActionResult> Index()
         {
-            // carrega users + company
-            var users = await _userManager.Users.Include(u => u.Company).ToListAsync();
+            var users = await _userManager.Users
+                .AsNoTracking()
+                .Include(u => u.Company)
+                .ToListAsync();
 
-            // carrega roles de cada user
-            var model = new List<User>();
             foreach (var u in users)
             {
-                // opcionalmente, se você exibe u.Role (enum) na table,
-                // sincronize com o role real caso queira:
                 var roles = await _userManager.GetRolesAsync(u);
-                if (roles.Count > 0)
-                {
-                    if (Enum.TryParse<UserRole>(roles[0], out var r))
-                        u.Role = r;
-                }
-                model.Add(u);
+                if (roles.Count > 0 && Enum.TryParse<UserRole>(roles[0], out var r))
+                    u.Role = r;
             }
-            return View(model);
+
+            return View(users);
         }
 
         // GET: Users/Details/{id}
         public async Task<IActionResult> Details(string id)
         {
             if (string.IsNullOrWhiteSpace(id)) return NotFound();
+
             var user = await _userManager.Users
+                .AsNoTracking()
                 .Include(u => u.Company)
                 .FirstOrDefaultAsync(u => u.Id == id);
+
             if (user == null) return NotFound();
 
             var roles = await _userManager.GetRolesAsync(user);
@@ -86,55 +84,57 @@ namespace CondoSphere.Controllers
             ModelState.Remove("Company");
             ModelState.Remove("OwnedUnits");
 
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                var newUser = new User
-                {
-                    Email = user.Email?.Trim(),
-                    UserName = user.Email?.Trim(),
-                    FullName = user.FullName?.Trim() ?? "",
-                    CompanyId = user.CompanyId,
-                    IsActive = user.IsActive,
-                    EmailConfirmed = true,
-                    ProfileImagePath = "/images/default-user.png"
-                };
-
-                // Se não passar senha, define uma default temporária
-                var initialPassword = string.IsNullOrWhiteSpace(password) ? "ChangeMe123$" : password;
-
-                var result = await _userManager.CreateAsync(newUser, initialPassword);
-                if (!result.Succeeded)
-                {
-                    foreach (var error in result.Errors)
-                        ModelState.AddModelError("", error.Description);
-
-                    var companies = await _companyRepo.GetAllAsync();
-                    ViewBag.CompanyId = new SelectList(companies, "Id", "Name", user.CompanyId);
-                    return View(user);
-                }
-
-                // Adiciona o Role
-                await _userManager.AddToRoleAsync(newUser, user.Role.ToString());
-
-                return RedirectToAction(nameof(Index));
+                var companiesReload = await _companyRepo.GetAllAsync();
+                ViewBag.CompanyId = new SelectList(companiesReload, "Id", "Name", user.CompanyId);
+                return View(user);
             }
 
-            var companiesList = await _companyRepo.GetAllAsync();
-            ViewBag.CompanyId = new SelectList(companiesList, "Id", "Name", user.CompanyId);
-            return View(user);
-        }
+            var newUser = new User
+            {
+                Email = user.Email?.Trim(),
+                UserName = user.Email?.Trim(),
+                FullName = user.FullName?.Trim() ?? "",
+                CompanyId = user.CompanyId,
+                IsActive = user.IsActive,
+                EmailConfirmed = true,
+                ProfileImagePath = "/images/default-user.png"
+            };
 
+            var initialPassword = string.IsNullOrWhiteSpace(password) ? "ChangeMe123$" : password;
+
+            var createRes = await _userManager.CreateAsync(newUser, initialPassword);
+            if (!createRes.Succeeded)
+            {
+                foreach (var e in createRes.Errors) ModelState.AddModelError("", e.Description);
+                var companiesReload = await _companyRepo.GetAllAsync();
+                ViewBag.CompanyId = new SelectList(companiesReload, "Id", "Name", user.CompanyId);
+                return View(user);
+            }
+
+            // Garante que o role existe e atribui
+            var roleName = user.Role.ToString();
+            if (!await _roleManager.RoleExistsAsync(roleName))
+                await _roleManager.CreateAsync(new IdentityRole(roleName));
+
+            await _userManager.AddToRoleAsync(newUser, roleName);
+
+            return RedirectToAction(nameof(Index));
+        }
 
         // GET: Users/Edit/{id}
         public async Task<IActionResult> Edit(string id)
         {
             if (string.IsNullOrWhiteSpace(id)) return NotFound();
+
             var user = await _userManager.Users
+                .AsNoTracking()
                 .Include(u => u.Company)
                 .FirstOrDefaultAsync(u => u.Id == id);
+
             if (user == null) return NotFound();
 
-            // hidrata enum a partir do role real
             var roles = await _userManager.GetRolesAsync(user);
             if (roles.Count > 0 && Enum.TryParse<UserRole>(roles[0], out var r))
                 user.Role = r;
@@ -149,7 +149,6 @@ namespace CondoSphere.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(string id, User user)
         {
-            // não validar navegação que não vem no POST
             ModelState.Remove("Company");
             ModelState.Remove("OwnedUnits");
 
@@ -157,22 +156,28 @@ namespace CondoSphere.Controllers
 
             if (!ModelState.IsValid)
             {
-                var companies = await _companyRepo.GetAllAsync();
-                ViewBag.CompanyId = new SelectList(companies, "Id", "Name", user.CompanyId);
+                var companiesReload = await _companyRepo.GetAllAsync();
+                ViewBag.CompanyId = new SelectList(companiesReload, "Id", "Name", user.CompanyId);
                 return View(user);
             }
 
             var dbUser = await _userManager.FindByIdAsync(id);
             if (dbUser == null) return NotFound();
 
-            // atualiza campos permitidos
+            // Atualiza campos
+            var newEmail = user.Email?.Trim();
             dbUser.FullName = user.FullName?.Trim() ?? dbUser.FullName;
-            dbUser.Email = user.Email?.Trim() ?? dbUser.Email;
-            dbUser.UserName = dbUser.Email; // se essa é sua regra
+            if (!string.Equals(dbUser.Email, newEmail, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(newEmail))
+            {
+                dbUser.Email = newEmail;
+                dbUser.UserName = newEmail;
+                dbUser.NormalizedEmail = newEmail.ToUpperInvariant();
+                dbUser.NormalizedUserName = newEmail.ToUpperInvariant();
+            }
             dbUser.CompanyId = user.CompanyId;
             dbUser.IsActive = user.IsActive;
 
-            // sincroniza Role
+            // Sincroniza Role
             var targetRole = user.Role.ToString();
             if (!await _roleManager.RoleExistsAsync(targetRole))
                 await _roleManager.CreateAsync(new IdentityRole(targetRole));
@@ -189,8 +194,8 @@ namespace CondoSphere.Controllers
             if (!res.Succeeded)
             {
                 foreach (var e in res.Errors) ModelState.AddModelError("", e.Description);
-                var companies = await _companyRepo.GetAllAsync();
-                ViewBag.CompanyId = new SelectList(companies, "Id", "Name", user.CompanyId);
+                var companiesReload = await _companyRepo.GetAllAsync();
+                ViewBag.CompanyId = new SelectList(companiesReload, "Id", "Name", user.CompanyId);
                 return View(user);
             }
 
@@ -201,9 +206,12 @@ namespace CondoSphere.Controllers
         public async Task<IActionResult> Delete(string id)
         {
             if (string.IsNullOrWhiteSpace(id)) return NotFound();
+
             var user = await _userManager.Users
+                .AsNoTracking()
                 .Include(u => u.Company)
                 .FirstOrDefaultAsync(u => u.Id == id);
+
             if (user == null) return NotFound();
             return View(user);
         }
@@ -213,7 +221,7 @@ namespace CondoSphere.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
-            // se tiver Units relacionadas, faz soft delete
+            // Se possui unidades → desativa (soft delete)
             var hasUnits = await _userRepo.Query()
                 .Where(u => u.Id == id)
                 .Select(u => u.OwnedUnits.Any())
@@ -221,10 +229,10 @@ namespace CondoSphere.Controllers
 
             if (hasUnits)
             {
-                var user = await _userManager.FindByIdAsync(id);
-                if (user == null) return NotFound();
-                user.IsActive = false;
-                await _userManager.UpdateAsync(user);
+                var u = await _userManager.FindByIdAsync(id);
+                if (u == null) return NotFound();
+                u.IsActive = false;
+                await _userManager.UpdateAsync(u);
                 TempData["Success"] = "Usuário possui unidades vinculadas. A conta foi desativada.";
                 return RedirectToAction(nameof(Index));
             }
@@ -233,14 +241,8 @@ namespace CondoSphere.Controllers
             if (dbUser == null) return NotFound();
 
             var result = await _userManager.DeleteAsync(dbUser);
-            if (!result.Succeeded)
-            {
-                TempData["Error"] = "Não foi possível excluir o usuário.";
-            }
-            else
-            {
-                TempData["Success"] = "Usuário excluído com sucesso.";
-            }
+            TempData[result.Succeeded ? "Success" : "Error"] =
+                result.Succeeded ? "Usuário excluído com sucesso." : "Não foi possível excluir o usuário.";
 
             return RedirectToAction(nameof(Index));
         }

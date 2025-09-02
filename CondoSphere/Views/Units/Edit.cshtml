@@ -25,17 +25,22 @@
                 <span asp-validation-for="Area" class="text-danger"></span>
             </div>
 
-            <div class="mb-3">
-                <label asp-for="CondominiumId" class="form-label"></label>
-                <select asp-for="CondominiumId" class="form-select" asp-items="ViewBag.CondominiumId"></select>
-                <span asp-validation-for="CondominiumId" class="text-danger"></span>
-            </div>
+          <div class="mb-3">
+    <label asp-for="CondominiumId" class="form-label">Condominium</label>
+    <select asp-for="CondominiumId" class="form-select" asp-items="ViewBag.CondominiumId">
+        <option value="">— Select —</option>
+    </select>
+    <span asp-validation-for="CondominiumId" class="text-danger"></span>
+</div>
 
-            <div class="mb-3">
-                <label asp-for="OwnerId" class="form-label"></label>
-                <select asp-for="OwnerId" class="form-select" asp-items="ViewBag.OwnerId"></select>
-                <span asp-validation-for="OwnerId" class="text-danger"></span>
-            </div>
+<div class="mb-3">
+    <label asp-for="OwnerId" class="form-label">Owner</label>
+    <select asp-for="OwnerId" class="form-select" asp-items="ViewBag.OwnerId">
+        <option value="">— Select —</option>
+    </select>
+    <span asp-validation-for="OwnerId" class="text-danger"></span>
+</div>
+
 
             <div class="text-end">
                 <button type="submit" class="btn btn-success"><i class="bi bi-check-circle"></i> Save</button>

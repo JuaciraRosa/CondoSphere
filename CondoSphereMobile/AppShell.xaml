@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<Shell
-    x:Class="CondoSphereMobile.AppShell"
-    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:views="clr-namespace:CondoSphereMobile.Views"
-    Shell.FlyoutBehavior="Disabled"
-    Title="CondoSphereMobile">
+<Shell x:Class="CondoSphereMobile.AppShell"
+       xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+       xmlns:local="clr-namespace:CondoSphereMobile.Views"
+       Title="CondoSphere"
+       Shell.FlyoutBehavior="Flyout">
 
     <!-- DASHBOARD (comum a todos) -->
     <FlyoutItem Title="Dashboard" Route="dashboard" x:Name="DashboardFlyout">
@@ -14,7 +13,7 @@
 
     <!-- RESIDENT -->
     <FlyoutItem Title="My Area" Route="resident" x:Name="ResidentFlyout">
-        <ShellContent Title="My Unit"        ContentTemplate="{DataTemplate local:MyUnitPage}" />
+        <ShellContent Title="My Unit"        ContentTemplate="{DataTemplate local:UnitsPage}" />
         <ShellContent Title="Quotas"         ContentTemplate="{DataTemplate local:QuotasPage}" />
         <ShellContent Title="Meetings"       ContentTemplate="{DataTemplate local:MeetingsPage}" />
         <ShellContent Title="Occurrences"    ContentTemplate="{DataTemplate local:OccurrencesPage}" />
@@ -40,11 +39,9 @@
         <ShellContent Title="Companies"  ContentTemplate="{DataTemplate local:CompaniesPage}" />
     </FlyoutItem>
 
-    <!-- Rodapé com logout -->
     <Shell.FlyoutFooter>
         <Grid Padding="16">
             <Button Text="Logout" Clicked="OnLogoutClicked"/>
         </Grid>
     </Shell.FlyoutFooter>
-
 </Shell>

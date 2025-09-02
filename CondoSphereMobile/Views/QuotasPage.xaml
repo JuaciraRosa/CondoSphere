@@ -3,22 +3,30 @@
     x:Class="CondoSphereMobile.Views.QuotasPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:models="clr-namespace:CondoSphereMobile.Models"
+    xmlns:conv="clr-namespace:CondoSphereMobile.Converters"
     Title="Quotas">
 
-    <Grid RowDefinitions="Auto, *" Padding="12">
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <conv:BoolNegationConverter x:Key="Not" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*" Padding="12">
         <HorizontalStackLayout Spacing="12">
             <Button Text="Recarregar" Clicked="OnReloadClicked" />
-            <ActivityIndicator x:Name="Busy" IsRunning="False" IsVisible="False" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}" />
         </HorizontalStackLayout>
 
-        <CollectionView
-            x:Name="List"
-            Grid.Row="1"
-            SelectionMode="None">
+        <!-- Se preferir binding: ItemsSource="{Binding Quotas}" -->
+        <CollectionView x:Name="List" Grid.Row="1" SelectionMode="None">
             <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="models:QuotaDto"
-                              xmlns:models="clr-namespace:CondoSphereMobile.Models">
-                    <Grid Padding="12" ColumnDefinitions="*, Auto" BackgroundColor="{AppThemeBinding Light=#ffffff, Dark=#222}" Margin="0,6" >
+                <DataTemplate x:DataType="models:QuotaDto">
+                    <Grid Padding="12" Margin="0,6"
+                          ColumnDefinitions="*,Auto"
+                          BackgroundColor="{AppThemeBinding Light=#ffffff, Dark=#222}">
                         <VerticalStackLayout>
                             <Label Text="{Binding UnitNumber}" FontAttributes="Bold" />
                             <Label Text="{Binding DueDateStr}" Opacity="0.7" FontSize="12" />
@@ -26,13 +34,12 @@
                             <Label Text="{Binding IsPaid, StringFormat='Pago: {0}'}" />
                         </VerticalStackLayout>
 
-                        <StackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
-                            <Button Text="Detalhes" Clicked="OnDetailsClicked" CommandParameter="{Binding .}" />
-                            <Button Text="Pagar"
-                                    IsEnabled="{Binding IsPaid, Converter={StaticResource invertBoolConverter}}"
-                                    Clicked="OnPayClicked"
+                        <VerticalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                            <Button Text="Detalhes"
+                                    Clicked="OnDetailsClicked"
                                     CommandParameter="{Binding .}" />
-                        </StackLayout>
+                            <Button Text="Pagar" Clicked="OnDetailsClicked" CommandParameter="{Binding}" />
+                        </VerticalStackLayout>
                     </Grid>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
