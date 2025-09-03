@@ -16,6 +16,8 @@ public partial class QuotasPage : ContentPage
     {
         InitializeComponent();
         BindingContext = this;
+
+        List.ItemsSource = Quotas;
         Appearing += async (_, __) => await LoadQuotasAsync();
     }
 
@@ -87,6 +89,12 @@ public partial class QuotasPage : ContentPage
             return;
         }
 
+        if (quota.IsPaid)
+        {
+            await DisplayAlert("Pagamento", "Esta quota já está paga.", "OK");
+            return;
+        }
+
         // Se usas Shell: await Shell.Current.Navigation.PushAsync(new PaymentMethodPage(quota));
         await Navigation.PushAsync(new PaymentMethodPage(quota));
     }
@@ -113,28 +121,6 @@ public partial class QuotasPage : ContentPage
 
     // === helpers para desserializar residents/me ===
     private class ResidentMeResp { public List<UnitX> Units { get; set; } = new(); }
-    private class UnitX
-    {
-        public int Id { get; set; }
-        public string UnitNumber { get; set; } = "";
-        public List<QuotaX> Quotas { get; set; } = new();
-    }
-    private class QuotaX
-    {
-        public int Id { get; set; }
-        public int UnitId { get; set; }
-        public string UnitNumber { get; set; } = "";
-        public decimal Amount { get; set; }
-        public DateTime DueDate { get; set; }
-        public bool IsPaid { get; set; }
-        public PaymentX? Payment { get; set; }
-    }
-    private class PaymentX
-    {
-        public int Id { get; set; }
-        public string Method { get; set; } = "";
-        public string? ProviderReference { get; set; }
-        public DateTime? CreatedAt { get; set; }
-        public DateTime? PaidAt { get; set; }
-    }
+ 
+
 }

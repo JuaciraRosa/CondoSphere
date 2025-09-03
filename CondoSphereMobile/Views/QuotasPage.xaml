@@ -38,7 +38,7 @@
                             <Button Text="Detalhes"
                                     Clicked="OnDetailsClicked"
                                     CommandParameter="{Binding .}" />
-                            <Button Text="Pagar" Clicked="OnDetailsClicked" CommandParameter="{Binding}" />
+                            <Button Text="Pagar" Clicked="OnDetailsClicked" CommandParameter="{Binding}"  IsEnabled="{Binding IsPaid, Converter={StaticResource Not}}"/>
                         </VerticalStackLayout>
                     </Grid>
                 </DataTemplate>

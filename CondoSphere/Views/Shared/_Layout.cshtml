@@ -63,6 +63,9 @@
                         @if (role == "Administrator" || role == "Manager")
                         {
                             <li><a asp-controller="Condominiums" asp-action="Index">Condominiums</a></li>
+                            <li class="nav-item">
+                            <a class="nav-link" asp-controller="Units" asp-action="Create">Create Unit</a>
+                            </li>
                             <li><a asp-controller="Meetings" asp-action="Index">Meetings</a></li>
                             <li><a asp-controller="Expenses" asp-action="Index">Expenses</a></li>
                             <li><a asp-controller="Quotas" asp-action="Index">Quotas</a></li>

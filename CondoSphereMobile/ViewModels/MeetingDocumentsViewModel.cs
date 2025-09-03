@@ -16,31 +16,18 @@ namespace CondoSphereMobile.ViewModels
 
         public async Task LoadAsync(int condominiumId)
         {
-            try
-            {
-                var token = await SecureStorage.GetAsync("jwt_token");
-                if (!string.IsNullOrEmpty(token)) _api.SetAuthToken(token);
+            var token = await SecureStorage.GetAsync("jwt_token");
+            if (!string.IsNullOrEmpty(token)) _api.SetAuthToken(token);
 
-                var url = $"meeting-documents?condominiumId={condominiumId}"; // ✅ sem {id} literal
-                var list = await _api.GetAsync<List<MeetingDocumentItem>>(url);
+            var list = await _api.GetAsync<List<MeetingDocumentItem>>(
+                $"meeting-documents?condominiumId={condominiumId}");
 
-                Documents.Clear();
-                foreach (var d in list) Documents.Add(d);
-            }
-            catch (Exception ex)
-            {
-                await Application.Current.MainPage.DisplayAlert("Error", ex.Message, "OK");
-            }
+            Documents.Clear();
+            foreach (var d in list) Documents.Add(d);
         }
-    }
 
-    public class MeetingDocumentItem
-    {
-        public int Id { get; set; }
-        public int CondominiumId { get; set; }
-        public string Title { get; set; } = "";
-        public string Url { get; set; } = "";
-        public DateTime PublishedAt { get; set; }
+
+
     }
 }
 

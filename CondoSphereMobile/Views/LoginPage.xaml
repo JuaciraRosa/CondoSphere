@@ -1,11 +1,31 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<ContentPage x:Class="CondoSphereMobile.Views.LoginPage"
+             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="CondoSphereMobile.Views.LoginPage"
-               Title="Login">
-    <VerticalStackLayout Padding="20" Spacing="15">
-        <Entry Placeholder="Email" Text="{Binding Email}" />
-        <Entry Placeholder="Password" IsPassword="True" Text="{Binding Password}" />
-        <Button Text="Entrar" Command="{Binding LoginCommand}" />
-    </VerticalStackLayout>
+             xmlns:vm="clr-namespace:CondoSphereMobile.ViewModels"
+             Title="Login">
+    <ContentPage.BindingContext>
+        <vm:LoginViewModel />
+    </ContentPage.BindingContext>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="12">
+            <Entry Placeholder="Email" Keyboard="Email" Text="{Binding Email}" />
+            <Entry Placeholder="Password" IsPassword="True" Text="{Binding Password}" />
+
+            <Grid ColumnDefinitions="Auto,*">
+                <CheckBox IsChecked="{Binding RememberMe}" VerticalOptions="Center"/>
+                <Label Grid.Column="1" Text="Remember me" VerticalOptions="Center"/>
+            </Grid>
+
+            <Button Text="Entrar" Command="{Binding LoginCommand}" />
+
+            <Label Text="Esqueci a senha" TextDecorations="Underline"
+             HorizontalOptions="Center">
+                <Label.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding ForgotPasswordCommand}" />
+                </Label.GestureRecognizers>
+            </Label>
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>

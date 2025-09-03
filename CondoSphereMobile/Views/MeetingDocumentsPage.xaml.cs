@@ -1,3 +1,4 @@
+using CondoSphereMobile.Models;
 using CondoSphereMobile.Services;
 using CondoSphereMobile.ViewModels;
 
@@ -5,35 +6,49 @@ namespace CondoSphereMobile.Views;
 
 public partial class MeetingDocumentsPage : ContentPage
 {
-    public MeetingDocumentsViewModel VM { get; }
-    public Command<string> DownloadCommand { get; }
+    private readonly CondoSphereMobile.ViewModels.MeetingDocumentsViewModel _vm = new();
 
-    public int CondominiumId { get; set; }
-
-    public MeetingDocumentsPage(int condominiumId)
+    public MeetingDocumentsPage()
     {
         InitializeComponent();
-        BindingContext = VM = new MeetingDocumentsViewModel();
-        DownloadCommand = new Command<string>(async (url) => await OnDownload(url));
-        CondominiumId = condominiumId;
+        BindingContext = _vm;
+        Appearing += async (_, __) => await LoadAsync();
     }
 
-    protected override async void OnAppearing()
+    private async Task LoadAsync()
     {
-        base.OnAppearing();
-        await VM.LoadAsync(CondominiumId);
-    }
+        try
+        {
+            var api = new ApiService();
+            var token = await SecureStorage.GetAsync("jwt_token");
+            if (!string.IsNullOrEmpty(token)) api.SetAuthToken(token);
 
-    private async System.Threading.Tasks.Task OnDownload(string url)
-    {
-        var api = new ApiService();
-        var token = await SecureStorage.GetAsync("jwt_token");
-        var downloader = new FileDownloadService("http://condosphere.somee.com/", token);
-        var relative = url.StartsWith("/") ? url.Substring(1) : url;
-        var bytes = await downloader.GetBytesAsync(relative);
+            int condominiumId = 0;
 
-        var path = System.IO.Path.Combine(FileSystem.CacheDirectory, $"ata_{DateTime.Now:yyyyMMddHHmmss}.pdf");
-        System.IO.File.WriteAllBytes(path, bytes);
-        await DisplayAlert("Download", $"Guardado em: {path}", "OK");
+            // 1) Tenta como Resident (mais correto)
+            try
+            {
+                var me = await api.GetAsync<ResidentMeDto>("residents/me");
+                condominiumId = me.OwnedUnits.FirstOrDefault()?.CondominiumId ?? 0;
+            }
+            catch
+            {
+                // 2) Se não for Resident, pega o primeiro condomínio disponível
+                var condos = await api.GetAsync<List<CondoShort>>("condominiums");
+                condominiumId = condos.FirstOrDefault()?.Id ?? 0;
+            }
+
+            if (condominiumId == 0)
+            {
+                await DisplayAlert("Info", "Nenhum condomínio encontrado para este utilizador.", "OK");
+                return;
+            }
+
+            await _vm.LoadAsync(condominiumId); // <- chama o VM com número real
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlert("Error", ex.Message, "OK");
+        }
     }
 }

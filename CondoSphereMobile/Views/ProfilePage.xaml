@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CondoSphereMobile.Views.ProfilePage"
+             Title="Profile">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="10">
+            <Label Text="Dados pessoais" FontAttributes="Bold" />
+            <Label Text="{Binding FullName}" />
+            <Label Text="{Binding Email}" />
+            <Label Text="{Binding Role}" />
+
+            <BoxView HeightRequest="1" Color="#ddd" />
+
+            <Label Text="Minhas Unidades" FontAttributes="Bold" />
+            <CollectionView ItemsSource="{Binding OwnedUnits}" SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Padding="8" Margin="0,6" HasShadow="False" BorderColor="#ddd">
+                            <VerticalStackLayout>
+                                <Label Text="{Binding UnitNumber}" FontAttributes="Bold" />
+                                <Label Text="{Binding Area, StringFormat='{0} m²'}" />
+                                <Label Text="{Binding CondominiumId, StringFormat='Condomínio: {0}'}" />
+                            </VerticalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

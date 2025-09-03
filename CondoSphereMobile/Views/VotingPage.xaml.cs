@@ -20,7 +20,8 @@ public partial class VotingPage : ContentPage
         try
         {
             _polls = await BuildPollsFromMeetingsAsync();
-            // TODO: bind _polls ao teu UI (Picker/CollectionView/etc.)
+
+            List.ItemsSource = _polls;
         }
         catch (Exception ex)
         {
@@ -34,7 +35,11 @@ public partial class VotingPage : ContentPage
     // Se teu XAML tiver um botão "Votar" com Clicked="OnVoteClicked"
     private async void OnVoteClicked(object sender, EventArgs e)
     {
-        var poll = _polls.FirstOrDefault(p => !string.IsNullOrEmpty(p.Selected));
+      
+
+        var poll = (sender as Button)?.CommandParameter as VoteDto
+                      ?? _polls.FirstOrDefault(p => !string.IsNullOrEmpty(p.Selected));
+
         if (poll == null)
         {
             await DisplayAlert("Atenção", "Escolhe uma opção.", "OK");
@@ -46,19 +51,21 @@ public partial class VotingPage : ContentPage
             var token = await SecureStorage.GetAsync("jwt_token");
             if (!string.IsNullOrEmpty(token)) _api.SetAuthToken(token);
 
-            var me = await _api.GetAsync<dynamic>("residents/me");
-            var voterEmail = (string)(me?.email ?? me?.Email ?? "");
+            var me = await _api.GetAsync<ResidentMeDto>("residents/me");
+
 
             var payload = new
             {
                 MeetingId = poll.PollId,
-                VoterEmail = voterEmail,
+                VoterEmail = me.Email,
                 UnitNumber = "",
                 Choice = poll.Selected
             };
 
             await _api.PostAsync<object, object>("voting/cast", payload);
             await DisplayAlert("Ok", "Voto registado.", "OK");
+
+           
         }
         catch (Exception ex)
         {

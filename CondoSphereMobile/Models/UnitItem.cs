@@ -6,12 +6,13 @@ using System.Threading.Tasks;
 
 namespace CondoSphereMobile.Models
 {
-    public class MeetingDocumentItem
+
+    public class UnitItem
     {
         public int Id { get; set; }
+        public string Number { get; set; } = "";
+        public decimal Area { get; set; }
         public int CondominiumId { get; set; }
-        public string Title { get; set; } = "";
-        public string Url { get; set; } = "";
-        public DateTime PublishedAt { get; set; }
+        public string OwnerId { get; set; } = "";
     }
 }

@@ -6,11 +6,30 @@
     Title="Nova Ocorrência">
     <ScrollView>
         <VerticalStackLayout Padding="16" Spacing="12">
-            <Entry x:Name="CondoId" Placeholder="Condomínio Id" Keyboard="Numeric" />
-            <Entry x:Name="UnitNumber" Placeholder="Unidade (ex: A1)" />
+
+
+
+
+            <Label Text="Condomínio" />
+            <Picker x:Name="CondoPicker"
+                    Title="Selecione o condomínio"
+                    ItemDisplayBinding="{Binding Name}"
+                    SelectedIndexChanged="OnCondoChanged" />
+
+            <Label Text="Unidade" />
+            <Picker x:Name="UnitPicker"
+                    Title="Selecione a unidade"
+                    ItemDisplayBinding="{Binding Display}" />
+
+            <Label Text="Título" />
             <Entry x:Name="TitleEntry" Placeholder="Título" />
+
+            <Label Text="Descrição" />
             <Editor x:Name="DescEntry" Placeholder="Descrição" AutoSize="TextChanges" />
-            <Entry x:Name="EmailEntry" Placeholder="Seu e-mail" Keyboard="Email" />
+
+            <Label Text="Seu e-mail" />
+            <Entry x:Name="EmailEntry" Placeholder="email@exemplo.com" Keyboard="Email" />
+
             <Button Text="Criar" Clicked="OnCreateClicked" />
         </VerticalStackLayout>
     </ScrollView>

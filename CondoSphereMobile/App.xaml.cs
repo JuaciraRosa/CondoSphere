@@ -16,6 +16,7 @@ namespace CondoSphereMobile
 
             // carrega sessão armazenada e decide o shell
             _ = StartAsync();
+            _ = ClearTokenIfNotRememberAsync();
         }
 
         private async Task StartAsync()
@@ -23,6 +24,15 @@ namespace CondoSphereMobile
             await _session.LoadAsync();
             if (_session.IsAuthenticated)
                 Application.Current.MainPage = new AppShell(_session);
+        }
+
+        private static async Task ClearTokenIfNotRememberAsync()
+        {
+            if (!Preferences.Get("remember_me", false))
+            {
+                try { SecureStorage.Remove("jwt_token"); } catch { }
+            }
+            await Task.CompletedTask;
         }
     }
 
