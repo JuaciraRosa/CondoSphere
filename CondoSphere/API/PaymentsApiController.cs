@@ -47,8 +47,13 @@ namespace CondoSphere.API
         {
             try
             {
+                var cfg = HttpContext.RequestServices.GetRequiredService<IConfiguration>();
+                var pk = cfg["Stripe:PublishableKey"];
+                var sk = cfg["Stripe:SecretKey"];
+                if (string.IsNullOrWhiteSpace(pk) || string.IsNullOrWhiteSpace(sk))
+                    return BadRequest(new { error = "Stripe keys not configured. Set Stripe:PublishableKey and Stripe:SecretKey." });
+
                 var (clientSecret, intentId) = await _payments.CreateCardIntentAsync(req.QuotaId);
-                var pk = HttpContext.RequestServices.GetRequiredService<IConfiguration>()["Stripe:PublishableKey"];
                 return Ok(new { clientSecret, intentId, publishableKey = pk });
             }
             catch (DbUpdateException ex)
@@ -60,6 +65,7 @@ namespace CondoSphere.API
                 return BadRequest(new { error = ex.Message });
             }
         }
+
 
         // API/PaymentsApiController.cs
         [HttpPost("confirm")]

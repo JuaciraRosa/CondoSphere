@@ -25,58 +25,71 @@
 
 <script src="https://js.stripe.com/v3/"></script>
 <script>
-    (async () => {
-      // 1) Cria PaymentIntent no backend
-      const res = await fetch('/api/payments/card/intent', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ quotaId: @Model.QuotaId })
-      });
-      const errorDiv = document.getElementById('card-errors');
-      if (!res.ok) {
-        errorDiv.textContent = 'Failed to create payment intent.';
-        return;
-      }
-      const { clientSecret, publishableKey } = await res.json();
+  (async () => {
+    const errorDiv = document.getElementById('card-errors');
 
-      // 2) Inicializa Stripe.js
-      const stripe = Stripe(publishableKey);
-      const elements = stripe.elements();
-      const card = elements.create('card');
-      card.mount('#card-element');
-
-      const btn = document.getElementById('payBtn');
-      const spinner = document.getElementById('paySpinner');
-
-      btn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        btn.disabled = true; spinner.style.display = 'inline-block'; errorDiv.textContent = '';
-
-        // 3) Confirma pagamento
-        const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-          payment_method: { card }
+    async function createIntent() {
+      try {
+        const res = await fetch('/api/payments/card/intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quotaId: @Model.QuotaId })
         });
 
-        btn.disabled = false; spinner.style.display = 'none';
-
-        if (error) {
-          errorDiv.textContent = error.message || 'Payment failed.';
-          return;
+        const bodyText = await res.text();
+        if (!res.ok) {
+          try {
+            const j = JSON.parse(bodyText);
+            errorDiv.textContent = j.error || 'Failed to create payment intent.';
+          } catch {
+            errorDiv.textContent = bodyText || 'Failed to create payment intent.';
+          }
+          return null;
         }
+        return JSON.parse(bodyText);
+      } catch (e) {
+        errorDiv.textContent = e.message || 'Failed to create payment intent.';
+        return null;
+      }
+    }
 
-        if (paymentIntent && paymentIntent.status === 'succeeded') {
-          // 4) Marca pago de imediato no servidor
-          await fetch('/api/payments/confirm', {
-            method: 'POST',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ intentId: paymentIntent.id })
-          });
+    const data = await createIntent();
+    if (!data) return;
 
-          // Redireciona (ajuste o destino como preferir)
-          window.location.href = '@Url.Action("Details", "Quotas", new { id = Model.QuotaId })';
-        } else {
-          errorDiv.textContent = 'Payment not completed.';
-        }
+    const { clientSecret, publishableKey } = data;
+
+    const stripe = Stripe(publishableKey);
+    const elements = stripe.elements();
+    const card = elements.create('card');
+    card.mount('#card-element');
+
+    const btn = document.getElementById('payBtn');
+    const spinner = document.getElementById('paySpinner');
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true; spinner.style.display = 'inline-block'; errorDiv.textContent = '';
+
+      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: { card }
       });
-    })();
+
+      btn.disabled = false; spinner.style.display = 'none';
+
+      if (error) {
+        errorDiv.textContent = error.message || 'Payment failed.';
+        return;
+      }
+
+      if (paymentIntent && paymentIntent.status === 'succeeded') {
+        await fetch('/api/payments/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ intentId: paymentIntent.id })
+        });
+        window.location.href = '@Url.Action("Details","Quotas", new { id = Model.QuotaId })';
+      } else {
+        errorDiv.textContent = 'Payment not completed.';
+      }
+    });
+  })();
 </script>

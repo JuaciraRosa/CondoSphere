@@ -189,28 +189,21 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        // 1) Aplica migrações
-        await ctx.Database.MigrateAsync();
+        await ctx.Database.MigrateAsync();     
+        await DbSeeder.SeedAsync(sp);         
 
-        // 2) Seed (cria roles e usuários iniciais, SEMPRE setando ProfileImagePath)
-        await DbSeeder.SeedAsync(sp);
-
-      
         var afetados = await ctx.Users
             .Where(u => u.ProfileImagePath == null)
             .ExecuteUpdateAsync(setters => setters.SetProperty(u => u.ProfileImagePath, ""));
 
         if (afetados > 0)
-        {
             app.Logger.LogInformation("Corrigidos {Afetados} usuários com ProfileImagePath NULL.", afetados);
-        }
     }
     catch (Exception ex)
     {
         var logger = sp.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "Falha ao migrar/seedar o banco.");
-        throw; // deixe falhar no startup para você ver o erro
+        throw;
     }
 }
-
 app.Run();

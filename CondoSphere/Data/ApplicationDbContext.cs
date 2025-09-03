@@ -95,12 +95,11 @@ namespace CondoSphere.Data
                 .HasForeignKey<Payment>(p => p.QuotaId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // User -> Company (opcional)
             modelBuilder.Entity<User>()
-                .HasOne<Company>()
-                .WithMany(c => c.Users)
-                .HasForeignKey(u => u.CompanyId)
-                .OnDelete(DeleteBehavior.SetNull);
+       .HasOne(u => u.Company)
+       .WithMany(c => c.Users)                // ou .WithMany() se não tiver navegação
+       .HasForeignKey(u => u.CompanyId)
+       .OnDelete(DeleteBehavior.Restrict);
 
             // ===== Precision for money =====
             modelBuilder.Entity<Quota>()
