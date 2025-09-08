@@ -1,0 +1,11 @@
+﻿@model int
+@{ ViewData["Title"] = $"Erro {Model}"; }
+<div class="container py-5">
+  <div class="card shadow-sm">
+    <div class="card-body text-center">
+      <h1 class="display-4">@Model</h1>
+      <p class="lead">Ocorreu um erro ao processar o seu pedido.</p>
+      <a class="btn btn-primary" href="@Url.Action("Index","Home")">Voltar ao início</a>
+    </div>
+  </div>
+</div>

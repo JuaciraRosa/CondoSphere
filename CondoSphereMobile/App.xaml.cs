@@ -3,37 +3,50 @@ using CondoSphereMobile.Views;
 
 namespace CondoSphereMobile
 {
-    // App.xaml.cs
+   
     public partial class App : Application
     {
-        private readonly SessionService _session;
-
-        public App(SessionService session)
+        public App()
         {
             InitializeComponent();
-            _session = session;
-            MainPage = new NavigationPage(new LoginPage()); // arranque
 
-            // carrega sessão armazenada e decide o shell
-            _ = StartAsync();
-            _ = ClearTokenIfNotRememberAsync();
+            // Placeholder para não travar a UI
+            MainPage = new ContentPage { Content = new ActivityIndicator { IsRunning = true, IsVisible = true } };
+
+            // Decide a tela inicial sem bloquear o construtor
+            Dispatcher.Dispatch(async () => await DecideLandingPageAsync());
         }
 
-        private async Task StartAsync()
+        private async Task DecideLandingPageAsync()
         {
-            await _session.LoadAsync();
-            if (_session.IsAuthenticated)
-                Application.Current.MainPage = new AppShell(_session);
-        }
-
-        private static async Task ClearTokenIfNotRememberAsync()
-        {
-            if (!Preferences.Get("remember_me", false))
+            try
             {
-                try { SecureStorage.Remove("jwt_token"); } catch { }
+                // se não marcou "remember me", remove token salvo
+                var remember = Preferences.Get("remember_me", false);
+                if (!remember)
+                {
+                    try { SecureStorage.Remove("jwt_token"); } catch { /* ignore */ }
+                }
+
+                var token = await SecureStorage.GetAsync("jwt_token");
+
+                if (!string.IsNullOrWhiteSpace(token))
+                {
+                    // tem token: abre o Shell
+                    MainPage = new AppShell();
+                }
+                else
+                {
+                    // sem token: vai para Login
+                    MainPage = new NavigationPage(new LoginPage());
+                }
             }
-            await Task.CompletedTask;
+            catch
+            {
+                MainPage = new NavigationPage(new LoginPage());
+            }
         }
     }
+
 
 }

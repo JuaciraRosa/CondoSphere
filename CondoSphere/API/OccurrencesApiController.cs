@@ -8,7 +8,6 @@ namespace CondoSphere.API
 {
     [Route("api/occurrences")]
     [ApiController]
-    [Authorize]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class OccurrencesApiController : ControllerBase
     {

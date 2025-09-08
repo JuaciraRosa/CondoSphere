@@ -105,19 +105,7 @@ public partial class QuotasPage : ContentPage
     private async void OnReloadClicked(object sender, EventArgs e) =>
         await LoadQuotasAsync();
 
-    // XAML: Clicked="OnDetailsClicked"
-    // Suporta tanto CommandParameter="{Binding}" quanto acessar o BindingContext do botão
-    private async void OnDetailsClicked(object sender, EventArgs e)
-    {
-        QuotaDto? quota =
-            (sender as Button)?.CommandParameter as QuotaDto ??
-            (sender as BindableObject)?.BindingContext as QuotaDto;
-
-        if (quota == null) return;
-
-        // Abre a tela de métodos de pagamento (se não usa, pode trocar por outra navegação)
-        await Navigation.PushAsync(new PaymentMethodPage(quota));
-    }
+ 
 
     // === helpers para desserializar residents/me ===
     private class ResidentMeResp { public List<UnitX> Units { get; set; } = new(); }

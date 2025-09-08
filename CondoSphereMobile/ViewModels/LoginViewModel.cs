@@ -76,6 +76,13 @@ namespace CondoSphereMobile.ViewModels
             }
         }
 
+        private static Task NavigateToHomeAsync()
+        {
+            Application.Current.MainPage = new AppShell();
+            return Task.CompletedTask;
+        }
+
+
         private async Task LoginAsync()
         {
             if (IsBusy) return;
@@ -127,8 +134,9 @@ namespace CondoSphereMobile.ViewModels
                 Preferences.Set("user_role", resp.Role ?? "");
                 Preferences.Set("user_fullname", resp.FullName ?? "");
 
-                await Shell.Current.GoToAsync("//DashboardPage");
+                Application.Current.MainPage = new AppShell(); // entra no Shell
                 Password = "";
+
             }
             catch (Exception ex)
             {
@@ -186,14 +194,7 @@ namespace CondoSphereMobile.ViewModels
             }
         }
 
-        private static async Task NavigateToHomeAsync()
-        {
-            // Se usas Shell com rota para o dashboard:
-            await Shell.Current.GoToAsync("//DashboardPage");
-
-            // Alternativa (com AppShell como MainPage):
-            // Application.Current.MainPage = new AppShell();
-        }
+     
 
         /// <summary>Remove o token guardado se o utilizador não marcou “remember me”.</summary>
         private static async Task ClearTokenIfNotRememberAsync()

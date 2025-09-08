@@ -9,7 +9,6 @@ namespace CondoSphere.API
 {
     [Route("api/payment-receipts")]
     [ApiController]
-    [Authorize]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class PaymentReceiptsApiController : ControllerBase
     {

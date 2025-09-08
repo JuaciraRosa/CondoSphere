@@ -6,57 +6,52 @@ namespace CondoSphereMobile
 {
     public partial class AppShell : Shell
     {
-        private bool _menuApplied;
-        private readonly SessionService? _session;
+        bool _menuApplied;
 
         public AppShell()
         {
             InitializeComponent();
         }
 
-        public AppShell(SessionService session) : this()  
-        {
-            _session = session;
-           
-        }
         protected override async void OnAppearing()
         {
             base.OnAppearing();
-
             if (_menuApplied) return;
             _menuApplied = true;
 
             var role = await SecureStorage.GetAsync("user_role") ?? "";
 
-            // Por padrão, mostra só Dashboard + Resident
-            // Remove o que não se aplica
+            // exemplo simples:
             if (role == "Administrator")
             {
-                // Admin vê tudo (Manager + Admin + Resident se quiseres)
+                // vê tudo
             }
             else if (role == "Manager")
             {
-                // Manager não vê Admin
                 if (Items.Contains(AdminFlyout)) Items.Remove(AdminFlyout);
             }
             else
             {
-                // Resident não vê Manager nem Admin
                 if (Items.Contains(ManagerFlyout)) Items.Remove(ManagerFlyout);
                 if (Items.Contains(AdminFlyout)) Items.Remove(AdminFlyout);
             }
 
-            // Define a página inicial (Dashboard)
             CurrentItem = DashboardFlyout;
         }
 
-        private async void OnLogoutClicked(object sender, EventArgs e)
+        private void OnLogoutClicked(object sender, EventArgs e)
         {
-            SecureStorage.Remove("jwt_token");
-            SecureStorage.Remove("user_role");
-            SecureStorage.Remove("user_name");
+            try
+            {
+                SecureStorage.Remove("jwt_token");
+                SecureStorage.Remove("user_role");
+                SecureStorage.Remove("user_fullname");
+            }
+            catch { /* ignore */ }
+
+            // volta para o login
             Application.Current.MainPage = new NavigationPage(new LoginPage());
         }
-
     }
+
 }

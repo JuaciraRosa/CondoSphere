@@ -35,10 +35,7 @@
                         </VerticalStackLayout>
 
                         <VerticalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
-                            <Button Text="Detalhes"
-                                    Clicked="OnDetailsClicked"
-                                    CommandParameter="{Binding .}" />
-                            <Button Text="Pagar" Clicked="OnDetailsClicked" CommandParameter="{Binding}"  IsEnabled="{Binding IsPaid, Converter={StaticResource Not}}"/>
+                            <Button Text="Pagar" Clicked="OnPayClicked" CommandParameter="{Binding}"  IsEnabled="{Binding IsPaid, Converter={StaticResource Not}}"/>
                         </VerticalStackLayout>
                     </Grid>
                 </DataTemplate>

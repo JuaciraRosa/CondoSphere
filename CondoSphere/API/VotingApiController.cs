@@ -9,7 +9,6 @@ namespace CondoSphere.API
 {
     [Route("api/voting")]
     [ApiController]
-    [Authorize]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class VotingApiController : ControllerBase
     {

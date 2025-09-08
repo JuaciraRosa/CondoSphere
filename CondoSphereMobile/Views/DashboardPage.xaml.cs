@@ -60,4 +60,9 @@ public partial class DashboardPage : ContentPage
     {
         await Shell.Current.GoToAsync("///MeetingDocumentsPage");
     }
+
+    private async void OnProfileClicked(object sender, EventArgs e)
+    {
+        await Shell.Current.GoToAsync("///ProfilePage");
+    }
 }

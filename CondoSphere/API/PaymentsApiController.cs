@@ -12,7 +12,6 @@ namespace CondoSphere.API
   
     [ApiController]
     [Route("api/payments")]
-    [AllowAnonymous]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class PaymentsApiController : ControllerBase
     {

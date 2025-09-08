@@ -1,17 +1,19 @@
-using System.Text;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.EntityFrameworkCore;
 using CondoSphere.Data;
 using CondoSphere.Data.DependencyInjection;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using CondoSphere.Infrastructure;
+using CondoSphere.Messaging;
+using CondoSphere.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
-using CondoSphere.Services;
+using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System;
-using CondoSphere.Messaging;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -116,7 +118,11 @@ builder.Services.AddSwaggerGen(c =>
         Description = "API REST para gestão de condomínios"
     });
 
-    // ?? JWT in Swagger
+    // <<< evita estouro quando há actions “iguais”
+    c.ResolveConflictingActions(apiDescriptions => apiDescriptions.First());
+    // <<< evita conflito de nomes (tipos aninhados etc.)
+    c.CustomSchemaIds(t => t.FullName!.Replace("+", "."));
+
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -141,8 +147,17 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 
-    // ? Avoid “Conflicting schemaIds” (User, etc.)
-    c.CustomSchemaIds(type => type.FullName!.Replace("+", "."));
+    c.ResolveConflictingActions(apiDescriptions => apiDescriptions.First());
+    c.CustomSchemaIds(t => t.FullName!.Replace("+", "."));
+
+   
+    c.DocInclusionPredicate((doc, apiDesc) =>
+    {
+        var cad = apiDesc.ActionDescriptor as ControllerActionDescriptor;
+        return cad?.ControllerTypeInfo
+                   .GetCustomAttributes(typeof(ApiControllerAttribute), inherit: true)
+                   .Any() == true;
+    });
 });
 
 
@@ -152,7 +167,9 @@ var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Home/Error");
+    app.UseExceptionHandler("/Error/500");          
+    app.UseStatusCodePagesWithReExecute("/Error/{0}");
+    app.UseDeveloperExceptionPage();
     app.UseHsts();
 }
 
@@ -163,6 +180,16 @@ app.UseRouting();
 
 app.UseCors("maui");
 
+app.Use(async (ctx, next) =>
+{
+    if (ctx.Request.Path.StartsWithSegments("/swagger"))
+    {
+        await next(); 
+        return;
+    }
+    await next();
+});
+
 // Important: auth order
 app.UseAuthentication();
 app.UseAuthorization();
@@ -171,8 +198,8 @@ if (app.Environment.IsDevelopment() || true) // deixar sempre ativo por enquanto
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "CondoSphere API v1");
-        c.RoutePrefix = string.Empty; // Swagger abre na raiz /
+        c.RoutePrefix = "swagger";                  // UI em /swagger
+        c.SwaggerEndpoint("./v1/swagger.json", "CondoSphere API v1"); // caminho RELATIVO
     });
 }
 

@@ -36,14 +36,20 @@ namespace CondoSphereMobile.ViewModels
             {
                 IsBusy = true;
 
+                // garante header
                 var token = await SecureStorage.GetAsync("jwt_token");
                 if (!string.IsNullOrEmpty(token)) _api.SetAuthToken(token);
 
-                // TIPADO (⚠️ não usar dynamic aqui)
-                var me = await _api.GetAsync<ResidentMeDto>("residents/me");
+                var role = Preferences.Get("user_role", "");
+                List<ApiService.UnitDto> src;
+
+                if (role == "Administrator" || role == "Manager")
+                    src = await _api.GetUnitsAllAsync();
+                else
+                    src = await _api.GetUnitsMineAsync();
 
                 Units.Clear();
-                foreach (var u in me.OwnedUnits)
+                foreach (var u in src)
                 {
                     Units.Add(new UnitItem
                     {
@@ -51,7 +57,7 @@ namespace CondoSphereMobile.ViewModels
                         Number = u.UnitNumber,
                         Area = u.Area,
                         CondominiumId = u.CondominiumId,
-                        OwnerId = me.Email
+                        OwnerId = u.OwnerId
                     });
                 }
             }
@@ -62,5 +68,6 @@ namespace CondoSphereMobile.ViewModels
             finally { IsBusy = false; }
         }
     }
+
 }
 

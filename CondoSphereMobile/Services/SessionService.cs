@@ -10,6 +10,7 @@ namespace CondoSphereMobile.Services
     public class SessionService
     {
         private readonly ApiService _api;
+
         public string Token { get; private set; } = "";
         public string Role { get; private set; } = "";
         public string UserName { get; private set; } = "";
@@ -22,30 +23,45 @@ namespace CondoSphereMobile.Services
         public async Task LoadAsync()
         {
             Token = await SecureStorage.GetAsync("jwt_token") ?? "";
-            Role = await SecureStorage.GetAsync("user_role") ?? "";
-            UserName = await SecureStorage.GetAsync("user_name") ?? "";
+            Role = await SecureStorage.GetAsync("user_role") ?? "";   // pode trocar por Preferences se quiser
+            UserName = await SecureStorage.GetAsync("user_name") ?? "";   // idem
+
             _api.SetAuthToken(Token);
-            Changed?.Invoke();
+            RaiseChanged();
         }
 
         public async Task SignInAsync(LoginResponse r)
         {
-            Token = r.Token; Role = r.Role; UserName = r.FullName ?? "";
+            Token = r.Token;
+            Role = r.Role;
+            UserName = r.FullName ?? "";
+
             await SecureStorage.SetAsync("jwt_token", Token);
             await SecureStorage.SetAsync("user_role", Role);
             await SecureStorage.SetAsync("user_name", UserName);
+
             _api.SetAuthToken(Token);
-            Changed?.Invoke();
+            RaiseChanged();
         }
 
-        public async Task SignOutAsync()
+        // <<< Remove o 'async' (some o CS1998)
+        public Task SignOutAsync()
         {
             Token = Role = UserName = "";
             _api.SetAuthToken("");
-            SecureStorage.Remove("jwt_token");
-            SecureStorage.Remove("user_role");
-            SecureStorage.Remove("user_name");
-            Changed?.Invoke();
+
+            try { SecureStorage.Remove("jwt_token"); } catch { /* ignore */ }
+            try { SecureStorage.Remove("user_role"); } catch { /* ignore */ }
+            try { SecureStorage.Remove("user_name"); } catch { /* ignore */ }
+
+            RaiseChanged();
+            return Task.CompletedTask;
+        }
+
+        private void RaiseChanged()
+        {
+            if (MainThread.IsMainThread) Changed?.Invoke();
+            else MainThread.BeginInvokeOnMainThread(() => Changed?.Invoke());
         }
     }
 }

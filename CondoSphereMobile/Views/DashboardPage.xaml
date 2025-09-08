@@ -22,6 +22,7 @@
             <Button Text="Quotas" Clicked="OnQuotasClicked" />
             <Button Text="Receipts" Clicked="OnReceiptsClicked" />
             <Button Text="MeetingDocuments" Clicked="OnMeetingDocumentsClicked" />
+            <Button Text="Profile" Clicked="OnProfileClicked" />
 
         </VerticalStackLayout>
     </ScrollView>

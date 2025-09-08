@@ -70,6 +70,23 @@ namespace CondoSphereMobile.Services
             }
         }
 
+        public record UnitDto(int Id, string UnitNumber, decimal Area, int CondominiumId, string? OwnerId);
+
+        public async Task<List<UnitDto>> GetUnitsMineAsync()
+        {
+            var token = await SecureStorage.GetAsync("jwt_token");
+            if (!string.IsNullOrEmpty(token)) SetAuthToken(token);
+            return await GetAsync<List<UnitDto>>("units/mine");
+        }
+
+        public async Task<List<UnitDto>> GetUnitsAllAsync()
+        {
+            var token = await SecureStorage.GetAsync("jwt_token");
+            if (!string.IsNullOrEmpty(token)) SetAuthToken(token);
+            return await GetAsync<List<UnitDto>>("units/list");
+        }
+
+
         public async Task<TOut> PostAsync<TIn, TOut>(string endpoint, TIn payload, CancellationToken ct = default)
         {
             var resp = await _http.PostAsJsonAsync(endpoint, payload, _json, ct);

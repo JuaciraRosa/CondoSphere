@@ -9,7 +9,6 @@ namespace CondoSphere.API
 {
     [ApiController]
     [Route("api/quotas")]
-    [AllowAnonymous]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class QuotasApiController : ControllerBase
     {

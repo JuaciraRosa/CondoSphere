@@ -1,18 +1,23 @@
 using CondoSphereMobile.ViewModels;
 
 namespace CondoSphereMobile.Views;
-
 public partial class LoginPage : ContentPage
 {
     public LoginPage()
     {
-        InitializeComponent(); // ? vai compilar quando x:Class e namespace estiverem certos
+        InitializeComponent();
+        if (BindingContext is not LoginViewModel)
+            BindingContext = new LoginViewModel();
     }
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
-        if (BindingContext is LoginViewModel vm)
-            await vm.InitAsync(); // auto-login + remember
+
+        if (BindingContext is LoginViewModel vm &&
+            vm.InitCommand?.CanExecute(null) == true)
+        {
+            vm.InitCommand.Execute(null);   // carrega remember/email e tenta auto-login
+        }
     }
 }
