@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace CondoSphere.Migrations
 {
     /// <inheritdoc />
-    public partial class UpdateAll : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -62,92 +62,6 @@ namespace CondoSphere.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Condominiums",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Address = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    CompanyId = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Condominiums", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Condominiums_Companies_CompanyId",
-                        column: x => x.CompanyId,
-                        principalTable: "Companies",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Expenses",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Description = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    Amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    Date = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CondominiumId = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Expenses", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Expenses_Condominiums_CondominiumId",
-                        column: x => x.CondominiumId,
-                        principalTable: "Condominiums",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Meetings",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ScheduledDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Agenda = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
-                    MinutesDocumentPath = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    CondominiumId = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Meetings", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Meetings_Condominiums_CondominiumId",
-                        column: x => x.CondominiumId,
-                        principalTable: "Condominiums",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Notifications",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Message = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    SentAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CondominiumId = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Notifications", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Notifications_Condominiums_CondominiumId",
-                        column: x => x.CondominiumId,
-                        principalTable: "Condominiums",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "AspNetUsers",
                 columns: table => new
                 {
@@ -156,7 +70,7 @@ namespace CondoSphere.Migrations
                     Role = table.Column<int>(type: "int", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CompanyId = table.Column<int>(type: "int", nullable: true),
-                    NotificationId = table.Column<int>(type: "int", nullable: true),
+                    ProfileImagePath = table.Column<string>(type: "nvarchar(max)", nullable: false, defaultValue: ""),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -179,12 +93,29 @@ namespace CondoSphere.Migrations
                         name: "FK_AspNetUsers_Companies_CompanyId",
                         column: x => x.CompanyId,
                         principalTable: "Companies",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Condominiums",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Address = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    CompanyId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Condominiums", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_AspNetUsers_Notifications_NotificationId",
-                        column: x => x.NotificationId,
-                        principalTable: "Notifications",
-                        principalColumn: "Id");
+                        name: "FK_Condominiums_Companies_CompanyId",
+                        column: x => x.CompanyId,
+                        principalTable: "Companies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -273,6 +204,28 @@ namespace CondoSphere.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Expenses",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Description = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    Date = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CondominiumId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Expenses", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Expenses_Condominiums_CondominiumId",
+                        column: x => x.CondominiumId,
+                        principalTable: "Condominiums",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "MaintenanceRequests",
                 columns: table => new
                 {
@@ -303,6 +256,49 @@ namespace CondoSphere.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Meetings",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ScheduledDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Agenda = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
+                    MinutesDocumentPath = table.Column<string>(type: "nvarchar(400)", maxLength: 400, nullable: true),
+                    CondominiumId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Meetings", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Meetings_Condominiums_CondominiumId",
+                        column: x => x.CondominiumId,
+                        principalTable: "Condominiums",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Notifications",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Message = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    SentAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CondominiumId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Notifications", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Notifications_Condominiums_CondominiumId",
+                        column: x => x.CondominiumId,
+                        principalTable: "Condominiums",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Units",
                 columns: table => new
                 {
@@ -311,7 +307,7 @@ namespace CondoSphere.Migrations
                     Number = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     Area = table.Column<double>(type: "float", nullable: false),
                     CondominiumId = table.Column<int>(type: "int", nullable: false),
-                    OwnerId = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                    OwnerId = table.Column<string>(type: "nvarchar(450)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -326,6 +322,30 @@ namespace CondoSphere.Migrations
                         name: "FK_Units_Condominiums_CondominiumId",
                         column: x => x.CondominiumId,
                         principalTable: "Condominiums",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "NotificationRecipients",
+                columns: table => new
+                {
+                    NotificationId = table.Column<int>(type: "int", nullable: false),
+                    RecipientsId = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_NotificationRecipients", x => new { x.NotificationId, x.RecipientsId });
+                    table.ForeignKey(
+                        name: "FK_NotificationRecipients_AspNetUsers_RecipientsId",
+                        column: x => x.RecipientsId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_NotificationRecipients_Notifications_NotificationId",
+                        column: x => x.NotificationId,
+                        principalTable: "Notifications",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -362,10 +382,10 @@ namespace CondoSphere.Migrations
                     Amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     Method = table.Column<int>(type: "int", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
-                    Provider = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ProviderPaymentId = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ProviderReference = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ReceiptUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Provider = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    ProviderPaymentId = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false),
+                    ProviderReference = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: true),
+                    ReceiptUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     PaidAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -418,16 +438,17 @@ namespace CondoSphere.Migrations
                 column: "CompanyId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_AspNetUsers_NotificationId",
-                table: "AspNetUsers",
-                column: "NotificationId");
-
-            migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
                 table: "AspNetUsers",
                 column: "NormalizedUserName",
                 unique: true,
                 filter: "[NormalizedUserName] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Companies_TaxNumber",
+                table: "Companies",
+                column: "TaxNumber",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Condominiums_CompanyId",
@@ -453,6 +474,11 @@ namespace CondoSphere.Migrations
                 name: "IX_Meetings_CondominiumId",
                 table: "Meetings",
                 column: "CondominiumId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NotificationRecipients_RecipientsId",
+                table: "NotificationRecipients",
+                column: "RecipientsId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Notifications_CondominiumId",
@@ -509,10 +535,16 @@ namespace CondoSphere.Migrations
                 name: "Meetings");
 
             migrationBuilder.DropTable(
+                name: "NotificationRecipients");
+
+            migrationBuilder.DropTable(
                 name: "Payments");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
+
+            migrationBuilder.DropTable(
+                name: "Notifications");
 
             migrationBuilder.DropTable(
                 name: "Quotas");
@@ -522,9 +554,6 @@ namespace CondoSphere.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
-
-            migrationBuilder.DropTable(
-                name: "Notifications");
 
             migrationBuilder.DropTable(
                 name: "Condominiums");

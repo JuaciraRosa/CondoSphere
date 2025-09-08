@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CondoSphere.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250830231434_ModifyUser")]
-    partial class ModifyUser
+    [Migration("20250908182135_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -68,9 +68,6 @@ namespace CondoSphere.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
-                    b.Property<int?>("NotificationId")
-                        .HasColumnType("int");
-
                     b.Property<string>("PasswordHash")
                         .HasColumnType("nvarchar(max)");
 
@@ -111,8 +108,6 @@ namespace CondoSphere.Migrations
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
-                    b.HasIndex("NotificationId");
-
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
@@ -139,6 +134,9 @@ namespace CondoSphere.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TaxNumber")
+                        .IsUnique();
 
                     b.ToTable("Companies");
                 });
@@ -258,9 +256,8 @@ namespace CondoSphere.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("MinutesDocumentPath")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
 
                     b.Property<DateTime>("ScheduledDate")
                         .HasColumnType("datetime2");
@@ -321,20 +318,24 @@ namespace CondoSphere.Migrations
 
                     b.Property<string>("Provider")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("ProviderPaymentId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
 
                     b.Property<string>("ProviderReference")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
 
                     b.Property<int>("QuotaId")
                         .HasColumnType("int");
 
                     b.Property<string>("ReceiptUrl")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -383,7 +384,8 @@ namespace CondoSphere.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<double>("Area")
+                    b.Property<double?>("Area")
+                        .IsRequired()
                         .HasColumnType("float");
 
                     b.Property<int>("CondominiumId")
@@ -395,7 +397,6 @@ namespace CondoSphere.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("OwnerId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
@@ -540,15 +541,27 @@ namespace CondoSphere.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("NotificationUser", b =>
+                {
+                    b.Property<int>("NotificationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RecipientsId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("NotificationId", "RecipientsId");
+
+                    b.HasIndex("RecipientsId");
+
+                    b.ToTable("NotificationRecipients", (string)null);
+                });
+
             modelBuilder.Entity("CondoSphere.Data.User", b =>
                 {
                     b.HasOne("CondoSphere.Models.Company", "Company")
                         .WithMany("Users")
-                        .HasForeignKey("CompanyId");
-
-                    b.HasOne("CondoSphere.Models.Notification", null)
-                        .WithMany("Recipients")
-                        .HasForeignKey("NotificationId");
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Company");
                 });
@@ -649,8 +662,7 @@ namespace CondoSphere.Migrations
                     b.HasOne("CondoSphere.Data.User", "Owner")
                         .WithMany("OwnedUnits")
                         .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Condominium");
 
@@ -708,6 +720,21 @@ namespace CondoSphere.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("NotificationUser", b =>
+                {
+                    b.HasOne("CondoSphere.Models.Notification", null)
+                        .WithMany()
+                        .HasForeignKey("NotificationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CondoSphere.Data.User", null)
+                        .WithMany()
+                        .HasForeignKey("RecipientsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("CondoSphere.Data.User", b =>
                 {
                     b.Navigation("OwnedUnits");
@@ -733,15 +760,9 @@ namespace CondoSphere.Migrations
                     b.Navigation("Units");
                 });
 
-            modelBuilder.Entity("CondoSphere.Models.Notification", b =>
-                {
-                    b.Navigation("Recipients");
-                });
-
             modelBuilder.Entity("CondoSphere.Models.Quota", b =>
                 {
-                    b.Navigation("Payment")
-                        .IsRequired();
+                    b.Navigation("Payment");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.Unit", b =>
