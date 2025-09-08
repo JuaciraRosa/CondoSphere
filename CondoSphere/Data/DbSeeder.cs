@@ -20,7 +20,9 @@ namespace CondoSphere.Data
             string[] roles = { "Administrator", "Manager", "Resident" };
             foreach (var r in roles)
                 if (!await roleMgr.RoleExistsAsync(r))
+                {
                     await roleMgr.CreateAsync(new IdentityRole(r));
+                }
 
             // 3) Company & Condominium (idempotent)
             var company = await ctx.Companies.FirstOrDefaultAsync(c => c.TaxNumber == "123456789");
