@@ -1,12 +1,23 @@
 ﻿@model IEnumerable<CondoSphere.Features.Ocurrences.OccurrenceDto>
 @{
     ViewData["Title"] = "Ocorrências";
-
     var map = ViewBag.CondoLookup as Dictionary<int, (string Condo, string Company)>;
+    int? currentCondoId = ViewBag.CurrentCondoId as int?;
 }
-<h2>Ocorrências</h2>
-<p><a class="btn btn-primary" href="/Occurrences/Create">Nova Ocorrência</a></p>
-<table class="table table-striped">
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="mb-0">Ocorrências</h2>
+    <a asp-action="Create"
+       asp-route-condominiumId="@currentCondoId"
+       class="btn btn-primary">Nova ocorrência</a>
+</div>
+
+@if (TempData["ok"] != null)
+{
+    <div class="alert alert-success">@TempData["ok"]</div>
+}
+
+<table class="table table-striped align-middle">
     <thead>
         <tr>
             <th>Condomínio</th>
@@ -14,32 +25,45 @@
             <th>Título</th>
             <th>Estado</th>
             <th>Criada em</th>
-            <th></th>
+            <th style="width:1%"></th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var o in Model)
-        {
-            var text = o.CondominiumId;
-            string display = text.ToString();
-
-            if (map != null && map.TryGetValue(o.CondominiumId, out var info))
-                display = $"{info.Condo} ({info.Company})";
-            <tr>
-                <td>@display</td>
-                <td>@o.UnitNumber</td>
-                <td>@o.Title</td>
-                <td>@o.Status</td>
-                <td>@o.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
-                <td>
-                    <form asp-action="ChangeStatus" method="post" style="display:inline">
-                        <input type="hidden" name="id" value="@o.Id" />
-                        <button class="btn btn-sm btn-warning" name="status" value="InProgress">Em progresso</button>
-                        <button class="btn btn-sm btn-success" name="status" value="Resolved">Resolver</button>
-                    </form>
-                </td>
-            </tr>
-        }
+    @foreach (var o in Model)
+    {
+        var display = o.CondominiumId.ToString();
+        if (map != null && map.TryGetValue(o.CondominiumId, out var info))
+            display = $"{info.Condo} ({info.Company})";
+        <tr>
+            <td>@display</td>
+            <td>@o.UnitNumber</td>
+            <td>@o.Title</td>
+            <td>
+                @switch (o.Status)
+                {
+                    case "Open":
+                        @:<span class="badge bg-secondary">Open</span>
+                        break;
+                    case "InProgress":
+                        @:<span class="badge bg-warning text-dark">Em progresso</span>
+                        break;
+                    case "Resolved":
+                        @:<span class="badge bg-success">Resolvida</span>
+                        break;
+                    default:
+                        @o.Status
+                        break;
+                }
+            </td>
+            <td>@o.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+            <td class="text-nowrap">
+                <form asp-action="ChangeStatus" method="post" class="d-inline">
+                    <input type="hidden" name="id" value="@o.Id" />
+                    <button class="btn btn-sm btn-outline-warning" name="status" value="InProgress">Em progresso</button>
+                    <button class="btn btn-sm btn-outline-success" name="status" value="Resolved">Resolver</button>
+                </form>
+            </td>
+        </tr>
+    }
     </tbody>
 </table>
-

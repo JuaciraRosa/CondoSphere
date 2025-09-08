@@ -10,6 +10,9 @@ namespace CondoSphere.Data.Interfaces
 
         Task<IEnumerable<Unit>> GetAllDetailedAsync();     
         Task<Unit?> GetByIdDetailedAsync(int id);
+
+
+        Task<List<string>> GetNumbersByCondominiumIdAsync(int condominiumId);
     }
 
 }

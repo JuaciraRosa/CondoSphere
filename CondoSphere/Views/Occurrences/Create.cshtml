@@ -12,10 +12,14 @@
         <span asp-validation-for="CondominiumId" class="text-danger"></span>
     </div>
 
-    <div class="mb-3">
-        <label class="form-label">Unidade</label>
-        <input asp-for="UnitNumber" class="form-control" placeholder="A1" required />
+      <div class="mb-3">
+        <label asp-for="UnitNumber" class="form-label">Unidade</label>
+        <select asp-for="UnitNumber" class="form-select" id="UnitNumber">
+            <option value="">— selecione um condomínio primeiro —</option>
+        </select>
+        <span asp-validation-for="UnitNumber" class="text-danger"></span>
     </div>
+
     <div class="mb-3">
         <label class="form-label">Título</label>
         <input asp-for="Title" class="form-control" required />
@@ -30,4 +34,54 @@
     </div>
     <button class="btn btn-primary">Criar</button>
 </form>
+
+
+@section Scripts{
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        const condoSel = document.getElementById('CondominiumId');
+        const unitSel  = document.getElementById('UnitNumber');
+
+        function setUnitOptions(list, selected) {
+            unitSel.innerHTML = '';
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = list.length ? '— selecione —' : '— sem unidades —';
+            unitSel.appendChild(placeholder);
+
+            list.forEach(x => {
+                const op = document.createElement('option');
+                // o endpoint retorna [{value:'A1', text:'A1'}, ...]
+                op.value = x.value ?? x;
+                op.text  = x.text ?? x;
+                if (selected && selected === op.value) op.selected = true;
+                unitSel.appendChild(op);
+            });
+        }
+
+        async function loadUnits(id){
+            setUnitOptions([], null);
+            if (!id) return;
+            try {
+                const url = '@Url.Action("UnitsByCondo","Occurrences")' + '?condominiumId=' + id;
+                const resp = await fetch(url);
+                if (!resp.ok) throw new Error('Erro');
+                const data = await resp.json();
+                setUnitOptions(data, '@Model?.UnitNumber');
+            } catch (e) {
+                console.error(e);
+                setUnitOptions([], null);
+            }
+        }
+
+        condoSel.addEventListener('change', e => loadUnits(e.target.value));
+
+        // Quando a página abre (ex.: retorno de validação), recarrega
+        (function bootstrap(){
+            const current = condoSel.value;
+            if (current) loadUnits(current);
+        })();
+    </script>
+}
 

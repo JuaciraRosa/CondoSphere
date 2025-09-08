@@ -14,13 +14,16 @@ namespace CondoSphere.Controllers
         private readonly JsonFileStore<OccurrenceDto> _store;
         private readonly DomainNotificationService _notify;
         private readonly ICondominiumRepository _condos;
+        private readonly IUnitRepository _units;
         public OccurrencesController(IWebHostEnvironment env,
                                      DomainNotificationService notify,
-                                      ICondominiumRepository condos)
+                                      ICondominiumRepository condos,
+                                        IUnitRepository units)
         {
             _store = new JsonFileStore<OccurrenceDto>(env, "appdata/occurrences.json");
             _notify = notify;
             _condos = condos;
+            _units = units;
         }
 
         public async Task<IActionResult> Index(int? condominiumId)
@@ -103,5 +106,29 @@ namespace CondoSphere.Controllers
 
             ViewBag.CondominiumId = new SelectList(items, "Value", "Text", selectedId?.ToString());
         }
+
+        private async Task LoadUnitsSelectAsync(int? condominiumId)
+        {
+            var list = new List<SelectListItem>();
+
+            if (condominiumId.HasValue && condominiumId.Value > 0)
+            {
+                var numbers = await _units.GetNumbersByCondominiumIdAsync(condominiumId.Value);
+                list = numbers.Select(n => new SelectListItem { Value = n, Text = n }).ToList();
+            }
+
+            ViewBag.UnitNumbers = new SelectList(list, "Value", "Text");
+        }
+
+
+
+        [HttpGet]
+        public async Task<IActionResult> UnitsByCondo(int condominiumId)
+        {
+            var numbers = await _units.GetNumbersByCondominiumIdAsync(condominiumId);
+            var items = numbers.Select(n => new { value = n, text = n }).ToList();
+            return Json(items);
+        }
+
     }
 }

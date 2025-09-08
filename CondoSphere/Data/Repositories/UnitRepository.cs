@@ -26,6 +26,15 @@ namespace CondoSphere.Data.Repositories
                 .Include(u => u.Condominium)
                 .Include(u => u.Owner)
                 .FirstOrDefaultAsync(u => u.Id == id);
+
+
+        public async Task<List<string>> GetNumbersByCondominiumIdAsync(int condominiumId)
+     => await _context.Units
+         .AsNoTracking()
+         .Where(u => u.CondominiumId == condominiumId)
+         .OrderBy(u => u.Number)
+         .Select(u => u.Number)
+         .ToListAsync();
     }
 
 }

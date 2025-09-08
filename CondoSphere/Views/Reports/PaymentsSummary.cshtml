@@ -1,7 +1,9 @@
 ﻿@model IEnumerable<CondoSphere.Controllers.PaymentsSummaryDto>
+@using System.Globalization
 @{
     ViewData["Title"] = "Pagamentos por Mês";
     var year = (int)ViewBag.Year;
+     var euro = CultureInfo.GetCultureInfo("pt-PT");
 }
 <h2>Pagamentos por Mês - @year</h2>
 <table class="table table-hover">
@@ -17,7 +19,7 @@
         {
             <tr>
                 <td>@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m.Month)</td>
-                <td>@m.Total.ToString("C")</td>
+               <td>@m.Total.ToString("C", euro)</td>
                 <td>@m.Count</td>
             </tr>
         }
