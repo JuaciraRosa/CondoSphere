@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CondoSphere.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250908182135_InitialCreate")]
+    [Migration("20250909124507_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />

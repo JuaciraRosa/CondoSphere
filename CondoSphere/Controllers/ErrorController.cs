@@ -40,7 +40,7 @@ namespace CondoSphere.Controllers
         public IActionResult ErrorGeneric(int code)
         {
             Response.StatusCode = code;
-            return View("Generic", code); // procura Views/Error/Generic.cshtml
+            return View("ErrorGeneric", code); // procura Views/Error/Generic.cshtml
         }
     }
 

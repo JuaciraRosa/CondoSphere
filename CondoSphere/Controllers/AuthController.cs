@@ -1,11 +1,13 @@
-﻿using CondoSphere.Data.Interfaces;
-using Microsoft.AspNetCore.Authentication.Cookies;
+﻿using CondoSphere.Data;
+using CondoSphere.Data.Interfaces;
+using CondoSphere.ViewModels;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using CondoSphere.Data;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages;
+using System.Security.Claims;
 
 namespace CondoSphere.Controllers
 {
@@ -23,35 +25,124 @@ namespace CondoSphere.Controllers
 
         [HttpGet]
         [AllowAnonymous]
-        public IActionResult Login() => View();
+        public IActionResult Login(string? returnUrl = null)
+            => View(new LoginViewModel { ReturnUrl = returnUrl });
 
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Login(string email, string password, bool rememberMe = false)
+        public async Task<IActionResult> Login(LoginViewModel model)
         {
-            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+            // fallback: se a view manda "Email", usa-o quando EmailOrUser vier vazio
+            var loginKey = string.IsNullOrWhiteSpace(model.EmailOrUser)
+                ? (Request.Form["Email"].ToString() ?? "")
+                : model.EmailOrUser;
+
+            if (string.IsNullOrWhiteSpace(loginKey) || string.IsNullOrWhiteSpace(model.Password))
             {
-                ModelState.AddModelError("", "Email and password are required.");
-                return View();
+                ModelState.AddModelError(string.Empty, "Credenciais inválidas.");
+                return View(model);
             }
 
-            var user = await _userManager.FindByEmailAsync(email);
-            if (user == null || !user.IsActive)
+            // procurar por email OU username
+            var user = await _userManager.FindByEmailAsync(loginKey)
+                       ?? await _userManager.FindByNameAsync(loginKey);
+
+            if (user == null)
             {
-                ModelState.AddModelError("", "Invalid credentials.");
-                return View();
+                ModelState.AddModelError(string.Empty, "Credenciais inválidas.");
+                return View(model);
             }
 
-            var result = await _signInManager.PasswordSignInAsync(user, password, rememberMe, lockoutOnFailure: false);
-            if (!result.Succeeded)
+            var result = await _signInManager.PasswordSignInAsync(
+                user.UserName!, model.Password, model.RememberMe, lockoutOnFailure: true);
+
+            if (result.Succeeded)
+                return LocalRedirect(model.ReturnUrl ?? "/");
+
+            if (result.RequiresTwoFactor)
+                return RedirectToAction(nameof(LoginWith2fa),
+                    new { returnUrl = model.ReturnUrl, rememberMe = model.RememberMe });
+
+            if (result.IsLockedOut)
+                return View("Lockout");
+
+            if (result.IsNotAllowed)
             {
-                ModelState.AddModelError("", "Invalid credentials.");
-                return View();
+                // caso Identity exija email confirmado, etc.
+                ModelState.AddModelError(string.Empty, "Conta não autorizada. Verifique a confirmação de e-mail.");
+                return View(model);
             }
 
-            return RedirectToAction("Index", "Dashboard");
+            ModelState.AddModelError(string.Empty, "Invalid login attempt");
+            return View(model);
         }
+
+
+        [HttpGet]
+        public async Task<IActionResult> LoginWith2fa(bool rememberMe, string? returnUrl = null)
+        {
+            // só chega aqui após a 1ª etapa do login
+            var user = await _signInManager.GetTwoFactorAuthenticationUserAsync();
+            if (user == null)
+                return RedirectToAction(nameof(Login), new { returnUrl });
+
+            var vm = new LoginWith2faViewModel
+            {
+                RememberMe = rememberMe,
+                ReturnUrl = returnUrl
+            };
+            return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> LoginWith2fa(LoginWith2faViewModel model)
+        {
+            if (!ModelState.IsValid) return View(model);
+
+            var user = await _signInManager.GetTwoFactorAuthenticationUserAsync();
+            if (user == null)
+                return RedirectToAction(nameof(Login), new { returnUrl = model.ReturnUrl });
+
+            var code = model.TwoFactorCode?.Replace(" ", "").Replace("-", "");
+            var result = await _signInManager.TwoFactorAuthenticatorSignInAsync(
+                code!, model.RememberMe, model.RememberMachine);
+
+            if (result.Succeeded)
+                return LocalRedirect(model.ReturnUrl ?? "/");
+
+            if (result.IsLockedOut)
+                return View("Lockout");
+
+            ModelState.AddModelError(string.Empty, "Código 2FA inválido.");
+            return View(model);
+        }
+
+
+        // ---------- 2FA via CÓDIGO DE RECUPERAÇÃO ----------
+        [HttpGet]
+        public IActionResult LoginWithRecoveryCode(string? returnUrl = null)
+            => View(new LoginWithRecoveryCodeViewModel { ReturnUrl = returnUrl });
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> LoginWithRecoveryCode(LoginWithRecoveryCodeViewModel model)
+        {
+            if (!ModelState.IsValid) return View(model);
+
+            var result = await _signInManager.TwoFactorRecoveryCodeSignInAsync(model.RecoveryCode!);
+
+            if (result.Succeeded)
+                return LocalRedirect(model.ReturnUrl ?? "/");
+
+            if (result.IsLockedOut)
+                return View("Lockout");
+
+            ModelState.AddModelError(string.Empty, "Código de recuperação inválido.");
+            return View(model);
+        }
+    
 
         [HttpPost]
         [ValidateAntiForgeryToken]

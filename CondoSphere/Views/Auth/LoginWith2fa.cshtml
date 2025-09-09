@@ -1,0 +1,38 @@
+﻿@model CondoSphere.ViewModels.LoginWith2faViewModel
+@{
+    ViewData["Title"] = "Autenticação de dois fatores";
+}
+
+<div class="container-xl py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h2 class="mb-3">Introduzir código 2FA</h2>
+          <form asp-action="LoginWith2fa" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="ReturnUrl" />
+            <input type="hidden" asp-for="RememberMe" />
+            <div class="mb-3">
+              <label asp-for="TwoFactorCode" class="form-label"></label>
+              <input asp-for="TwoFactorCode" autocomplete="one-time-code" class="form-control" />
+              <span asp-validation-for="TwoFactorCode" class="text-danger"></span>
+            </div>
+            <div class="form-check mb-3">
+              <input asp-for="RememberMachine" class="form-check-input" />
+              <label asp-for="RememberMachine" class="form-check-label"></label>
+            </div>
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">Confirmar</button>
+              <a asp-action="LoginWithRecoveryCode" asp-route-returnUrl="@Model.ReturnUrl" class="btn btn-link">
+                Usar código de recuperação
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

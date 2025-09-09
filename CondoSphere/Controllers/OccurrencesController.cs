@@ -130,5 +130,22 @@ namespace CondoSphere.Controllers
             return Json(items);
         }
 
+
+        [HttpPost]
+        [Authorize(Roles = "Administrator,Manager")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(string id, int? condominiumId)
+        {
+            var list = await _store.ReadAllAsync();
+            var occ = list.FirstOrDefault(x => x.Id == id);
+            if (occ == null) return NotFound();
+
+            list.RemoveAll(x => x.Id == id);     // remove do JSON
+            await _store.WriteAllAsync(list);
+
+            TempData["ok"] = "Ocorrência apagada.";
+            return RedirectToAction(nameof(Index), new { condominiumId = condominiumId ?? occ.CondominiumId });
+        }
+
     }
 }

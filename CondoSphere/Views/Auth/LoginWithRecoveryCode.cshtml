@@ -1,0 +1,28 @@
+﻿@model CondoSphere.ViewModels.LoginWithRecoveryCodeViewModel
+@{
+    ViewData["Title"] = "Entrar com código de recuperação";
+}
+<div class="container-xl py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h2 class="mb-3">Usar código de recuperação</h2>
+          <form asp-action="LoginWithRecoveryCode" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="ReturnUrl" />
+            <div class="mb-3">
+              <label asp-for="RecoveryCode" class="form-label"></label>
+              <input asp-for="RecoveryCode" class="form-control" />
+              <span asp-validation-for="RecoveryCode" class="text-danger"></span>
+            </div>
+            <button type="submit" class="btn btn-primary">Entrar</button>
+            <a asp-action="Login" asp-route-returnUrl="@Model.ReturnUrl" class="btn btn-link">Voltar ao login</a>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }
