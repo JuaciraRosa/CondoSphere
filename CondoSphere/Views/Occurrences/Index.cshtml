@@ -57,11 +57,24 @@
             </td>
             <td>@o.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
             <td class="text-nowrap">
+
                 <form asp-action="ChangeStatus" method="post" class="d-inline">
                     <input type="hidden" name="id" value="@o.Id" />
                     <button class="btn btn-sm btn-outline-warning" name="status" value="InProgress">Em progresso</button>
                     <button class="btn btn-sm btn-outline-success" name="status" value="Resolved">Resolver</button>
                 </form>
+
+                   <form asp-action="Delete"
+            asp-route-condominiumId="@o.CondominiumId"
+            method="post"
+            class="d-inline"
+            onsubmit="return confirm('Apagar esta ocorrência?');">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@o.Id" />
+        <button type="submit" class="btn btn-outline-danger btn-sm">
+          <i class="fa fa-trash"></i> Apagar
+        </button>
+      </form>
             </td>
         </tr>
     }

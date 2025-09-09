@@ -164,13 +164,15 @@ builder.Services.AddSwaggerGen(c =>
 var app = builder.Build();
 
 
-
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error/500");          
+    app.UseExceptionHandler("/Error/500");
     app.UseStatusCodePagesWithReExecute("/Error/{0}");
-    app.UseDeveloperExceptionPage();
     app.UseHsts();
+}
+else
+{
+    app.UseDeveloperExceptionPage();
 }
 
 app.UseHttpsRedirection();
@@ -203,11 +205,16 @@ if (app.Environment.IsDevelopment() || true) // deixar sempre ativo por enquanto
     });
 }
 
+
+
 // Map API and MVC
 app.MapControllers(); // if using attribute routing for API
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+
+
 
 using (var scope = app.Services.CreateScope())
 {

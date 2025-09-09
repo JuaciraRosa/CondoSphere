@@ -1,30 +1,64 @@
 ﻿@{
-    ViewData["Title"] = "Two-Factor Auth";
+    ViewData["Title"] = "Two-Factor Authentication";
+    Layout = "_Layout";
 }
 
-<h2>Two-Factor Authentication</h2>
+<div class="container py-4">
+  <h2 class="mb-3">Two-Factor Authentication</h2>
 
-@if ((bool)ViewBag.Enabled)
-{
-    <div class="alert alert-success">2FA is enabled.</div>
-    <form asp-action="DisableTwoFactor" method="post">
-        <button class="btn btn-warning">Disable 2FA</button>
-    </form>
-}
-else
-{
-    <div class="alert alert-info">
-        <p>Install an Authenticator app (Google/Microsoft).</p>
-        <p><strong>Key:</strong> @ViewBag.Key</p>
-        <p><strong>otpauth URI:</strong> <code>@ViewBag.OtpAuthUri</code></p>
-        <small>Scan the URI or enter the key in your app, then type the 6-digit code below.</small>
-    </div>
+  @if (TempData["Error"] != null)
+  {
+      <div class="alert alert-danger">@TempData["Error"]</div>
+  }
+  @if (TempData["Success"] != null)
+  {
+      <div class="alert alert-success">@TempData["Success"]</div>
+  }
 
-    <form asp-action="EnableTwoFactor" method="post">
-        <div class="mb-2">
-            <label class="form-label">Code</label>
-            <input name="code" class="form-control" maxlength="7" />
+  @if (ViewBag.Enabled == true)
+  {
+      <div class="alert alert-success">2FA is currently <strong>enabled</strong> for your account.</div>
+
+      <form asp-action="DisableTwoFactor" method="post" class="mt-3">
+        @Html.AntiForgeryToken()
+        <button class="btn btn-outline-danger">Disable 2FA</button>
+      </form>
+  }
+  else
+  {
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-body text-center">
+            <h5 class="card-title mb-3">Scan this QR code</h5>
+            <img src="@ViewBag.QrDataUrl" alt="QR Code" class="img-fluid" style="max-width: 260px;" />
+            <p class="text-muted mt-3 mb-0">
+              Can't scan? Enter this key manually in your app:
+              <br /><strong>@ViewBag.KeyFormatted</strong>
+            </p>
+            <p class="small text-muted mt-2">Issuer: CondoSphere</p>
+          </div>
         </div>
-        <button class="btn btn-primary">Enable 2FA</button>
-    </form>
-}
+      </div>
+
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title mb-3">Verify a code</h5>
+            <p class="text-muted">After adding the account in your authenticator, type a 6-digit code to enable 2FA.</p>
+
+            <form asp-action="EnableTwoFactor" method="post">
+              @Html.AntiForgeryToken()
+              <div class="mb-3">
+                <label class="form-label" for="code">Code</label>
+                <input id="code" name="code" class="form-control" autocomplete="one-time-code"
+                       placeholder="123 456" />
+              </div>
+              <button class="btn btn-primary">Enable 2FA</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

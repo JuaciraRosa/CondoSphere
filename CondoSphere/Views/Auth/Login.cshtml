@@ -1,50 +1,59 @@
-﻿﻿@{
+﻿@using CondoSphere.ViewModels
+@model LoginViewModel
+@{
     ViewData["Title"] = "Login";
-
     Layout = "_Layout";
 }
 
-
-
 <section class="section">
-    <div class="container" data-aos="fade-up">
-        <div class="row justify-content-center">
-            <div class="col-lg-4">
+  <div class="container" data-aos="fade-up">
+    <div class="row justify-content-center">
+      <div class="col-lg-4">
 
-                @if (!ViewData.ModelState.IsValid)
-                {
-                    <div class="alert alert-danger">Invalid login attempt</div>
-                }
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-danger">Invalid login attempt</div>
+        }
 
-                <div class="card p-4 shadow-sm">
-                    <h3 class="mb-3 text-center">Login</h3>
+        <div class="card p-4 shadow-sm">
+          <h3 class="mb-3 text-center">Login</h3>
 
-                    <form method="post" asp-controller="Auth" asp-action="Login">
-                        @Html.AntiForgeryToken()
+          <form asp-controller="Auth" asp-action="Login" method="post">
+            @Html.AntiForgeryToken()
+            <input asp-for="ReturnUrl" type="hidden" />
 
-                        <div class="mb-3">
-                            <label class="form-label">Email</label>
-                            <input name="email" type="email" class="form-control" required />
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Password</label>
-                            <input name="password" type="password" class="form-control" required />
-                        </div>
-
-                        <button type="submit" class="btn btn-primary w-100">Login</button>
-
-                        <div class="mt-3 text-center">
-                            <small>
-                                <a asp-controller="Account" asp-action="ForgotPassword" class="text-decoration-none">
-                                    Forgot your password?
-                                </a>
-                            </small>
-                        </div>
-                    </form>
-                </div>
-
+            <div class="mb-3">
+              <label asp-for="EmailOrUser" class="form-label"></label>
+              <input asp-for="EmailOrUser" class="form-control" autocomplete="username" />
+              <span asp-validation-for="EmailOrUser" class="text-danger"></span>
             </div>
+
+            <div class="mb-3">
+              <label asp-for="Password" class="form-label"></label>
+              <input asp-for="Password" class="form-control" autocomplete="current-password" />
+              <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+
+            <div class="form-check mb-3">
+              <input asp-for="RememberMe" class="form-check-input" />
+              <label asp-for="RememberMe" class="form-check-label"></label>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Login</button>
+
+            <div class="mt-3 text-center">
+              <small>
+                <a asp-controller="Auth" asp-action="ForgotPassword" class="text-decoration-none">
+                  Forgot your password?
+                </a>
+              </small>
+            </div>
+          </form>
         </div>
+
+      </div>
     </div>
+  </div>
 </section>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using QRCoder;
+using System.Text.RegularExpressions;
 
 namespace CondoSphere.Controllers
 {
@@ -223,15 +225,38 @@ namespace CondoSphere.Controllers
                 key = await _userManager.GetAuthenticatorKeyAsync(user);
             }
 
-            // URI otpauth (escaneável no app autenticador — você pode gerar um QR numa lib, mas o texto já funciona)
+            // URI otpauth (Google/Microsoft Authenticator)
             var issuer = "CondoSphere";
-            var email = user.Email;
-            var otpauth = $"otpauth://totp/{Uri.EscapeDataString(issuer)}:{Uri.EscapeDataString(email)}?secret={key}&issuer={Uri.EscapeDataString(issuer)}&digits=6";
+            var email = user.Email ?? user.UserName ?? "user";
+            var otpauth = $"otpauth://totp/{Uri.EscapeDataString(issuer)}:{Uri.EscapeDataString(email)}" +
+                          $"?secret={key}&issuer={Uri.EscapeDataString(issuer)}&digits=6";
 
-            ViewBag.Key = key;
-            ViewBag.OtpAuthUri = otpauth;
+            // QR como Data URL (png base64)
+            var qrDataUrl = GenerateQrPngDataUrl(otpauth);
+
             ViewBag.Enabled = is2faEnabled;
+            ViewBag.Key = key;
+            ViewBag.KeyFormatted = FormatKey(key);
+            ViewBag.OtpAuthUri = otpauth;
+            ViewBag.QrDataUrl = qrDataUrl;
+
             return View();
+        }
+
+        // helpers
+        private static string GenerateQrPngDataUrl(string content)
+        {
+            var gen = new QRCodeGenerator();
+            using var data = gen.CreateQrCode(content, QRCodeGenerator.ECCLevel.Q);
+            var pngQr = new PngByteQRCode(data);
+            var bytes = pngQr.GetGraphic(220); // tamanho do QR
+            return "data:image/png;base64," + Convert.ToBase64String(bytes);
+        }
+
+        private static string FormatKey(string key)
+        {
+            // agrupa em blocos de 4: XXXX XXXX XXXX...
+            return Regex.Replace(key.ToUpperInvariant(), ".{4}", "$0 ").Trim();
         }
 
         [HttpPost]
