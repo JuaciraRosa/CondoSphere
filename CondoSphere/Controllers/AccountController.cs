@@ -258,14 +258,12 @@ namespace CondoSphere.Controllers
             // agrupa em blocos de 4: XXXX XXXX XXXX...
             return Regex.Replace(key.ToUpperInvariant(), ".{4}", "$0 ").Trim();
         }
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EnableTwoFactor(string code)
         {
             var user = await _userManager.GetUserAsync(User);
 
-            // remove espaços e hífens
             code = code?.Replace(" ", "").Replace("-", "");
 
             var isValid = await _userManager.VerifyTwoFactorTokenAsync(
@@ -279,12 +277,16 @@ namespace CondoSphere.Controllers
 
             await _userManager.SetTwoFactorEnabledAsync(user, true);
 
-            // Gera códigos de recuperação (guarde para o usuário)
-            var recoveryCodes = await _userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
-            TempData["Success"] = "2FA enabled. Save your recovery codes: " + string.Join(", ", recoveryCodes);
+            // gera os 10 códigos e mostra de imediato
+            var codes = (await _userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10)).ToArray();
+            TempData["RecoveryCodes"] = string.Join(";", codes);
 
-            return RedirectToAction(nameof(TwoFactor));
+            // atualiza o cookie de auth com o novo estado (boa prática)
+            await _signInManager.RefreshSignInAsync(user);
+
+            return RedirectToAction(nameof(ShowRecoveryCodes));
         }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -329,6 +331,33 @@ namespace CondoSphere.Controllers
             var bytes = System.Text.Encoding.UTF8.GetBytes(json);
             return File(bytes, "application/json", "my-data.json");
         }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GenerateRecoveryCodes()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (!await _userManager.GetTwoFactorEnabledAsync(user))
+            {
+                TempData["Error"] = "Ative o 2FA antes de gerar códigos.";
+                return RedirectToAction(nameof(TwoFactor));
+            }
+
+            var codes = (await _userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10)).ToArray();
+            TempData["RecoveryCodes"] = string.Join(";", codes);
+            return RedirectToAction(nameof(ShowRecoveryCodes));
+        }
+
+        [HttpGet]
+        public IActionResult ShowRecoveryCodes()
+        {
+            var raw = TempData["RecoveryCodes"] as string;
+            if (string.IsNullOrEmpty(raw)) return RedirectToAction(nameof(TwoFactor));
+            var codes = raw.Split(';', StringSplitOptions.RemoveEmptyEntries);
+            return View(model: codes); // IEnumerable<string>
+        }
+
 
 
         [HttpPost]

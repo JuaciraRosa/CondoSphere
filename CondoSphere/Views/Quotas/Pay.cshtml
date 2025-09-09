@@ -4,91 +4,33 @@
 @{
     ViewData["Title"] = "Pay quota";
 }
+
 <section class="section">
-    <div class="container">
-        <h3>Pay quota</h3>
-        <p class="text-muted mb-1">@Model.Description</p>
-        <p class="fs-5 fw-semibold">Amount: @Model.Amount.ToString("C", new CultureInfo("pt-PT"))</p>
+  <div class="container">
+    <h3>Pay quota</h3>
 
-        <div class="card p-3 shadow-sm">
-            <div id="card-element" class="form-control mb-3"></div>
-            <div id="card-errors" class="text-danger mb-2" role="alert"></div>
-            <button id="payBtn" class="btn btn-primary">
-                <i class="bi bi-credit-card-2-front"></i> Pay now
-            </button>
-            <div id="paySpinner" class="spinner-border ms-2" style="display:none" role="status"></div>
-        </div>
+    <p class="text-muted mb-1">@Model.Description</p>
+    <p class="fs-5 fw-semibold">
+      Amount: @Model.Amount.ToString("C", new CultureInfo("pt-PT"))
+    </p>
 
-        <a class="btn btn-link mt-3" asp-action="Index">Back</a>
-    </div>
-</section>
-<script src="https://js.stripe.com/v3/"></script>
-<script>
-  (async () => {
-    const errorDiv = document.getElementById('card-errors');
-
-    async function createIntent() {
-      try {
-        const res = await fetch('/api/payments/card/intent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ quotaId: @Model.QuotaId })
-        });
-
-        const bodyText = await res.text();
-        if (!res.ok) {
-          try {
-            const j = JSON.parse(bodyText);
-            errorDiv.textContent = j.error || 'Failed to create payment intent.';
-          } catch {
-            errorDiv.textContent = bodyText || 'Failed to create payment intent.';
-          }
-          return null;
-        }
-        return JSON.parse(bodyText);
-      } catch (e) {
-        errorDiv.textContent = e.message || 'Failed to create payment intent.';
-        return null;
-      }
+    @if (TempData["pay_error"] != null)
+    {
+      <div class="alert alert-danger">@TempData["pay_error"]</div>
+    }
+    @if (TempData["ok"] != null)
+    {
+      <div class="alert alert-success">@TempData["ok"]</div>
     }
 
-    const data = await createIntent();
-    if (!data) return;
+    <form asp-controller="Quotas" asp-action="StartCheckout" method="post">
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="id" value="@Model.QuotaId" />
+      <button class="btn btn-primary btn-lg">
+        <i class="bi bi-credit-card"></i> Pay now
+      </button>
+    </form>
 
-    const { clientSecret, publishableKey } = data;
-
-    const stripe = Stripe(publishableKey);
-    const elements = stripe.elements();
-    const card = elements.create('card');
-    card.mount('#card-element');
-
-    const btn = document.getElementById('payBtn');
-    const spinner = document.getElementById('paySpinner');
-
-    btn.addEventListener('click', async () => {
-      btn.disabled = true; spinner.style.display = 'inline-block'; errorDiv.textContent = '';
-
-      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: { card }
-      });
-
-      btn.disabled = false; spinner.style.display = 'none';
-
-      if (error) {
-        errorDiv.textContent = error.message || 'Payment failed.';
-        return;
-      }
-
-      if (paymentIntent && paymentIntent.status === 'succeeded') {
-        await fetch('/api/payments/confirm', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ intentId: paymentIntent.id })
-        });
-        window.location.href = '@Url.Action("Details","Quotas", new { id = Model.QuotaId })';
-      } else {
-        errorDiv.textContent = 'Payment not completed.';
-      }
-    });
-  })();
-</script>
+    <a asp-action="Index" class="btn btn-outline-secondary mt-3">Back</a>
+  </div>
+</section>

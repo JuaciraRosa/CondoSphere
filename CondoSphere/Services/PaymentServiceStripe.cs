@@ -1,7 +1,9 @@
 ﻿using CondoSphere.Data;
 using CondoSphere.Models;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Stripe;
+using Stripe.Checkout;
 
 namespace CondoSphere.Services
 {
@@ -10,11 +12,6 @@ namespace CondoSphere.Services
         private readonly ApplicationDbContext _db;
         private readonly IConfiguration _cfg;
 
-        // Event type strings (evita depender de Stripe.Events.*)
-        private const string PI_SUCCEEDED = "payment_intent.succeeded";
-        private const string PI_FAILED = "payment_intent.payment_failed";
-        private const string PI_CANCELED = "payment_intent.canceled";
-
         public PaymentServiceStripe(ApplicationDbContext db, IConfiguration cfg)
         {
             _db = db;
@@ -22,77 +19,120 @@ namespace CondoSphere.Services
             StripeConfiguration.ApiKey = _cfg["Stripe:SecretKey"];
         }
 
-        public async Task<(string clientSecret, string paymentIntentId)> CreateCardIntentAsync(int quotaId)
+        // ---------- 1) Checkout Session (sem duplicar session_id) ----------
+        public async Task<string> CreateCheckoutSessionForQuotaAsync(int quotaId, string successUrl, string cancelUrl)
         {
             var quota = await _db.Quotas
-                .Include(q => q.Unit).ThenInclude(u => u.Condominium)
-                .FirstOrDefaultAsync(q => q.Id == quotaId);
-            if (quota == null) throw new Exception("Quota not found.");
-            if (quota.IsPaid) throw new Exception("Quota already paid.");
+                .Include(q => q.Unit)
+                .FirstOrDefaultAsync(q => q.Id == quotaId)
+                ?? throw new InvalidOperationException("Quota não encontrada.");
 
-            // 1) Já existe payment para esta quota?
-            var existing = await _db.Payments.FirstOrDefaultAsync(p => p.QuotaId == quotaId);
+            // IMPORTANTE: manter o placeholder literal, sem codificar!
+            var successUrlWithParam = successUrl + (successUrl.Contains("?") ? "&" : "?") + "session_id={CHECKOUT_SESSION_ID}";
 
-            // 2) Se existir e estiver pendente com PaymentIntent válido, reusa-o
-            if (existing != null && existing.Status != PaymentStatusType.Succeeded &&
-                !string.IsNullOrEmpty(existing.ProviderPaymentId))
+            var options = new SessionCreateOptions
             {
-                var piService = new PaymentIntentService();
-                var pi = await piService.GetAsync(existing.ProviderPaymentId);
-                if (pi != null && !string.Equals(pi.Status, "canceled", StringComparison.OrdinalIgnoreCase))
-                    return (pi.ClientSecret, pi.Id);
-                // se foi cancelado, vamos criar outro e atualizar a mesma linha
-            }
-
-            // 3) Criar/atualizar PaymentIntent
-            var amountCents = (long)(quota.Amount * 100m);
-            var options = new PaymentIntentCreateOptions
-            {
-                Amount = amountCents,
-                Currency = "eur",
+                Mode = "payment",
+                SuccessUrl = successUrlWithParam,
+                CancelUrl = cancelUrl,
                 PaymentMethodTypes = new List<string> { "card" },
-                Description = $"Quota {quotaId} - {quota.DueDate:yyyy-MM}",
-                Metadata = new Dictionary<string, string> { ["quota_id"] = quotaId.ToString() }
+                LineItems = new List<SessionLineItemOptions>
+        {
+            new()
+            {
+                Quantity = 1,
+                PriceData = new SessionLineItemPriceDataOptions
+                {
+                    UnitAmountDecimal = quota.Amount * 100m,
+                    Currency = "eur",
+                    ProductData = new SessionLineItemPriceDataProductDataOptions
+                    {
+                        Name = $"Quota #{quota.Id} - Unidade {quota.Unit?.Number}"
+                    }
+                }
+            }
+        },
+                // ConfirmAndMarkAsync vai usar este metadata
+                PaymentIntentData = new SessionPaymentIntentDataOptions
+                {
+                    Metadata = new Dictionary<string, string>
+                    {
+                        ["QuotaId"] = quota.Id.ToString()
+                    }
+                }
             };
 
-            var piServiceNew = new PaymentIntentService();
-            var intent = await piServiceNew.CreateAsync(
-                options,
-                // chave de idempotência extra: evita duplicar intents no Stripe em cliques repetidos
-                new RequestOptions { IdempotencyKey = $"quota-{quotaId}-card" }
-            );
-
-            if (existing == null)
-            {
-                _db.Payments.Add(new Payment
-                {
-                    QuotaId = quotaId,
-                    Amount = quota.Amount,
-                    Method = PaymentMethodType.Card,
-                    Status = PaymentStatusType.Pending,
-                    Provider = "stripe",
-                    ProviderPaymentId = intent.Id,
-                    CreatedAt = DateTime.UtcNow
-                });
-            }
-            else
-            {
-                // Atualiza a MESMA linha para não bater no índice único
-                existing.Amount = quota.Amount;
-                existing.Method = PaymentMethodType.Card;
-                existing.Status = PaymentStatusType.Pending;
-                existing.Provider = "stripe";
-                existing.ProviderPaymentId = intent.Id;
-                existing.CreatedAt = DateTime.UtcNow;
-                _db.Payments.Update(existing);
-            }
-
-            await _db.SaveChangesAsync();
-            return (intent.ClientSecret, intent.Id);
+            var sSrv = new SessionService();
+            var session = await sSrv.CreateAsync(options);
+            return session.Url!;
         }
 
+        // ---------- 2) Confirma e marca pago usando o PaymentIntentId ----------
+        public async Task<string> ConfirmAndMarkAsync(string paymentIntentId)
+        {
+            var piService = new PaymentIntentService();
+            var intent = await piService.GetAsync(paymentIntentId);
 
+            if (intent == null || !string.Equals(intent.Status, "succeeded", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("PaymentIntent não está pago.");
 
+            if (!intent.Metadata.TryGetValue("QuotaId", out var quotaIdStr) ||
+                !int.TryParse(quotaIdStr, out var quotaId))
+                throw new InvalidOperationException("Metadata 'QuotaId' não encontrado no PaymentIntent.");
+
+            var quota = await _db.Quotas
+                .Include(q => q.Payment)
+                .FirstOrDefaultAsync(q => q.Id == quotaId)
+                ?? throw new InvalidOperationException("Quota não encontrada.");
+
+            // evita duplicar
+            if (quota.Payment != null)
+                return quota.Payment.Id.ToString();
+
+            // montante (Stripe devolve em cêntimos)
+            long cents = intent.AmountReceived != 0 ? intent.AmountReceived : intent.Amount;
+            var amount = cents / 100m;
+
+            // tenta obter Charge para ReceiptUrl
+            string? receiptUrl = null;
+            string? chargeId = null;
+            try
+            {
+                var chargeSrv = new ChargeService();
+                var list = await chargeSrv.ListAsync(new ChargeListOptions
+                {
+                    PaymentIntent = intent.Id,
+                    Limit = 1
+                });
+                var charge = list?.Data?.FirstOrDefault();
+                receiptUrl = charge?.ReceiptUrl;
+                chargeId = charge?.Id;
+            }
+            catch { /* opcional: log */ }
+
+            var payment = new Payment
+            {
+                QuotaId = quota.Id,
+                Amount = amount,
+                Method = PaymentMethodType.Card,
+                Status = PaymentStatusType.Succeeded,
+                Provider = "stripe",
+                ProviderPaymentId = intent.Id,   // PaymentIntent Id
+                ProviderReference = chargeId,    // Charge Id (se houver)
+                ReceiptUrl = receiptUrl,
+                CreatedAt = DateTime.UtcNow,
+                PaidAt = DateTime.UtcNow
+            };
+
+            _db.Payments.Add(payment);
+            quota.IsPaid = true;
+            quota.Payment = payment;
+
+            await _db.SaveChangesAsync();
+            return payment.Id.ToString();
+        }
+
+        // ---------- 3) Webhook (opcional; útil em produção) ----------
         public async Task HandleWebhookAsync(string json, string signatureHeader)
         {
             var secret = _cfg["Stripe:WebhookSecret"];
@@ -101,7 +141,6 @@ namespace CondoSphere.Services
 
             var stripeEvent = EventUtility.ConstructEvent(json, signatureHeader, secret);
 
-            // usa as tuas constantes PI_SUCCEEDED/PI_FAILED/PI_CANCELED
             if (stripeEvent.Type is "payment_intent.succeeded"
                                 or "payment_intent.payment_failed"
                                 or "payment_intent.canceled")
@@ -109,7 +148,6 @@ namespace CondoSphere.Services
                 var evtPi = stripeEvent.Data.Object as PaymentIntent;
                 if (evtPi == null) return;
 
-                // Recarrega expandindo latest_charge para ter ReceiptUrl
                 var piService = new PaymentIntentService();
                 var pi = await piService.GetAsync(evtPi.Id, new PaymentIntentGetOptions
                 {
@@ -122,24 +160,14 @@ namespace CondoSphere.Services
 
                 if (payment == null) return;
 
-                // IDEMPOTÊNCIA: se já marcámos como succeeded, não volta a fazer nada
-                if (payment.Status == PaymentStatusType.Succeeded &&
-                    stripeEvent.Type == "payment_intent.succeeded")
-                {
-                    return;
-                }
-
-                bool changed = false;
-
+                var changed = false;
                 if (stripeEvent.Type == "payment_intent.succeeded")
                 {
                     payment.Status = PaymentStatusType.Succeeded;
                     payment.PaidAt = DateTime.UtcNow;
                     payment.ReceiptUrl = pi.LatestCharge?.ReceiptUrl;
+                    if (payment.Quota != null) payment.Quota.IsPaid = true;
                     changed = true;
-
-                    if (payment.Quota != null && !payment.Quota.IsPaid)
-                        payment.Quota.IsPaid = true;
                 }
                 else if (stripeEvent.Type == "payment_intent.payment_failed")
                 {
@@ -161,38 +189,74 @@ namespace CondoSphere.Services
                 if (changed)
                     await _db.SaveChangesAsync();
             }
+
+
         }
 
-
-
-
-        public async Task<string> ConfirmAndMarkAsync(string intentId)
+        public async Task<(string clientSecret, string paymentIntentId)> CreateCardIntentAsync(int quotaId)
         {
-            var piService = new PaymentIntentService();
-            var pi = await piService.GetAsync(intentId); // sem expands
+            // carrega a quota
+            var quota = await _db.Quotas
+                .Include(q => q.Unit)
+                .FirstOrDefaultAsync(q => q.Id == quotaId)
+                ?? throw new InvalidOperationException("Quota não encontrada.");
 
-            if (string.Equals(pi.Status, "succeeded", StringComparison.OrdinalIgnoreCase))
+            if (quota.IsPaid)
+                throw new InvalidOperationException("Quota já está paga.");
+
+            // verifica se já existe um Payment pendente para esta quota
+            var existing = await _db.Payments.FirstOrDefaultAsync(p => p.QuotaId == quotaId);
+
+            // cria PaymentIntent (card elements)
+            var options = new PaymentIntentCreateOptions
             {
-                var payment = await _db.Payments
-                    .Include(p => p.Quota)
-                    .FirstOrDefaultAsync(p => p.ProviderPaymentId == pi.Id);
-
-                if (payment != null)
+                Amount = (long)(quota.Amount * 100m),
+                Currency = "eur",
+                PaymentMethodTypes = new List<string> { "card" },
+                Description = $"Quota {quota.Id} - {quota.DueDate:yyyy-MM}",
+                Metadata = new Dictionary<string, string>
                 {
-                    payment.Status = PaymentStatusType.Succeeded;
-                    payment.PaidAt = DateTime.UtcNow;
-
-                    // Se fizeres questão do recibo via Charge, podemos tentar depois.
-                    // payment.ReceiptUrl = ... (opcional)
-
-                    if (payment.Quota != null)
-                        payment.Quota.IsPaid = true;
-
-                    await _db.SaveChangesAsync();
+                    ["QuotaId"] = quota.Id.ToString()
                 }
+            };
+
+            var piSrv = new PaymentIntentService();
+            var intent = await piSrv.CreateAsync(options);
+
+            // registra/atualiza o Payment localmente (pendente)
+            if (existing == null)
+            {
+                _db.Payments.Add(new Payment
+                {
+                    QuotaId = quota.Id,
+                    Amount = quota.Amount,
+                    Method = PaymentMethodType.Card,
+                    Status = PaymentStatusType.Pending,
+                    Provider = "stripe",
+                    ProviderPaymentId = intent.Id,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                existing.Amount = quota.Amount;
+                existing.Method = PaymentMethodType.Card;
+                existing.Status = PaymentStatusType.Pending;
+                existing.Provider = "stripe";
+                existing.ProviderPaymentId = intent.Id;
+                existing.CreatedAt = DateTime.UtcNow;
+                _db.Payments.Update(existing);
             }
 
-            return pi.Status; // succeeded / processing / requires_action / canceled / ...
+            await _db.SaveChangesAsync();
+
+            // devolve os dados esperados pelos controllers antigos
+            return (intent.ClientSecret, intent.Id);
         }
     }
+
+
 }
+
+
+

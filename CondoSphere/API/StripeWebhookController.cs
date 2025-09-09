@@ -10,7 +10,7 @@ namespace CondoSphere.API
     [ApiController]
     [Route("api/webhooks/stripe")]
     [Consumes("application/json")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [AllowAnonymous]
     public class StripeWebhookController : ControllerBase
     {
         private readonly IPaymentService _payments;

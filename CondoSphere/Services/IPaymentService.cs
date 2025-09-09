@@ -2,14 +2,9 @@
 {
     public interface IPaymentService
     {
-
-        Task<(string clientSecret, string paymentIntentId)> CreateCardIntentAsync(int quotaId);
-
+        Task<string> CreateCheckoutSessionForQuotaAsync(int quotaId, string successUrl, string cancelUrl);
+        Task<string> ConfirmAndMarkAsync(string paymentIntentId);
         Task HandleWebhookAsync(string json, string signatureHeader);
-
-        Task<string> ConfirmAndMarkAsync(string intentId);
-
-
-
+        Task<(string clientSecret, string paymentIntentId)> CreateCardIntentAsync(int quotaId);
     }
 }
