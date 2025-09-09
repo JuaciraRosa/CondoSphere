@@ -16,7 +16,7 @@ using System.Security.Claims;
 
 namespace CondoSphere.Controllers
 {
-    [Authorize(Roles = "Administrator,Manager,Resident")]
+   
 
     [Authorize(Roles = "Administrator,Manager,Resident")]
     public class PaymentsController : Controller
@@ -70,69 +70,6 @@ namespace CondoSphere.Controllers
             return View(payment);
         }
 
-        // ------- Create -------
-        [HttpGet]
-        public async Task<IActionResult> Create()
-        {
-            await LoadSelects();
-            return View(new Payment { Status = PaymentStatusType.Pending });
-        }
-
-        [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Payment model)
-        {
-            if (!ModelState.IsValid)
-            {
-                await LoadSelects(model);
-                return View(model);
-            }
-
-            model.CreatedAt = DateTime.UtcNow;
-            await _payments.AddAsync(model);
-            return RedirectToAction(nameof(Index));
-        }
-
-        // ------- Edit -------
-        [HttpGet]
-        public async Task<IActionResult> Edit(int id)
-        {
-            var payment = await _payments.GetByIdDetailedAsync(id);
-            if (payment == null) return NotFound();
-
-            await LoadSelects(payment);
-            return View(payment);
-        }
-
-        [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Payment model)
-        {
-            if (id != model.Id) return NotFound();
-
-            if (!ModelState.IsValid)
-            {
-                await LoadSelects(model);
-                return View(model);
-            }
-
-            // pega estado anterior
-            var before = await _payments.GetByIdDetailedAsync(id);
-            if (before == null) return NotFound();
-            var wasPaidBefore = before.Status == PaymentStatusType.Succeeded;
-
-            _payments.Update(model);
-            await _payments.SaveChangesAsync();
-
-            // se mudou para pago, notifica por email
-            var isPaidNow = model.Status == PaymentStatusType.Succeeded;
-            if (!wasPaidBefore && isPaidNow)
-            {
-                var to = ResolveDestEmail(model);
-                await _notify.PaymentReceivedAsync(to, model.Id, model.Amount);
-                TempData["ok"] = $"Pagamento #{model.Id:D6} confirmado. Email enviado para {to}.";
-            }
-
-            return RedirectToAction(nameof(Index));
-        }
 
         // ------- Delete -------
         [HttpGet]

@@ -14,5 +14,13 @@
     "VoterEmail": "condosphere.reset.test@yopmail.com",
     "Choice": "Absten\u00E7\u00E3o",
     "CreatedAt": "2025-09-01T04:51:45.2449229Z"
+  },
+  {
+    "Id": "d2de18a1-8dd5-47cb-8d45-0bc10b72f3ef",
+    "MeetingId": 0,
+    "UnitNumber": "A101",
+    "VoterEmail": "hello@yopmail.com",
+    "Choice": "Contra",
+    "CreatedAt": "2025-09-09T23:35:34.5567314Z"
   }
 ]
