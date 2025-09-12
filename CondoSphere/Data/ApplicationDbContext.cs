@@ -20,6 +20,11 @@ namespace CondoSphere.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Meeting> Meetings { get; set; }
 
+        public DbSet<ChatThread> ChatThreads { get; set; }
+        public DbSet<ChatMessage> ChatMessages { get; set; }
+
+        public DbSet<ChatAttachment> ChatAttachments => Set<ChatAttachment>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -119,6 +124,24 @@ namespace CondoSphere.Data
                 .Property(u => u.ProfileImagePath)
                 .IsRequired()
                 .HasDefaultValue("");
+
+
+
+            modelBuilder.Entity<ChatMessage>()
+    .HasOne(m => m.Thread)
+    .WithMany(t => t.Messages)
+    .HasForeignKey(m => m.ThreadId)
+    .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ChatThread>()
+                .HasIndex(t => t.ResidentId);
+
+
+            modelBuilder.Entity<ChatAttachment>()
+   .HasOne(a => a.Message)
+   .WithMany(m => m.Attachments)
+   .HasForeignKey(a => a.MessageId)
+   .OnDelete(DeleteBehavior.Cascade);
         }
 
 

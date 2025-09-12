@@ -39,6 +39,19 @@
                     <span asp-validation-for="CondominiumId" class="text-danger"></span>
                 </div>
 
+                <div class="mb-3 form-check">
+  <input asp-for="IsOnline" class="form-check-input" id="isOnlineChk" />
+  <label class="form-check-label" for="isOnlineChk">Reunião online</label>
+</div>
+
+<div class="mb-3" id="provRow">
+  <label class="form-label">Provedor</label>
+  <select asp-for="OnlineProvider" class="form-select">
+    <option value="Zoom">Zoom</option>
+    @* Futuro: <option value="Teams">Microsoft Teams</option> <option value="Google">Google Meet</option> *@
+  </select>
+</div>
+
                  <div class="mt-4 d-flex gap-2">
                     <button class="btn btn-primary"><i class="bi bi-check2"></i> Save</button>
                     <a class="btn btn-outline-secondary" asp-action="Index"><i class="bi bi-arrow-left"></i> Cancel</a>
@@ -48,8 +61,15 @@
     </div>
 </div>
 
-@section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
- }
+
+@section Scripts{
+  <script>
+    (function(){
+      const chk = document.getElementById('isOnlineChk');
+      const row = document.getElementById('provRow');
+      function toggle(){ row.style.display = chk.checked ? '' : 'none'; }
+      chk?.addEventListener('change', toggle);
+      toggle();
+    })();
+  </script>
+}

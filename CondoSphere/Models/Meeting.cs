@@ -31,6 +31,14 @@ namespace CondoSphere.Models
 
         [ValidateNever]
         public Condominium? Condominium { get; set; }
+
+
+        // NOVO
+        public bool IsOnline { get; set; } = false;
+        public string? OnlineProvider { get; set; }   // "Zoom" | "Teams" | "Google"
+        public string? OnlineMeetingId { get; set; }  // id no provedor
+        public string? OnlineJoinUrl { get; set; }    // link para participantes
+        public string? OnlineStartUrl { get; set; }   // link do host (Zoom)
     }
 
 }

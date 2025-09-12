@@ -28,6 +28,26 @@
                         <span>-</span>
                     }
                 </dd>
+                <dt class="col-sm-3">Online</dt>
+<dd class="col-sm-9">
+  @if (Model.IsOnline)
+  {
+    <div><strong>Provedor:</strong> @Model.OnlineProvider</div>
+    <div>
+      <a class="btn btn-sm btn-primary" href="@Model.OnlineJoinUrl" target="_blank" rel="noopener">
+        Link para participantes
+      </a>
+      @if (User.IsInRole("Administrator") || User.IsInRole("Manager"))
+      {
+        <a class="btn btn-sm btn-outline-dark ms-2" href="@Model.OnlineStartUrl" target="_blank" rel="noopener">
+          Link do host
+        </a>
+      }
+    </div>
+  }
+  else { <span>-</span> }
+</dd>
+
 
                 <dt class="col-sm-3">Condominium</dt>
                 <dd class="col-sm-9">@Model.Condominium?.Name</dd>
@@ -36,10 +56,19 @@
                 <dd class="col-sm-9">@Model.Condominium?.Company?.Name</dd>
             </dl>
         </div>
-        <div class="mt-4 d-flex gap-2">
-            <a class="btn btn-outline-secondary" asp-action="Index"><i class="bi bi-arrow-left"></i> Back</a>
-            <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model.Id"><i class="bi bi-pencil"></i> Edit</a>
-        </div>
+      <div class="mt-4 d-flex gap-2">
+  <a class="btn btn-outline-secondary" asp-action="Index">
+    <i class="bi bi-arrow-left"></i> Back
+  </a>
+
+  @if (User.IsInRole("Administrator") || User.IsInRole("Manager"))
+  {
+      <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model.Id">
+        <i class="bi bi-pencil"></i> Edit
+      </a>
+  }
+</div>
+
     </div>
 </div>
 

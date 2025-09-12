@@ -1,0 +1,145 @@
+﻿@model CondoSphere.Models.ChatThread
+@{
+    ViewData["Title"] = $"Chat #{Model.Id} — {Model.Subject}";
+}
+
+<section class="section">
+  <div class="container">
+    <div class="d-flex justify-content-between mb-3">
+      <h3 class="m-0">@ViewData["Title"]</h3>
+
+      <form asp-action="Upload" method="post" enctype="multipart/form-data" class="d-flex gap-2 mt-2">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.Id" />
+        <input type="file" name="file" class="form-control" />
+        <input type="text" name="text" class="form-control" placeholder="Mensagem opcional…" />
+        <button class="btn btn-outline-secondary">
+          <i class="bi bi-paperclip"></i> Enviar anexo
+        </button>
+      </form>
+
+      <a asp-action="Index" class="btn btn-outline-primary">Voltar</a>
+    </div>
+
+    <div class="row">
+      <div class="col-lg-8">
+        <div id="msgs" class="card p-3" style="min-height:380px;max-height:60vh;overflow:auto">
+          @foreach (var m in Model.Messages.OrderBy(m => m.CreatedAt))
+          {
+            <div class="mb-3">
+              <div class="small text-muted">
+                <strong>@(m.Role == ChatRole.Admin ? "Admin" : m.Role.ToString())</strong>
+                · @m.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+              </div>
+              <div>@m.Text</div>
+
+              @if (m.Attachments?.Any() == true)
+              {
+                foreach (var a in m.Attachments)
+                {
+                  <div><a href="@a.StoragePath" target="_blank" rel="noopener">@a.FileName</a></div>
+                }
+              }
+            </div>
+          }
+        </div>
+
+        <div class="input-group mt-3">
+          <input id="msg" class="form-control" autocomplete="off" placeholder="Escreva sua mensagem…" />
+          <button id="sendBtn" type="button" class="btn btn-primary">
+            <i class="bi bi-send"></i>
+          </button>
+        </div>
+        <small class="text-muted">Pressione Enter para enviar.</small>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="card p-3">
+          <div class="d-flex justify-content-between">
+            <div>
+              <div class="small text-muted">Estado</div>
+              <span class="badge bg-success">@Model.Status</span>
+            </div>
+            <div class="text-end">
+              <div class="small text-muted">Criado</div>
+              <div>@Model.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
+            </div>
+          </div>
+          <div class="mt-3 small text-muted">
+            Última atividade<br />
+            @Model.LastActivityAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<input type="hidden" id="threadId" value="@Model.Id" />
+
+<!-- SignalR (CDN correto) -->
+<script src="https://cdn.jsdelivr.net/npm/%40microsoft/signalr@8.0.5/dist/browser/signalr.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+(function () {
+  const threadId = parseInt(document.getElementById('threadId').value, 10);
+  const list  = document.getElementById('msgs');
+  const input = document.getElementById('msg');
+  const btn   = document.getElementById('sendBtn');
+
+  function append(role, text, when) {
+    const wrap = document.createElement('div');
+    wrap.className = 'mb-3';
+    wrap.innerHTML = `<div class="small text-muted"><strong>${role}</strong> · ${when}</div><div>${text}</div>`;
+    list.appendChild(wrap);
+    list.scrollTop = list.scrollHeight;
+  }
+
+  const conn = new signalR.HubConnectionBuilder()
+    .withUrl('/hubs/chat', {
+      transport: signalR.HttpTransportType.LongPolling,
+      withCredentials: true
+    })
+    .withAutomaticReconnect()
+    .configureLogging(signalR.LogLevel.Information)
+    .build();
+
+  conn.on('ReceiveMessage', m => {
+    append(m.role, m.text, new Date(m.createdAt).toLocaleString());
+  });
+
+  conn.on('ThreadClosed', () => {
+    append('Sistema', 'Thread encerrada pela administração.', new Date().toLocaleString());
+  });
+
+  async function start() {
+    try {
+      await conn.start();
+      await conn.invoke('JoinThread', threadId);
+    } catch (e) {
+      console.error('SignalR start error:', e);
+      setTimeout(start, 2000);
+    }
+  }
+  start();
+
+  async function send() {
+    const t = (input.value || '').trim();
+    if (!t) return;
+    try {
+      await conn.invoke('SendMessage', threadId, t);
+      input.value = '';
+      input.focus();
+    } catch (e) {
+      console.error('Send error:', e);
+      append('Erro', 'Não foi possível enviar. Tente novamente.', new Date().toLocaleString());
+    }
+  }
+
+  btn.addEventListener('click', send);
+  input.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') { ev.preventDefault(); send(); }
+  });
+})();
+</script>

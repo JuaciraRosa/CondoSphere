@@ -66,5 +66,13 @@ namespace CondoSphere.Messaging
             return _email.SendAsync(to, subject, body);
         }
 
+
+        public Task SendAsync(string to, string subject, string htmlBody)
+        {
+            
+            return _email.SendAsync(to, subject, htmlBody);
+        }
+
+
     }
 }

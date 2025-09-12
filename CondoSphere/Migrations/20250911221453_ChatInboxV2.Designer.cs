@@ -4,6 +4,7 @@ using CondoSphere.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CondoSphere.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250911221453_ChatInboxV2")]
+    partial class ChatInboxV2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -378,24 +381,9 @@ namespace CondoSphere.Migrations
                     b.Property<int>("CondominiumId")
                         .HasColumnType("int");
 
-                    b.Property<bool>("IsOnline")
-                        .HasColumnType("bit");
-
                     b.Property<string>("MinutesDocumentPath")
                         .HasMaxLength(400)
                         .HasColumnType("nvarchar(400)");
-
-                    b.Property<string>("OnlineJoinUrl")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("OnlineMeetingId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("OnlineProvider")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("OnlineStartUrl")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("ScheduledDate")
                         .HasColumnType("datetime2");

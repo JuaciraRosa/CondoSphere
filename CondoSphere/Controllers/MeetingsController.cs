@@ -1,41 +1,49 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using CondoSphere.Data;
+using CondoSphere.Data.Interfaces;
+using CondoSphere.Models;
+using CondoSphere.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using CondoSphere.Data;
-using CondoSphere.Models;
-using CondoSphere.Data.Interfaces;
-using Microsoft.AspNetCore.Authorization;
+using System;
+using System.Collections.Generic;
+using System.Configuration.Provider;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace CondoSphere.Controllers
 {
-    [Authorize(Roles = "Administrator,Manager")]
+    [Authorize]
     public class MeetingsController : Controller
     {
         private readonly IMeetingRepository _meetings;
         private readonly ICondominiumRepository _condos;
         private readonly IWebHostEnvironment _env;
+        private readonly IOnlineMeetingProviderFactory _providers;
 
         public MeetingsController(
             IMeetingRepository meetings,
             ICondominiumRepository condos,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env,
+            IOnlineMeetingProviderFactory providers)
         {
             _meetings = meetings;
             _condos = condos;
             _env = env;
+            _providers = providers;
         }
-        // LISTA
+
+        [AllowAnonymous]
         public async Task<IActionResult> Index()
         {
-            var list = await _meetings.GetAllWithCondoAsync(); // inclui Condominium
+            var list = await _meetings.GetAllWithCondoAsync(); 
             return View(list);
         }
 
-        // DETALHES
+
+        [AllowAnonymous]
+
         public async Task<IActionResult> Details(int id)
         {
             var meeting = await _meetings.GetByIdWithCondoAsync(id);
@@ -43,7 +51,7 @@ namespace CondoSphere.Controllers
             return View(meeting);
         }
 
-
+      
         [HttpGet]
         public async Task<IActionResult> Create()
         {
@@ -51,6 +59,7 @@ namespace CondoSphere.Controllers
             return View(new Meeting { ScheduledDate = DateTime.Now.AddDays(1) });
         }
 
+        [Authorize(Roles = "Administrator,Manager")]
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Meeting meeting)
         {
@@ -62,6 +71,28 @@ namespace CondoSphere.Controllers
 
             // upload opcional
             await SaveMinutesFileAsync(meeting);
+
+
+            // 2) se for online, cria no provedor
+            if (meeting.IsOnline)
+            {
+                meeting.OnlineProvider = string.IsNullOrWhiteSpace(meeting.OnlineProvider) ? "Zoom" : meeting.OnlineProvider;
+                var prov = _providers.Get(meeting.OnlineProvider);
+                try
+                {
+                    var res = await prov.CreateAsync(meeting);
+                    meeting.OnlineProvider = res.Provider;
+                    meeting.OnlineMeetingId = res.ExternalId;
+                    meeting.OnlineJoinUrl = res.JoinUrl;
+                    meeting.OnlineStartUrl = res.StartUrl;
+                }
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError("", $"Falha ao criar reunião online: {ex.Message}");
+                    await LoadCondominiumsSelectAsync(meeting.CondominiumId);
+                    return View(meeting);
+                }
+            }
 
             await _meetings.AddAsync(meeting);
             return RedirectToAction(nameof(Index));
@@ -76,6 +107,8 @@ namespace CondoSphere.Controllers
             return View(meeting);
         }
 
+
+        [Authorize(Roles = "Administrator,Manager")]
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Meeting meeting)
         {
@@ -90,7 +123,7 @@ namespace CondoSphere.Controllers
                 return View(meeting);
             }
 
-            // Se veio novo ficheiro, substitui. Caso contrário mantém o caminho existente.
+           
             if (meeting.MinutesFile != null && meeting.MinutesFile.Length > 0)
             {
                 await SaveMinutesFileAsync(meeting, replaceExisting: true);
@@ -105,6 +138,53 @@ namespace CondoSphere.Controllers
             existingMeeting.Agenda = meeting.Agenda;
             existingMeeting.CondominiumId = meeting.CondominiumId;
             existingMeeting.MinutesDocumentPath = meeting.MinutesDocumentPath;
+
+
+
+            // Edit
+            if (meeting.IsOnline)
+            {
+                var providerName = string.IsNullOrWhiteSpace(meeting.OnlineProvider)
+                    ? (existingMeeting.OnlineProvider ?? "Zoom")
+                    : meeting.OnlineProvider;
+
+                var precisaCriar = string.IsNullOrWhiteSpace(existingMeeting.OnlineMeetingId)
+                                || !string.Equals(existingMeeting.OnlineProvider, providerName, StringComparison.OrdinalIgnoreCase);
+
+                if (precisaCriar)
+                {
+                    var prov = _providers.Get(providerName);
+                    try
+                    {
+                        var res = await prov.CreateAsync(meeting);
+                        existingMeeting.IsOnline = true;
+                        existingMeeting.OnlineProvider = providerName;
+                        existingMeeting.OnlineMeetingId = res.ExternalId;
+                        existingMeeting.OnlineJoinUrl = res.JoinUrl;
+                        existingMeeting.OnlineStartUrl = res.StartUrl;
+                    }
+                    catch (Exception ex)
+                    {
+                        ModelState.AddModelError("", $"Falha ao criar reunião online: {ex.Message}");
+                        await LoadCondominiumsSelectAsync(meeting.CondominiumId);
+                        return View(meeting);
+                    }
+                }
+                else
+                {
+                    existingMeeting.IsOnline = true;
+                }
+            }
+            else
+            {
+                existingMeeting.IsOnline = false;
+                existingMeeting.OnlineProvider = null;
+                existingMeeting.OnlineMeetingId = null;
+                existingMeeting.OnlineJoinUrl = null;
+                existingMeeting.OnlineStartUrl = null;
+            }
+
+
 
             _meetings.Update(existingMeeting);
             await _meetings.SaveChangesAsync();
@@ -122,6 +202,7 @@ namespace CondoSphere.Controllers
         }
 
         [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
+        [Authorize(Roles = "Administrator,Manager")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var meeting = await _meetings.GetByIdAsync(id);

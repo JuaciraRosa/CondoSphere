@@ -1,12 +1,15 @@
 ﻿﻿@using System.Security.Claims
 @using Microsoft.AspNetCore.Http
 @inject IHttpContextAccessor HttpContextAccessor
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 
 @{
     var user = HttpContextAccessor.HttpContext?.User;
     var isAuth = user?.Identity?.IsAuthenticated == true;
     var role = user?.FindFirst(ClaimTypes.Role)?.Value
                ?? user?.FindFirst("role")?.Value;
+
+   var anti = Antiforgery.GetAndStoreTokens(Context).RequestToken;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -75,6 +78,7 @@
                             <li><a asp-controller="Voting" asp-action="Cast">Voting</a></li>
                              <li><a asp-controller="Reports" asp-action="Index">Reports</a></li>
                              <li><a asp-controller="MaintenanceRequests" asp-action="Index">Maintenance Requests</a></li>
+                             <li> <a asp-controller="Chat" asp-action="Index">Chat</a></li>
                         }
                       
 
@@ -87,6 +91,8 @@
                             <li><a asp-controller="Occurrences" asp-action="Index">Occurrences</a></li>
                             <li><a asp-controller="Voting" asp-action="Cast">Voting</a></li>
                              <li><a asp-controller="MaintenanceRequests" asp-action="Index">Maintenance Requests</a></li>
+                          
+
 
                         }
 
@@ -174,6 +180,179 @@
     <!-- Main JS -->
     <script src="~/assets/js/main.js" asp-append-version="true"></script>
 
+    @if (isAuth && string.Equals(role, "Resident", StringComparison.OrdinalIgnoreCase))
+{
+
+
+    <style>
+      /* botão flutuante */
+      #botToggle {
+        position: fixed;
+        right: 22px; bottom: 22px;
+        width: 56px; height: 56px;
+        border: none; border-radius: 50%;
+        background: #3076ff; color: #fff;
+        display: grid; place-items: center;
+        box-shadow: 0 8px 24px rgba(0,0,0,.18);
+        z-index: 1100;
+      }
+      #botToggle i { font-size: 22px; }
+
+      /* painel */
+      #botPanel {
+        position: fixed;
+        right: 22px; bottom: 90px;
+        width: min(370px, 92vw);
+        max-height: min(68vh, 640px);
+        background: #fff; border-radius: 12px;
+        box-shadow: 0 18px 40px rgba(0,0,0,.22);
+        display: none; flex-direction: column;
+        overflow: hidden; z-index: 1100;
+      }
+      #botPanel.show { display: flex; }
+
+      #botHead {
+        padding: 10px 12px;
+        background: #f7f9ff;
+        border-bottom: 1px solid #e9eefc;
+      }
+      #botClose {
+        border: 0; background: transparent; color:#666;
+      }
+      #botMsgs {
+        padding: 14px;
+        overflow-y: auto;
+        min-height: 160px;
+      }
+      #botInputRow {
+        padding: 10px; border-top: 1px solid #eee;
+        display: grid; grid-template-columns: 1fr auto; gap: 8px;
+      }
+      #botSend {
+        width: 44px; border-radius: 10px;
+      }
+    </style>
+
+    <!-- BOT: botão + painel -->
+    <button id="botToggle" title="Assistente">
+      <i class="bi bi-chat-dots"></i>
+    </button>
+
+    <div id="botPanel" role="dialog" aria-label="Assistente">
+      <div id="botHead" class="d-flex align-items-center justify-content-between">
+        <strong>Assistente</strong>
+        <button id="botClose" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+      </div>
+
+      <div id="botMsgs" class="small">
+        <div class="text-muted">Conectando…</div>
+      </div>
+
+      <div id="botInputRow">
+        <input id="botInput" class="form-control" placeholder="Escreva sua mensagem…" />
+        <button id="botSend" class="btn btn-primary">
+          <i class="bi bi-send"></i>
+        </button>
+      </div>
+    </div>
+
+<script src="https://cdn.jsdelivr.net/npm/%40microsoft/signalr@8.0.5/dist/browser/signalr.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+(function () {
+  const HUB_URL   = 'https://condosphere-web-app.somee.com/hubs/chat';
+  const START_API = 'https://condosphere-web-app.somee.com/Chat/StartApi';
+  const anti = '@anti'; // seu token antiforgery
+
+  const toggle = document.getElementById('botToggle');
+  const panel  = document.getElementById('botPanel');
+  const close  = document.getElementById('botClose');
+  const msgs   = document.getElementById('botMsgs');
+  const input  = document.getElementById('botInput');
+  const send   = document.getElementById('botSend');
+
+  let threadId = null;
+  let conn = null;
+
+  function append(role, text) {
+    const wrap = document.createElement('div');
+    wrap.className = 'mb-2';
+    wrap.innerHTML = `<div class="text-muted"><strong>${role}</strong></div><div>${text}</div>`;
+    msgs.appendChild(wrap);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  async function ensureThread() {
+    if (threadId) return threadId;
+    const res = await fetch(START_API, {
+      method: 'POST',
+      headers: { 'RequestVerificationToken': anti },
+      credentials: 'include'
+    });
+    const j = await res.json();
+    if (!j.ok) throw new Error('Falha ao criar thread');
+    threadId = j.id;
+    return threadId;
+  }
+
+  async function connect() {
+    if (conn) return;
+
+    conn = new signalR.HubConnectionBuilder()
+      .withUrl(HUB_URL, {
+        transport: signalR.HttpTransportType.LongPolling,
+        withCredentials: true
+      })
+      .withAutomaticReconnect()
+      .configureLogging(signalR.LogLevel.Information)
+      .build();
+
+    conn.on('ReceiveMessage', m => append(m.role, m.text));
+    conn.on('ThreadClosed', () => append('Sistema', 'Thread encerrada.'));
+
+    await conn.start();
+    await ensureThread();
+    await conn.invoke('JoinThread', threadId);
+
+    msgs.innerHTML = '';
+    append('Bot', 'Olá! Em que posso ajudar?');
+  }
+
+  async function sendMsg() {
+    const t = (input.value || '').trim();
+    if (!t) return;
+    try {
+      await ensureThread();
+      await connect();
+      await conn.invoke('SendMessage', threadId, t);
+      input.value = '';
+      input.focus();
+    } catch (e) {
+      console.error(e);
+      append('Erro', 'Não foi possível enviar agora.');
+    }
+  }
+
+  toggle?.addEventListener('click', async () => {
+    panel.classList.toggle('show');
+    if (panel.classList.contains('show')) {
+      msgs.innerHTML = '<div class="text-muted">Conectando…</div>';
+      try { await connect(); } catch { append('Erro', 'Conexão indisponível.'); }
+    }
+  });
+
+  close?.addEventListener('click', () => panel.classList.remove('show'));
+  send?.addEventListener('click', sendMsg);
+  input?.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') { ev.preventDefault(); sendMsg(); }
+  });
+})();
+</script>
+}
+
+
     @RenderSection("Scripts", required: false)
-</body>
+  </body>
 </html>
+

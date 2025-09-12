@@ -1,18 +1,18 @@
+
 using CondoSphere.Data;
 using CondoSphere.Data.DependencyInjection;
 using CondoSphere.Infrastructure;
 using CondoSphere.Messaging;
 using CondoSphere.Services;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -66,6 +66,19 @@ builder.Services.AddScoped<IQuotaService, QuotaService>();
 builder.Services.AddScoped<IPaymentService, PaymentServiceStripe>();
 builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<DomainNotificationService>();
+builder.Services.AddScoped<IChatBotService, ChatBotService>();
+builder.Services.AddAntiforgery(o => o.HeaderName = "RequestVerificationToken");
+
+
+
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<ZoomOnlineMeetingProvider>();
+builder.Services.AddScoped<IOnlineMeetingProviderFactory, OnlineMeetingProviderFactory>();
+
+// ...
+
+
+
 
 
 
@@ -87,15 +100,26 @@ builder.Services.AddAuthentication()
 
 builder.Services.AddAuthorization();
 
-// CORS (allow mobile to call your API)
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("maui",
-        p => p.AllowAnyOrigin()
-              .AllowAnyHeader()
-              .AllowAnyMethod());
+    options.AddPolicy("maui", p => p
+        .AllowAnyOrigin()
+        .AllowAnyHeader()
+        .AllowAnyMethod());
+
+    options.AddPolicy("hub", p => p
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials()
+        .SetIsOriginAllowed(_ => true));
 });
 
+
+builder.Services.ConfigureApplicationCookie(o =>
+{
+    o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    o.Cookie.SameSite = SameSiteMode.Lax; 
+});
 
 
 builder.Services.AddControllersWithViews(options =>
@@ -106,6 +130,8 @@ builder.Services.AddControllersWithViews(options =>
         .Build();
     options.Filters.Add(new AuthorizeFilter(policy));
 })
+
+
 .AddViewLocalization()
 .AddDataAnnotationsLocalization();
 builder.Services.AddEndpointsApiExplorer();
@@ -161,8 +187,18 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 
-var app = builder.Build();
 
+builder.Services.AddSignalR(o =>
+{
+    o.EnableDetailedErrors = true;
+    o.KeepAliveInterval = TimeSpan.FromSeconds(10);
+    o.ClientTimeoutInterval = TimeSpan.FromSeconds(40);
+});
+
+// Se MAUI estiver em outro domínio, libere CORS do hub:
+
+
+var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
 {
@@ -180,56 +216,50 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-app.UseCors("maui");
+// habilita middleware CORS (sem escolher policy global aqui)
+app.UseCors();
 
-app.Use(async (ctx, next) =>
-{
-    if (ctx.Request.Path.StartsWithSegments("/swagger"))
-    {
-        await next(); 
-        return;
-    }
-    await next();
-});
-
-// Important: auth order
 app.UseAuthentication();
 app.UseAuthorization();
-if (app.Environment.IsDevelopment() || true) // deixar sempre ativo por enquanto
+
+// Swagger opcional
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.RoutePrefix = "swagger";                  // UI em /swagger
-        c.SwaggerEndpoint("./v1/swagger.json", "CondoSphere API v1"); // caminho RELATIVO
-    });
-}
+    c.RoutePrefix = "swagger";
+    c.SwaggerEndpoint("./v1/swagger.json", "CondoSphere API v1");
+});
 
+// ===== Endpoints com a policy certa =====
 
+// Controllers/API -> policy "maui" (caso MAUI consuma a API)
+app.MapControllers().RequireCors("maui");
 
-// Map API and MVC
-app.MapControllers(); // if using attribute routing for API
+// Hub SignalR -> policy "hub" + LongPolling (Somee)
+app.MapHub<CondoSphere.Hubs.ChatHub>("/hubs/chat", opt =>
+{
+    opt.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling;
+    opt.LongPolling.PollTimeout = TimeSpan.FromSeconds(25);
+}).RequireCors("hub");
+
+// MVC do site
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-
-
-
+// (seu bloco de migrate/seed permanece igual)
 using (var scope = app.Services.CreateScope())
 {
     var sp = scope.ServiceProvider;
     var ctx = sp.GetRequiredService<ApplicationDbContext>();
-
     try
     {
-        await ctx.Database.MigrateAsync();     
-        await DbSeeder.SeedAsync(sp);         
+        await ctx.Database.MigrateAsync();
+        await DbSeeder.SeedAsync(sp);
 
         var afetados = await ctx.Users
             .Where(u => u.ProfileImagePath == null)
             .ExecuteUpdateAsync(setters => setters.SetProperty(u => u.ProfileImagePath, ""));
-
         if (afetados > 0)
             app.Logger.LogInformation("Corrigidos {Afetados} usuários com ProfileImagePath NULL.", afetados);
     }
@@ -240,4 +270,5 @@ using (var scope = app.Services.CreateScope())
         throw;
     }
 }
+
 app.Run();
