@@ -4,7 +4,6 @@
     ViewData["Title"] = "Chat";
     var isAdmin = (bool)ViewBag.IsAdmin;
     string q = ViewBag.Q as string ?? "";
-    var status  = ViewBag.FilterStatus as string; // "", "Open", "Closed"
 }
 
 <section class="section">
@@ -15,25 +14,22 @@
     </div>
 
     <div class="d-flex gap-2 align-items-center mb-3">
-     <form method="get" class="d-flex gap-2 mb-3">
-  <input class="form-control" name="q" value="@q" placeholder="Buscar por assunto ou mensagens…" />
-  <select class="form-select" name="status" style="max-width:160px">
-    <option value="">Todos</option>
-    <option value="Open" selected="@(ViewBag.FilterStatus=="Open")">Abertos</option>
-    <option value="Closed" selected="@(ViewBag.FilterStatus=="Closed")">Fechados</option>
-  </select>
-  <button class="btn btn-outline-secondary">Filtrar</button>
-</form>
+      <form method="get" class="d-flex gap-2 mb-3">
+        <input class="form-control" name="q" value="@q" placeholder="Buscar por assunto ou mensagens…" />
+        <select class="form-select" name="status" style="max-width:160px">
+          <option value="">Todos</option>
+          <option value="Open" selected="@(ViewBag.FilterStatus=="Open")">Abertos</option>
+          <option value="Closed" selected="@(ViewBag.FilterStatus=="Closed")">Fechados</option>
+        </select>
+        <button class="btn btn-outline-secondary">Filtrar</button>
+      </form>
 
-      @* Morador pode abrir novo tópico *@
       @if (!isAdmin)
       {
         <form asp-action="Start" method="post" class="ms-auto">
           @Html.AntiForgeryToken()
           <input type="hidden" name="subject" value="Suporte" />
-          <button class="btn btn-sm btn-primary">
-            <i class="bi bi-chat-dots"></i> Novo tópico
-          </button>
+          <button class="btn btn-sm btn-primary"><i class="bi bi-chat-dots"></i> Novo tópico</button>
         </form>
       }
     </div>
@@ -52,15 +48,13 @@
                 <th style="width:120px;"></th>
               </tr>
             </thead>
-          <tbody>
+            <tbody id="threadRows">
 @foreach (var t in Model ?? Enumerable.Empty<CondoSphere.Models.ChatThread>())
 {
   <tr data-thread="@t.Id">
     <td>@t.Id</td>
     <td>@t.Subject</td>
-    <td>
-      <span class="badge @(t.Status=="Open"?"bg-success":"bg-secondary")">@t.Status</span>
-    </td>
+    <td><span class="badge @(t.Status=="Open"?"bg-success":"bg-secondary")">@t.Status</span></td>
     <td>@t.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
     <td>
       <div data-last>@(t.LastPreview ?? "")</div>
@@ -79,8 +73,7 @@
 {
   <tr><td colspan="6" class="text-center text-muted py-4">Sem tópicos.</td></tr>
 }
-</tbody>
-
+            </tbody>
           </table>
         </div>
       </div>
@@ -89,37 +82,52 @@
   </div>
 </section>
 
-      <script src="https://cdn.jsdelivr.net/npm/%40microsoft/signalr@8.0.5/dist/browser/signalr.min.js"></script>
+@if (isAdmin)
+{
 <script>
 (function(){
-  const isAdmin = @((bool)ViewBag.IsAdmin ? "true" : "false");
-  if(!isAdmin) return;
+  const ORIGIN = window.location.origin;
+  const API    = (ticks) => `${ORIGIN}/Chat/AdminPoll${ticks?`?afterTicks=${ticks}`:""}`;
 
-  const hub = new signalR.HubConnectionBuilder()
-    .withUrl('/hubs/chat', { transport: signalR.HttpTransportType.LongPolling, withCredentials: true })
-    .withAutomaticReconnect()
-    .build();
+  let lastTicks = null;
 
-  hub.on('ThreadUpdated', t => {
-    const row = document.querySelector(`[data-thread="${t.id}"]`);
-    if (row) {
-      row.querySelector('[data-last]')?.replaceChildren(document.createTextNode(t.last ?? ''));
-      row.querySelector('[data-lastat]')?.replaceChildren(document.createTextNode(t.lastAt ?? ''));
-      const ub = row.querySelector('[data-unread]');
-      if (ub) ub.textContent = (t.unread && t.unread > 0) ? t.unread : '';
-      else if (t.unread && t.unread > 0) {
-        const span = document.createElement('span');
-        span.className = 'badge rounded-pill text-bg-danger';
-        span.setAttribute('data-unread','');
-        span.textContent = t.unread;
-        row.children[row.children.length-2].appendChild(span);
-      }
-    } else {
-      // opcional: inserir nova linha no topo
-      // (para simplificar, recarregue a página se quiser)
+  function upsertRow(item){
+    const rows = document.getElementById('threadRows');
+    let row = rows.querySelector(`[data-thread="${item.id}"]`);
+    if(!row) return; // para manter simples, só atualiza linhas existentes
+
+    // estado
+    const badge = row.querySelector('td:nth-child(3) .badge');
+    badge.textContent = item.status;
+    badge.className = `badge ${item.status === 'Open' ? 'bg-success':'bg-secondary'}`;
+
+    // preview + lastAt
+    row.querySelector('[data-last]') .textContent = item.last ?? '';
+    row.querySelector('[data-lastat]').textContent = item.lastAt?.toString().replace('T',' ').slice(0,16) ?? '';
+
+    // unread
+    const ub = row.querySelector('[data-unread]');
+    if (ub) ub.textContent = (item.unread && item.unread > 0) ? item.unread : '';
+    else if (item.unread && item.unread > 0) {
+      const span = document.createElement('span');
+      span.className = 'badge rounded-pill text-bg-danger';
+      span.setAttribute('data-unread','');
+      span.textContent = item.unread;
+      row.children[row.children.length-1].prepend(span);
     }
-  });
+  }
 
-  hub.start().catch(console.error);
+  async function poll(){
+    try{
+      const res = await fetch(API(lastTicks), { credentials:'include' });
+      if(!res.ok) return;
+      const j = await res.json();
+      lastTicks = j.now;
+      (j.items || []).forEach(upsertRow);
+    }catch{}
+  }
+
+  setInterval(poll, 5000);
 })();
 </script>
+}

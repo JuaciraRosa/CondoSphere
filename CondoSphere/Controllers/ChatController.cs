@@ -187,22 +187,18 @@ namespace CondoSphere.Controllers
             return RedirectToAction(nameof(Thread), new { id });
         }
 
-        // ========== FECHAR / REABRIR ==========
-        [HttpPost]
-        [Authorize(Roles = "Administrator,Manager")]
-        [ValidateAntiForgeryToken]
+        [HttpPost, Authorize(Roles = "Administrator,Manager"), ValidateAntiForgeryToken]
         public async Task<IActionResult> Close(int id)
         {
             var t = await _db.ChatThreads.FindAsync(id);
             if (t == null) return NotFound();
             t.Status = "Closed";
             await _db.SaveChangesAsync();
+            await _hub.Clients.Group($"thread-{id}").SendAsync("ThreadClosed");
             return RedirectToAction(nameof(Thread), new { id });
         }
 
-        [HttpPost]
-        [Authorize(Roles = "Administrator,Manager")]
-        [ValidateAntiForgeryToken]
+        [HttpPost, Authorize(Roles = "Administrator,Manager"), ValidateAntiForgeryToken]
         public async Task<IActionResult> Reopen(int id)
         {
             var t = await _db.ChatThreads.FindAsync(id);
@@ -210,8 +206,54 @@ namespace CondoSphere.Controllers
             t.Status = "Open";
             t.LastActivityAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
+            await _hub.Clients.Group($"thread-{id}").SendAsync("ThreadReopened");
             return RedirectToAction(nameof(Thread), new { id });
         }
+
+
+        [HttpPost, Authorize(Roles = "Administrator,Manager"), ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteThread(int id)
+        {
+            var t = await _db.ChatThreads
+                .Include(x => x.Messages).ThenInclude(m => m.Attachments)
+                .FirstOrDefaultAsync(x => x.Id == id);
+            if (t == null) return NotFound();
+
+            foreach (var a in t.Messages.SelectMany(m => m.Attachments ?? new List<ChatAttachment>()))
+            {
+                var full = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+                    a.StoragePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (System.IO.File.Exists(full)) System.IO.File.Delete(full);
+            }
+
+            _db.ChatThreads.Remove(t);
+            await _db.SaveChangesAsync();
+
+            await _hub.Clients.Group($"thread-{id}").SendAsync("ThreadClosed");
+            await _hub.Clients.Group("admins").SendAsync("ThreadUpdated", new { id, deleted = true });
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost, Authorize(Roles = "Administrator,Manager"), ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteMessage(int id)
+        {
+            var m = await _db.ChatMessages.Include(x => x.Attachments).FirstOrDefaultAsync(x => x.Id == id);
+            if (m == null) return NotFound();
+
+            foreach (var a in m.Attachments ?? Enumerable.Empty<ChatAttachment>())
+            {
+                var full = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+                    a.StoragePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (System.IO.File.Exists(full)) System.IO.File.Delete(full);
+            }
+
+            _db.ChatMessages.Remove(m);
+            await _db.SaveChangesAsync();
+            return Ok(new { ok = true });
+        }
+
+
 
         // ========== BOT (simples, palavras-chave) ==========
         private async Task<string?> BotReplyAsync(ChatThread thread, ChatMessage lastUserMessage)
@@ -241,6 +283,90 @@ namespace CondoSphere.Controllers
             return null;
         }
 
+
+        // ===== Enviar mensagem via API (polling) =====
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SendApi(int id, string text)
+        {
+            text = (text ?? "").Trim();
+            if (string.IsNullOrEmpty(text)) return BadRequest();
+
+            var meId = _userManager.GetUserId(User)!;
+            var isAdmin = User.IsInRole("Administrator") || User.IsInRole("Manager");
+
+            var t = await _db.ChatThreads.FirstOrDefaultAsync(x => x.Id == id);
+            if (t == null) return NotFound();
+            if (!isAdmin && t.ResidentId != meId) return Forbid();
+
+            // ✅ bloqueia envio para todos quando fechado
+            if (t.Status == "Closed") return BadRequest("closed");
+
+            var msg = new ChatMessage
+            {
+                ThreadId = t.Id,
+                Role = isAdmin ? ChatRole.Admin : ChatRole.Resident,
+                UserId = meId,
+                Text = text,
+                CreatedAt = DateTime.UtcNow,
+                IsReadByAdmin = isAdmin,
+                IsReadByResident = !isAdmin
+            };
+            _db.ChatMessages.Add(msg);
+
+            // preview + contadores + last activity
+            t.LastActivityAt = msg.CreatedAt;
+            t.LastPreview = text.Length > 120 ? text[..120] + "…" : text;
+            if (isAdmin) t.UnreadForResident++; else t.UnreadForAdmin++;
+
+            await _db.SaveChangesAsync();
+
+            // bot só responde quando quem falou foi o residente
+            if (!isAdmin)
+            {
+                var bot = await BotReplyAsync(t, msg);
+                if (!string.IsNullOrWhiteSpace(bot))
+                {
+                    var botMsg = new ChatMessage
+                    {
+                        ThreadId = t.Id,
+                        Role = ChatRole.Bot,
+                        UserId = null,
+                        Text = bot,
+                        CreatedAt = DateTime.UtcNow,
+                        IsReadByAdmin = true,
+                        IsReadByResident = false
+                    };
+                    _db.ChatMessages.Add(botMsg);
+
+                    t.LastActivityAt = botMsg.CreatedAt;
+                    t.LastPreview = bot.Length > 120 ? bot[..120] + "…" : bot;
+                    t.UnreadForResident++;
+
+                    await _db.SaveChangesAsync();
+                }
+            }
+
+            return Json(new { ok = true, id = msg.Id, when = msg.CreatedAt });
+        }
+
+        // Retorna mensagens novas após um id
+        [HttpGet]
+        public async Task<IActionResult> Poll(int id, long after = 0)
+        {
+            var t = await _db.ChatThreads
+                .Include(x => x.Messages)
+                .FirstOrDefaultAsync(x => x.Id == id);
+            if (t == null) return NotFound();
+
+            var items = t.Messages
+                .Where(m => m.Id > after)
+                .OrderBy(m => m.Id)
+                .Select(m => new { m.Id, role = m.Role.ToString(), m.Text, createdAt = m.CreatedAt })
+                .ToList();
+
+            return Json(items);
+        }
 
         [HttpPost]
         [Authorize(Roles = "Resident")]
@@ -278,41 +404,67 @@ namespace CondoSphere.Controllers
 
             return Json(new { ok = true, id = th.Id });
         }
+        // ===== Lista incremental para admins (polling do Index) =====
+        [HttpGet, Authorize(Roles = "Administrator,Manager")]
+        public async Task<IActionResult> AdminPoll(long? afterTicks = null)
+        {
+            var since = afterTicks.HasValue
+                ? new DateTime(afterTicks.Value, DateTimeKind.Utc)
+                : DateTime.UtcNow.AddMinutes(-60);
+
+            var items = await _db.ChatThreads.AsNoTracking()
+                .Where(t => t.LastActivityAt >= since)
+                .OrderByDescending(t => t.LastActivityAt)
+                .Select(t => new {
+                    id = t.Id,
+                    subject = t.Subject,
+                    status = t.Status,
+                    last = t.LastPreview,
+                    lastAt = t.LastActivityAt,
+                    unread = t.UnreadForAdmin
+                })
+                .ToListAsync();
+
+            return Json(new { now = DateTime.UtcNow.Ticks, items });
+        }
 
 
-        [HttpPost]
+        // Helpers
+        private static bool IsAjax(HttpRequest req) =>
+            string.Equals(req.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase) ||
+            req.Headers["Accept"].ToString().Contains("application/json", StringComparison.OrdinalIgnoreCase);
+
+        // ===== Upload via widget (somente Resident) =====
+        // ===== Upload via widget (somente Resident) =====
+        [HttpPost, Authorize(Roles = "Resident")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Upload(int id, IFormFile file, string? text)
         {
+            // este upload é chamado pelo widget do morador,
+            // admin/manager NÃO têm esse formulário na tela de thread
             if (file == null || file.Length == 0)
-            {
-                TempData["chat_err"] = "Selecione um ficheiro.";
-                return RedirectToAction(nameof(Thread), new { id });
-            }
+                return BadRequest(new { ok = false, error = "nofile" });
 
             var meId = _userManager.GetUserId(User)!;
-            var isAdmin = User.IsInRole("Administrator") || User.IsInRole("Manager");
+
             var t = await _db.ChatThreads.FirstOrDefaultAsync(x => x.Id == id);
             if (t == null) return NotFound();
-            if (!isAdmin && t.ResidentId != meId) return Forbid();
+            if (t.ResidentId != meId) return Forbid();
+            if (t.Status == "Closed") return BadRequest("closed");
 
-            var role = isAdmin ? ChatRole.Admin : ChatRole.Resident;
-
-            // cria mensagem (texto opcional)
             var msg = new ChatMessage
             {
                 ThreadId = id,
-                Role = role,
+                Role = ChatRole.Resident,
                 UserId = meId,
                 Text = string.IsNullOrWhiteSpace(text) ? "[Anexo]" : text.Trim(),
                 CreatedAt = DateTime.UtcNow,
-                IsReadByAdmin = isAdmin,
-                IsReadByResident = !isAdmin
+                IsReadByAdmin = false,
+                IsReadByResident = true
             };
             _db.ChatMessages.Add(msg);
             await _db.SaveChangesAsync();
 
-            // salva ficheiro
             var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "chat", id.ToString());
             Directory.CreateDirectory(folder);
             var ext = Path.GetExtension(file.FileName);
@@ -331,37 +483,15 @@ namespace CondoSphere.Controllers
                 StoragePath = rel
             });
 
-            // counters + preview
             t.HasAttachments = true;
             t.LastActivityAt = msg.CreatedAt;
             t.LastPreview = msg.Text.Length > 120 ? msg.Text[..120] + "…" : msg.Text;
-            if (isAdmin) t.UnreadForResident++;
-            else t.UnreadForAdmin++;
+            t.UnreadForAdmin++;
             await _db.SaveChangesAsync();
 
-            // notifica thread e inbox admin
-            await _hub.Clients.Group($"thread-{id}").SendAsync("ReceiveMessage", new
-            {
-                id = msg.Id,
-                role = msg.Role.ToString(),
-                userId = msg.UserId,
-                text = msg.Text,
-                attachmentUrl = rel,
-                attachmentName = safeName,
-                createdAt = msg.CreatedAt
-            });
-            await _hub.Clients.Group("admins").SendAsync("ThreadUpdated", new
-            {
-                id = t.Id,
-                subject = t.Subject,
-                status = t.Status,
-                last = t.LastPreview,
-                lastAt = t.LastActivityAt,
-                unread = t.UnreadForAdmin
-            });
-
-            return RedirectToAction(nameof(Thread), new { id });
+            return Json(new { ok = true, id = msg.Id, url = rel, name = safeName, when = msg.CreatedAt });
         }
+
 
     }
 }

@@ -108,17 +108,17 @@ builder.Services.AddCors(options =>
         .AllowAnyMethod());
 
     options.AddPolicy("hub", p => p
+        .WithOrigins("https://condosphere-web-app.somee.com") // seu domínio HTTPS
         .AllowAnyHeader()
         .AllowAnyMethod()
-        .AllowCredentials()
-        .SetIsOriginAllowed(_ => true));
+        .AllowCredentials());
 });
 
 
 builder.Services.ConfigureApplicationCookie(o =>
 {
     o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    o.Cookie.SameSite = SameSiteMode.Lax; 
+    o.Cookie.SameSite = SameSiteMode.Lax;
 });
 
 
@@ -267,7 +267,8 @@ using (var scope = app.Services.CreateScope())
     {
         var logger = sp.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "Falha ao migrar/seedar o banco.");
-        throw;
+        if (app.Environment.IsDevelopment())
+            throw;
     }
 }
 

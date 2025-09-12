@@ -16,17 +16,26 @@ namespace CondoSphere.Hubs
 
         public ChatHub(ApplicationDbContext db, IChatBotService bot)
         {
-            _db = db;
-            _bot = bot;
+            _db = db; _bot = bot;
         }
 
         private static string GroupName(int threadId) => $"thread-{threadId}";
         private static string Preview(string text) =>
             string.IsNullOrWhiteSpace(text) ? "" : (text.Length <= 120 ? text : text[..120] + "…");
 
+        public override async Task OnConnectedAsync()
+        {
+            var isAdmin = Context.User.IsInRole("Administrator") || Context.User.IsInRole("Manager");
+            if (isAdmin)
+                await Groups.AddToGroupAsync(Context.ConnectionId, "admins");
+            await base.OnConnectedAsync();
+        }
+
         public async Task JoinThread(int threadId)
         {
-            var userId = Context.UserIdentifier!;
+            var userId = Context.UserIdentifier;
+            if (string.IsNullOrEmpty(userId)) throw new HubException("Usuário não identificado.");
+
             var isAdmin = Context.User.IsInRole("Administrator") || Context.User.IsInRole("Manager");
             if (isAdmin) await Groups.AddToGroupAsync(Context.ConnectionId, "admins");
 
@@ -36,7 +45,7 @@ namespace CondoSphere.Hubs
             if (!isAdmin && th.ResidentId != userId)
                 throw new HubException("Sem acesso a este chat.");
 
-            await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(threadId)); // (único)
+            await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(threadId));
         }
 
         public async Task SendMessage(int threadId, string text)
@@ -44,7 +53,8 @@ namespace CondoSphere.Hubs
             text = (text ?? "").Trim();
             if (string.IsNullOrEmpty(text)) return;
 
-            var userId = Context.UserIdentifier!;
+            var userId = Context.UserIdentifier;
+            if (string.IsNullOrEmpty(userId)) throw new HubException("Usuário não identificado.");
             var isAdmin = Context.User.IsInRole("Administrator") || Context.User.IsInRole("Manager");
 
             var th = await _db.ChatThreads.FirstOrDefaultAsync(t => t.Id == threadId)
@@ -68,11 +78,9 @@ namespace CondoSphere.Hubs
             };
             _db.ChatMessages.Add(msg);
 
-            // Atualiza preview, contadores e last activity
             th.LastActivityAt = msg.CreatedAt;
             th.LastPreview = Preview(text);
-            if (isAdmin) th.UnreadForResident++;
-            else th.UnreadForAdmin++;
+            if (isAdmin) th.UnreadForResident++; else th.UnreadForAdmin++;
 
             await _db.SaveChangesAsync();
 
@@ -85,7 +93,6 @@ namespace CondoSphere.Hubs
                 createdAt = msg.CreatedAt
             });
 
-            // Atualiza inbox da administração SEMPRE que chega mensagem nova
             await Clients.Group("admins").SendAsync("ThreadUpdated", new
             {
                 id = th.Id,
@@ -96,7 +103,6 @@ namespace CondoSphere.Hubs
                 unread = th.UnreadForAdmin
             });
 
-            // Se foi o morador, deixa o bot responder
             if (msg.Role == ChatRole.Resident)
             {
                 var replyText = await _bot.BuildReplyAsync(th, msg);
@@ -123,7 +129,7 @@ namespace CondoSphere.Hubs
                     await Clients.Group(GroupName(threadId)).SendAsync("ReceiveMessage", new
                     {
                         id = botMsg.Id,
-                        role = botMsg.Role.ToString(),
+                        role = "Bot",
                         userId = (string?)null,
                         text = botMsg.Text,
                         createdAt = botMsg.CreatedAt
@@ -140,13 +146,6 @@ namespace CondoSphere.Hubs
                     });
                 }
             }
-        }
-        public override async Task OnConnectedAsync()
-        {
-            var isAdmin = Context.User.IsInRole("Administrator") || Context.User.IsInRole("Manager");
-            if (isAdmin)
-                await Groups.AddToGroupAsync(Context.ConnectionId, "admins");
-            await base.OnConnectedAsync();
         }
 
         public async Task CloseThread(int threadId)
@@ -171,4 +170,5 @@ namespace CondoSphere.Hubs
             });
         }
     }
+
 }
