@@ -74,6 +74,18 @@ builder.Services.AddAntiforgery(o => o.HeaderName = "RequestVerificationToken");
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<ZoomOnlineMeetingProvider>();
 builder.Services.AddScoped<IOnlineMeetingProviderFactory, OnlineMeetingProviderFactory>();
+builder.Services.AddSingleton<GoogleCalendarServiceFactory>();
+builder.Services.AddTransient<GoogleMeetOnlineMeetingProvider>();
+builder.Services.AddTransient<GoogleManualOnlineMeetingProvider>(); // se usar fallback
+builder.Services.Configure<GoogleMeetOptions>(
+    builder.Configuration.GetSection("OnlineMeetings:Google"));
+
+builder.Services.AddTransient<GoogleMeetOnlineMeetingProvider>();
+// builder.Services.AddTransient<TeamsOnlineMeetingProvider>(); // quando ativar
+// Google Meet (automático)
+
+
+
 
 // ...
 

@@ -12,14 +12,19 @@
 
         public IOnlineMeetingProvider Get(string providerName)
         {
-            var name = providerName?.Trim() ?? _cfg["OnlineMeetings:DefaultProvider"] ?? "Zoom";
-            return name.ToLowerInvariant() switch
+            var name = providerName?.Trim().ToLowerInvariant()
+                       ?? _cfg["OnlineMeetings:DefaultProvider"]?.ToLowerInvariant()
+                       ?? "zoom";
+
+            return name switch
             {
                 "zoom" => _sp.GetRequiredService<ZoomOnlineMeetingProvider>(),
-                //"teams"  => _sp.GetRequiredService<TeamsOnlineMeetingProvider>(),
-                //"google" => _sp.GetRequiredService<GoogleMeetOnlineMeetingProvider>(),
+                "google" => _sp.GetRequiredService<GoogleMeetOnlineMeetingProvider>(), // automático (Workspace)
+                                                                                       // "google-manual" => _sp.GetRequiredService<GoogleManualOnlineMeetingProvider>(),
+              /*  "teams" => _sp.GetRequiredService<TeamsOnlineMeetingProvider>(),      */// você já tem
                 _ => _sp.GetRequiredService<ZoomOnlineMeetingProvider>()
             };
         }
+
     }
 }

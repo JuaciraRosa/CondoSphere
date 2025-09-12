@@ -52,7 +52,8 @@ namespace CondoSphere.Controllers
         }
 
       
-        [HttpGet]
+         [Authorize(Roles = "Administrator,Manager")]
+         [HttpGet]
         public async Task<IActionResult> Create()
         {
             await LoadCondominiumsSelectAsync();
@@ -73,10 +74,11 @@ namespace CondoSphere.Controllers
             await SaveMinutesFileAsync(meeting);
 
 
-            // 2) se for online, cria no provedor
+            // dentro do POST Create
             if (meeting.IsOnline)
             {
-                meeting.OnlineProvider = string.IsNullOrWhiteSpace(meeting.OnlineProvider) ? "Zoom" : meeting.OnlineProvider;
+                meeting.OnlineProvider = string.IsNullOrWhiteSpace(meeting.OnlineProvider) ? "Google" : meeting.OnlineProvider;
+
                 var prov = _providers.Get(meeting.OnlineProvider);
                 try
                 {
@@ -94,9 +96,11 @@ namespace CondoSphere.Controllers
                 }
             }
 
+
             await _meetings.AddAsync(meeting);
             return RedirectToAction(nameof(Index));
         }
+        [Authorize(Roles = "Administrator,Manager")]
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
@@ -141,48 +145,54 @@ namespace CondoSphere.Controllers
 
 
 
-            // Edit
             if (meeting.IsOnline)
             {
-                var providerName = string.IsNullOrWhiteSpace(meeting.OnlineProvider)
-                    ? (existingMeeting.OnlineProvider ?? "Zoom")
-                    : meeting.OnlineProvider;
-
-                var precisaCriar = string.IsNullOrWhiteSpace(existingMeeting.OnlineMeetingId)
-                                || !string.Equals(existingMeeting.OnlineProvider, providerName, StringComparison.OrdinalIgnoreCase);
-
-                if (precisaCriar)
+                if (string.Equals(meeting.OnlineProvider, "GoogleManual", StringComparison.OrdinalIgnoreCase))
                 {
-                    var prov = _providers.Get(providerName);
-                    try
+                    if (string.IsNullOrWhiteSpace(meeting.OnlineJoinUrl))
                     {
+                        ModelState.AddModelError("OnlineJoinUrl", "Informe o link do Google Meet.");
+                        await LoadCondominiumsSelectAsync(meeting.CondominiumId);
+                        return View(meeting);
+                    }
+
+                    existingMeeting.IsOnline = true;
+                    existingMeeting.OnlineProvider = "GoogleManual";
+                    existingMeeting.OnlineMeetingId = null;
+                    existingMeeting.OnlineJoinUrl = meeting.OnlineJoinUrl; // do formulário
+                    existingMeeting.OnlineStartUrl = null;
+                }
+                else
+                {
+                    var trocouDeProvider = !string.Equals(existingMeeting.OnlineProvider, meeting.OnlineProvider, StringComparison.OrdinalIgnoreCase)
+                                           || string.IsNullOrWhiteSpace(existingMeeting.OnlineMeetingId);
+
+                    if (trocouDeProvider)
+                    {
+                        var prov = _providers.Get(meeting.OnlineProvider ?? existingMeeting.OnlineProvider ?? "Zoom");
                         var res = await prov.CreateAsync(meeting);
                         existingMeeting.IsOnline = true;
-                        existingMeeting.OnlineProvider = providerName;
+                        existingMeeting.OnlineProvider = res.Provider;
                         existingMeeting.OnlineMeetingId = res.ExternalId;
                         existingMeeting.OnlineJoinUrl = res.JoinUrl;
                         existingMeeting.OnlineStartUrl = res.StartUrl;
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        ModelState.AddModelError("", $"Falha ao criar reunião online: {ex.Message}");
-                        await LoadCondominiumsSelectAsync(meeting.CondominiumId);
-                        return View(meeting);
+                        existingMeeting.IsOnline = true; // mantém dados online já criados
                     }
-                }
-                else
-                {
-                    existingMeeting.IsOnline = true;
                 }
             }
             else
             {
+                // desligou online
                 existingMeeting.IsOnline = false;
                 existingMeeting.OnlineProvider = null;
                 existingMeeting.OnlineMeetingId = null;
                 existingMeeting.OnlineJoinUrl = null;
                 existingMeeting.OnlineStartUrl = null;
             }
+
 
 
 
@@ -193,6 +203,7 @@ namespace CondoSphere.Controllers
         }
 
 
+        [Authorize(Roles = "Administrator,Manager")]
         [HttpGet]
         public async Task<IActionResult> Delete(int id)
         {
