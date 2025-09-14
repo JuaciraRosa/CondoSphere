@@ -23,7 +23,17 @@ namespace CondoSphere.Data
         public DbSet<ChatThread> ChatThreads { get; set; }
         public DbSet<ChatMessage> ChatMessages { get; set; }
 
-        public DbSet<ChatAttachment> ChatAttachments => Set<ChatAttachment>();
+        public DbSet<ChatAttachment> ChatAttachments { get; set; }
+
+        public DbSet<Announcement> Announcements { get; set; }
+        public DbSet<Poll> Polls { get; set; }
+        public DbSet<PollOption> PollOptions { get; set; }
+        public DbSet<PollVote> PollVotes { get; set; }
+        public DbSet<AnnouncementRead> AnnouncementReads { get; set; }
+
+        public DbSet<StaffChatAlert> StaffChatAlerts { get; set; }
+
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -101,10 +111,10 @@ namespace CondoSphere.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<User>()
-       .HasOne(u => u.Company)
-       .WithMany(c => c.Users)                // ou .WithMany() se não tiver navegação
-       .HasForeignKey(u => u.CompanyId)
-       .OnDelete(DeleteBehavior.Restrict);
+            .HasOne(u => u.Company)
+           .WithMany(c => c.Users)                // ou .WithMany() se não tiver navegação
+           .HasForeignKey(u => u.CompanyId)
+          .OnDelete(DeleteBehavior.Restrict);
 
             // ===== Precision for money =====
             modelBuilder.Entity<Quota>()
@@ -128,20 +138,102 @@ namespace CondoSphere.Data
 
 
             modelBuilder.Entity<ChatMessage>()
-    .HasOne(m => m.Thread)
-    .WithMany(t => t.Messages)
-    .HasForeignKey(m => m.ThreadId)
-    .OnDelete(DeleteBehavior.Cascade);
+           .HasOne(m => m.Thread)
+           .WithMany(t => t.Messages)
+           .HasForeignKey(m => m.ThreadId)
+           .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<ChatThread>()
                 .HasIndex(t => t.ResidentId);
 
 
             modelBuilder.Entity<ChatAttachment>()
-   .HasOne(a => a.Message)
-   .WithMany(m => m.Attachments)
-   .HasForeignKey(a => a.MessageId)
-   .OnDelete(DeleteBehavior.Cascade);
+           .HasOne(a => a.Message)
+          .WithMany(m => m.Attachments)
+          .HasForeignKey(a => a.MessageId)
+          .OnDelete(DeleteBehavior.Cascade);
+
+            // ---- POLLS ----
+            modelBuilder.Entity<Poll>(e =>
+            {
+                e.Property(p => p.Title).HasMaxLength(140).IsRequired();
+                e.Property(p => p.Description).HasMaxLength(1000);
+
+                // defaults no DB (UTC)
+                e.Property(p => p.CreatedAtUtc).HasDefaultValueSql("GETUTCDATE()");
+                e.Property(p => p.StartsAtUtc).HasDefaultValueSql("GETUTCDATE()");
+
+                // Condomínio
+                e.HasOne(p => p.Condominium)
+                 .WithMany(c => c.Polls)
+                 .HasForeignKey(p => p.CondominiumId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                // ✅ Criador
+                e.HasOne(p => p.CreatedBy)
+                 .WithMany() // (ou .WithMany(u => u.PollsCriados) se quiser navegação reversa)
+                 .HasForeignKey(p => p.CreatedById)
+                 .OnDelete(DeleteBehavior.Restrict);
+
+                // índices úteis
+                e.HasIndex(p => new { p.CondominiumId, p.StartsAtUtc, p.EndsAtUtc });
+            });
+
+            modelBuilder.Entity<PollOption>(e =>
+            {
+                e.Property(o => o.Text).HasMaxLength(160).IsRequired();
+
+                e.HasOne(o => o.Poll)
+                 .WithMany(p => p.Options)
+                 .HasForeignKey(o => o.PollId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                // opcional (evita opções duplicadas dentro do mesmo poll)
+                // e.HasIndex(o => new { o.PollId, o.Text }).IsUnique();
+            });
+
+
+
+            modelBuilder.Entity<PollVote>(e =>
+            {
+                // marca o timestamp de voto do lado do DB
+                e.Property(v => v.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+
+                // 1 voto por utilizador em cada enquete
+                e.HasIndex(v => new { v.PollId, v.UserId }).IsUnique();
+
+                // FK Poll
+                e.HasOne<Poll>()
+                 .WithMany(p => p.Votes)
+                 .HasForeignKey(v => v.PollId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+              
+                // FK Option — RESTRITO para evitar múltiplos caminhos de cascade
+                e.HasOne<PollOption>()
+                 .WithMany(o => o.Votes)
+                 .HasForeignKey(v => v.OptionId)
+                 .OnDelete(DeleteBehavior.Restrict);
+
+            });
+
+
+            modelBuilder.Entity<AnnouncementRead>(e =>
+            {
+                e.HasIndex(x => new { x.AnnouncementId, x.UserId }).IsUnique();
+                e.HasOne(x => x.Announcement)
+                 .WithMany()
+                 .HasForeignKey(x => x.AnnouncementId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasOne(x => x.User)
+                 .WithMany()
+                 .HasForeignKey(x => x.UserId)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
+
+
         }
 
 

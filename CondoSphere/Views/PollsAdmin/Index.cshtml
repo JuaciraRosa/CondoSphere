@@ -1,0 +1,53 @@
+﻿@model IEnumerable<CondoSphere.Models.Poll>
+@{
+    ViewData["Title"] = "Polls";
+}
+
+<section class="section">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h3 class="m-0">Polls</h3>
+      <a asp-action="Create" class="btn btn-primary">New Poll</a>
+    </div>
+
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>Title</th>
+              <th>Condominium</th>
+              <th>Starts</th>
+              <th>Ends</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          @foreach (var p in Model)
+          {
+            <tr>
+              <td>@p.Id</td>
+              <td>@p.Title</td>
+              <td>@p.Condominium?.Name</td>
+              <td>@p.StartsAtUtc.ToLocalTime()</td>
+              <td>@p.EndsAtUtc.ToLocalTime()</td>
+              <td class="text-end">
+                <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                <form asp-action="Close" asp-route-id="@p.Id" method="post" class="d-inline">
+                  @Html.AntiForgeryToken()
+                  <button class="btn btn-sm btn-outline-warning" onclick="return confirm('Close this poll now?');">Close</button>
+                </form>
+                <form asp-action="Delete" asp-route-id="@p.Id" method="post" class="d-inline">
+                  @Html.AntiForgeryToken()
+                  <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this poll?');">Delete</button>
+                </form>
+              </td>
+            </tr>
+          }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>

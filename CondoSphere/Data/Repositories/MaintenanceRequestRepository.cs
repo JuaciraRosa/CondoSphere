@@ -32,6 +32,16 @@ namespace CondoSphere.Data.Repositories
             .Include(m => m.SubmittedBy)
             .FirstOrDefaultAsync(m => m.Id == id);
 
+
+        public async Task<string?> GetRequesterEmailAsync(string userId)
+        {
+            // Ajuste o DbSet se o seu tipo for ApplicationUser, etc.
+            return await _context.Users
+                .Where(u => u.Id == userId)
+                .Select(u => u.Email)
+                .FirstOrDefaultAsync();
+        }
+
     }
 
 }

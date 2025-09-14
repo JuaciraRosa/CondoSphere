@@ -38,6 +38,9 @@ namespace CondoSphere.Models
 
         [ValidateNever]
         public ICollection<Notification> Notifications { get; set; }
+
+        [ValidateNever]
+        public ICollection<Poll> Polls { get; set; } = new List<Poll>();
     }
 
 }

@@ -9,7 +9,7 @@ namespace CondoSphere.Models
         public int Id { get; set; }
 
         [Required, DataType(DataType.DateTime)]
-        [Display(Name = "Scheduled Date")]
+        [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
         public DateTime ScheduledDate { get; set; }
 
         [Required, StringLength(300)]

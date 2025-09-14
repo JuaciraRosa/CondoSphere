@@ -1,6 +1,6 @@
 ﻿@model CondoSphere.ViewModels.VoteCastVM
 @{
-    ViewData["Title"] = $"Votação — Reunião {Model.MeetingId}";
+    ViewData["Title"] = $"Vote — Meeting {Model.MeetingId}";
 }
 
 @if (TempData["ok"] is string ok && !string.IsNullOrWhiteSpace(ok))
@@ -9,13 +9,11 @@
 }
 
 <div class="card p-4 shadow-sm">
-    <h3 class="mb-3">Votação — Reunião</h3>
+    <h3 class="mb-3">Vote — Meeting</h3>
 
     @if (Model.AlreadyVoted)
     {
-        <div class="alert alert-info">
-            Você já participou nesta votação.
-        </div>
+        <div class="alert alert-info">Você já participou nesta votação.</div>
     }
 
     <form asp-action="Cast" method="post">
@@ -30,10 +28,7 @@
 
         <div class="mb-3">
             <label asp-for="UnitNumber" class="form-label">Unidade (fração)</label>
-            <select asp-for="UnitNumber"
-                    class="form-select"
-                    asp-items="Model.Units"
-                    disabled="@Model.AlreadyVoted">
+            <select asp-for="UnitNumber" class="form-select" asp-items="Model.Units" disabled="@Model.AlreadyVoted">
                 <option value="">-- selecione --</option>
             </select>
             <span asp-validation-for="UnitNumber" class="text-danger"></span>
@@ -57,6 +52,4 @@
     </form>
 </div>
 
-@section Scripts {
-    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
-}
+@section Scripts { @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); } }

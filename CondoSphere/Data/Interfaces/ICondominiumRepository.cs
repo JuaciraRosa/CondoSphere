@@ -8,6 +8,10 @@ namespace CondoSphere.Data.Interfaces
 
         Task<List<Condominium>> GetAllWithCompanyAsync();
 
+
+        Task<List<string>> GetOwnerEmailsAsync(int condominiumId);
+
+
     }
 
 }

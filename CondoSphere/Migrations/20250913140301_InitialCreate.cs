@@ -26,6 +26,28 @@ namespace CondoSphere.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ChatThreads",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ResidentId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CondominiumId = table.Column<int>(type: "int", nullable: true),
+                    Subject = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    LastActivityAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UnreadForAdmin = table.Column<int>(type: "int", nullable: false),
+                    UnreadForResident = table.Column<int>(type: "int", nullable: false),
+                    LastPreview = table.Column<string>(type: "nvarchar(140)", maxLength: 140, nullable: true),
+                    HasAttachments = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ChatThreads", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Companies",
                 columns: table => new
                 {
@@ -57,6 +79,31 @@ namespace CondoSphere.Migrations
                         name: "FK_AspNetRoleClaims_AspNetRoles_RoleId",
                         column: x => x.RoleId,
                         principalTable: "AspNetRoles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ChatMessages",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ThreadId = table.Column<int>(type: "int", nullable: false),
+                    Role = table.Column<int>(type: "int", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Text = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsReadByAdmin = table.Column<bool>(type: "bit", nullable: false),
+                    IsReadByResident = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ChatMessages", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ChatMessages_ChatThreads_ThreadId",
+                        column: x => x.ThreadId,
+                        principalTable: "ChatThreads",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -114,6 +161,30 @@ namespace CondoSphere.Migrations
                         name: "FK_Condominiums_Companies_CompanyId",
                         column: x => x.CompanyId,
                         principalTable: "Companies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ChatAttachments",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    MessageId = table.Column<int>(type: "int", nullable: false),
+                    FileName = table.Column<string>(type: "nvarchar(260)", maxLength: 260, nullable: false),
+                    ContentType = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false),
+                    Size = table.Column<long>(type: "bigint", nullable: false),
+                    StoragePath = table.Column<string>(type: "nvarchar(400)", maxLength: 400, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ChatAttachments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ChatAttachments_ChatMessages_MessageId",
+                        column: x => x.MessageId,
+                        principalTable: "ChatMessages",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -204,6 +275,33 @@ namespace CondoSphere.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Announcements",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Title = table.Column<string>(type: "nvarchar(140)", maxLength: 140, nullable: false),
+                    Body = table.Column<string>(type: "nvarchar(max)", maxLength: 8000, nullable: false),
+                    CondominiumId = table.Column<int>(type: "int", nullable: true),
+                    SendEmail = table.Column<bool>(type: "bit", nullable: false),
+                    SendInApp = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ScheduledAtUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    EmailsQueued = table.Column<int>(type: "int", nullable: false),
+                    InAppDelivered = table.Column<int>(type: "int", nullable: false),
+                    AttachmentPath = table.Column<string>(type: "nvarchar(400)", maxLength: 400, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Announcements", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Announcements_Condominiums_CondominiumId",
+                        column: x => x.CondominiumId,
+                        principalTable: "Condominiums",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Expenses",
                 columns: table => new
                 {
@@ -264,7 +362,12 @@ namespace CondoSphere.Migrations
                     ScheduledDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Agenda = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
                     MinutesDocumentPath = table.Column<string>(type: "nvarchar(400)", maxLength: 400, nullable: true),
-                    CondominiumId = table.Column<int>(type: "int", nullable: false)
+                    CondominiumId = table.Column<int>(type: "int", nullable: false),
+                    IsOnline = table.Column<bool>(type: "bit", nullable: false),
+                    OnlineProvider = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OnlineMeetingId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OnlineJoinUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OnlineStartUrl = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -292,6 +395,38 @@ namespace CondoSphere.Migrations
                     table.PrimaryKey("PK_Notifications", x => x.Id);
                     table.ForeignKey(
                         name: "FK_Notifications_Condominiums_CondominiumId",
+                        column: x => x.CondominiumId,
+                        principalTable: "Condominiums",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Polls",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Title = table.Column<string>(type: "nvarchar(140)", maxLength: 140, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    StartsAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
+                    EndsAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CondominiumId = table.Column<int>(type: "int", nullable: true),
+                    AllowSingleChoice = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedById = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Polls", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Polls_AspNetUsers_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Polls_Condominiums_CondominiumId",
                         column: x => x.CondominiumId,
                         principalTable: "Condominiums",
                         principalColumn: "Id",
@@ -351,6 +486,26 @@ namespace CondoSphere.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PollOptions",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PollId = table.Column<int>(type: "int", nullable: false),
+                    Text = table.Column<string>(type: "nvarchar(160)", maxLength: 160, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PollOptions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PollOptions_Polls_PollId",
+                        column: x => x.PollId,
+                        principalTable: "Polls",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Quotas",
                 columns: table => new
                 {
@@ -368,6 +523,34 @@ namespace CondoSphere.Migrations
                         name: "FK_Quotas_Units_UnitId",
                         column: x => x.UnitId,
                         principalTable: "Units",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PollVotes",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PollId = table.Column<int>(type: "int", nullable: false),
+                    OptionId = table.Column<int>(type: "int", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PollVotes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PollVotes_PollOptions_OptionId",
+                        column: x => x.OptionId,
+                        principalTable: "PollOptions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PollVotes_Polls_PollId",
+                        column: x => x.PollId,
+                        principalTable: "Polls",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -399,6 +582,11 @@ namespace CondoSphere.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Announcements_CondominiumId",
+                table: "Announcements",
+                column: "CondominiumId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -443,6 +631,21 @@ namespace CondoSphere.Migrations
                 column: "NormalizedUserName",
                 unique: true,
                 filter: "[NormalizedUserName] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatAttachments_MessageId",
+                table: "ChatAttachments",
+                column: "MessageId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatMessages_ThreadId",
+                table: "ChatMessages",
+                column: "ThreadId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatThreads_ResidentId",
+                table: "ChatThreads",
+                column: "ResidentId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Companies_TaxNumber",
@@ -492,6 +695,32 @@ namespace CondoSphere.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_PollOptions_PollId",
+                table: "PollOptions",
+                column: "PollId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Polls_CondominiumId_StartsAtUtc_EndsAtUtc",
+                table: "Polls",
+                columns: new[] { "CondominiumId", "StartsAtUtc", "EndsAtUtc" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Polls_CreatedById",
+                table: "Polls",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PollVotes_OptionId",
+                table: "PollVotes",
+                column: "OptionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PollVotes_PollId_UserId",
+                table: "PollVotes",
+                columns: new[] { "PollId", "UserId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Quotas_UnitId",
                 table: "Quotas",
                 column: "UnitId");
@@ -511,6 +740,9 @@ namespace CondoSphere.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "Announcements");
+
+            migrationBuilder.DropTable(
                 name: "AspNetRoleClaims");
 
             migrationBuilder.DropTable(
@@ -524,6 +756,9 @@ namespace CondoSphere.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetUserTokens");
+
+            migrationBuilder.DropTable(
+                name: "ChatAttachments");
 
             migrationBuilder.DropTable(
                 name: "Expenses");
@@ -541,7 +776,13 @@ namespace CondoSphere.Migrations
                 name: "Payments");
 
             migrationBuilder.DropTable(
+                name: "PollVotes");
+
+            migrationBuilder.DropTable(
                 name: "AspNetRoles");
+
+            migrationBuilder.DropTable(
+                name: "ChatMessages");
 
             migrationBuilder.DropTable(
                 name: "Notifications");
@@ -550,7 +791,16 @@ namespace CondoSphere.Migrations
                 name: "Quotas");
 
             migrationBuilder.DropTable(
+                name: "PollOptions");
+
+            migrationBuilder.DropTable(
+                name: "ChatThreads");
+
+            migrationBuilder.DropTable(
                 name: "Units");
+
+            migrationBuilder.DropTable(
+                name: "Polls");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");

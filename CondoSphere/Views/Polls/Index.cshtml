@@ -1,0 +1,61 @@
+﻿@model IEnumerable<CondoSphere.Models.Poll>
+@{
+    ViewData["Title"] = "Voting";
+    var voted = (IDictionary<int, bool>)ViewBag.UserVotes;
+}
+
+@section PageHeader {
+  <section class="page-title">
+    <div class="container">
+      <h1>Voting</h1>
+      <div class="breadcrumbs">
+        <ol>
+          <li><a asp-controller="Home" asp-action="Index">Home</a></li>
+          <li>Voting</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+}
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Condominium</th>
+              <th>Starts</th>
+              <th>Ends</th>
+              <th class="text-end">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+@foreach (var p in Model)
+{
+  <tr>
+    <td>@p.Title</td>
+    <td>@(p.Condominium?.Name ?? "All")</td>
+    <td>@p.StartsAtUtc.ToLocalTime()</td>
+    <td>@p.EndsAtUtc.ToLocalTime()</td>
+    <td class="text-end">
+      @if (voted.TryGetValue(p.Id, out var v) && v)
+      {
+        <span class="badge bg-secondary">Voted</span>
+        <a class="btn btn-sm btn-outline-primary ms-2" asp-action="Result" asp-route-id="@p.Id">Results</a>
+      }
+      else
+      {
+        <a class="btn btn-sm btn-primary" asp-action="Cast" asp-route-id="@p.Id">Vote</a>
+      }
+    </td>
+  </tr>
+}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

@@ -15,54 +15,42 @@ using System.Security.Claims;
 
 namespace CondoSphere.Controllers
 {
-
-    [Authorize]
+    [Authorize(Roles = "Resident,Administrator,Manager")]
     public class VotingController : Controller
     {
-        private readonly JsonFileStore<MeetingVoteDto> _store;
+        private readonly IVotingRepository _repo;
         private readonly DomainNotificationService _notify;
-        private readonly ApplicationDbContext _db; // para carregar Unidades
 
-        public VotingController(
-            IWebHostEnvironment env,
-            DomainNotificationService notify,
-            ApplicationDbContext db)
+        public VotingController(IVotingRepository repo, DomainNotificationService notify)
         {
-            _store = new JsonFileStore<MeetingVoteDto>(env, "appdata/votes.json");
+            _repo = repo;
             _notify = notify;
-            _db = db;
         }
 
-        // carrega todas as unidades (se quiser, filtre por condomínio da reunião)
-        private async Task<IEnumerable<SelectListItem>> GetUnitsAsync(int meetingId)
+        [HttpGet]
+        public async Task<IActionResult> Index()
         {
-            return await _db.Units
-                .OrderBy(u => u.Number)
-                .Select(u => new SelectListItem { Value = u.Number, Text = u.Number })
-                .ToListAsync();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
+            var userMail = User.FindFirstValue(ClaimTypes.Email) ?? "";
+            var vm = await _repo.ListMeetingsForUserAsync(userId, userMail);
+            return View(vm);
         }
+
+        // alias para manter roteamento existente
+        [HttpGet] public Task<IActionResult> Vote(int meetingId) => Cast(meetingId);
+        [HttpPost, ValidateAntiForgeryToken] public Task<IActionResult> Vote(VoteCastVM model) => Cast(model);
 
         [HttpGet]
         public async Task<IActionResult> Cast(int meetingId)
         {
+            var email = User.Identity?.IsAuthenticated == true ? (User.FindFirstValue(ClaimTypes.Email) ?? "") : "";
             var vm = new VoteCastVM
             {
                 MeetingId = meetingId,
-                Email = User?.Identity?.IsAuthenticated == true
-                    ? (User.FindFirstValue(ClaimTypes.Email) ?? "")
-                    : ""
+                Email = email,
+                Units = await _repo.GetUnitsForMeetingAsync(meetingId),
+                AlreadyVoted = await _repo.HasUserVotedAsync(meetingId, email)
             };
-
-            vm.Units = await GetUnitsAsync(meetingId);
-
-            var list = await _store.ReadAllAsync();
-            if (!string.IsNullOrWhiteSpace(vm.Email))
-            {
-                vm.AlreadyVoted = list.Any(v =>
-                    v.MeetingId == meetingId &&
-                    v.VoterEmail.Equals(vm.Email, StringComparison.OrdinalIgnoreCase));
-            }
-
             return View(vm);
         }
 
@@ -70,39 +58,24 @@ namespace CondoSphere.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cast(VoteCastVM model)
         {
-            model.Units = await GetUnitsAsync(model.MeetingId);
+            model.Units = await _repo.GetUnitsForMeetingAsync(model.MeetingId);
             if (!ModelState.IsValid) return View(model);
 
-            var list = await _store.ReadAllAsync();
-
-            var already = list.Any(v =>
-                v.MeetingId == model.MeetingId &&
-                v.VoterEmail.Equals(model.Email, StringComparison.OrdinalIgnoreCase));
-
-            model.AlreadyVoted = already;
-            if (already)
+            if (await _repo.HasUserVotedAsync(model.MeetingId, model.Email))
             {
+                model.AlreadyVoted = true;
                 TempData["ok"] = "Você já participou nesta votação.";
                 return View(model);
             }
 
-            // garante 1 voto por MeetingId+Email
-            list.RemoveAll(v =>
-                v.MeetingId == model.MeetingId &&
-                v.VoterEmail.Equals(model.Email, StringComparison.OrdinalIgnoreCase));
-
-            list.Add(new MeetingVoteDto
+            await _repo.UpsertVoteAsync(new MeetingVoteDto
             {
-                Id = Guid.NewGuid().ToString(),
                 MeetingId = model.MeetingId,
                 VoterEmail = model.Email,
                 UnitNumber = model.UnitNumber,
-                Choice = model.Choice,
-                CreatedAt = DateTime.UtcNow
+                Choice = model.Choice
             });
-            await _store.WriteAllAsync(list);
 
-            // e-mail de agradecimento
             await _notify.VotingThankYouAsync(model.Email, model.MeetingId, model.UnitNumber, model.Choice);
 
             TempData["ok"] = "Voto registado!";
@@ -112,18 +85,10 @@ namespace CondoSphere.Controllers
         [HttpGet]
         public async Task<IActionResult> Result(int meetingId)
         {
-            var list = await _store.ReadAllAsync();
-            var m = list.Where(x => x.MeetingId == meetingId).ToList();
-            var res = new MeetingVoteResultDto
-            {
-                MeetingId = meetingId,
-                Total = m.Count,
-                AFavor = m.Count(x => x.Choice == "A favor"),
-                Contra = m.Count(x => x.Choice == "Contra"),
-                Abstencao = m.Count(x => x.Choice == "Abstenção")
-            };
+            var res = await _repo.GetResultAsync(meetingId);
             return View(res);
         }
     }
+
 }
 

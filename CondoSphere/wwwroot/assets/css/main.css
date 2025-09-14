@@ -17,6 +17,9 @@
   --nav-font: "Nunito",  sans-serif;
 }
 
+
+
+
 /* Global Colors - The following color variables are used throughout the website. Updating them here will change the color scheme of the entire website */
 :root { 
   --background-color: #ffffff; /* Background color for the entire website, including individual sections */
@@ -242,6 +245,16 @@ h6 {
   .navmenu li {
     position: relative;
   }
+
+ .navmenu ul li a {
+ padding: 8px 12px;
+ border-radius: 8px;
+ }
+
+.navmenu ul li a:hover {
+ background: rgba(0,0,0,.04);
+ }
+
 
   .navmenu a,
   .navmenu a:focus {

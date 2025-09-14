@@ -1,5 +1,6 @@
 ﻿using CondoSphere.Data.Interfaces;
 using CondoSphere.Messaging;
+using CondoSphere.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,14 +12,16 @@ namespace CondoSphere.Controllers
         private readonly IMeetingRepository _meetings;
         private readonly IWebHostEnvironment _env;
         private readonly DomainNotificationService _notify;
+        private readonly IResidentEmailService _residents;
 
         public MeetingMinutesController(IMeetingRepository meetings,
                                         IWebHostEnvironment env,
-                                        DomainNotificationService notify)
+                                        DomainNotificationService notify, IResidentEmailService residents)
         {
             _meetings = meetings;
             _env = env;
             _notify = notify;
+            _residents = residents;
         }
 
         // /MeetingMinutes/Manage?meetingId=123
@@ -56,12 +59,14 @@ namespace CondoSphere.Controllers
             var publicUrl = Url.Action("Download", "MeetingMinutes",
                 new { meetingId }, Request.Scheme);
 
-            // ENVIO DE E-MAIL:
-            // Aqui, se tiveres um repositório de residentes, substitui este “to” por cada email dos residentes.
-            var to = "Support@condosphere-web-app.somee.com"; // coloca a mailbox que configuraste
-            await _notify.MeetingMinutesPublishedAsync(to, meeting.Id, publicUrl);
+            // === NOVO: enviar a todos os owners das Units do condomínio ===
+            var emails = await _residents.GetResidentEmailsByCondoAsync(meeting.CondominiumId);
+            foreach (var to in emails)
+            {
+                await _notify.MeetingMinutesPublishedAsync(to, meeting.Id, publicUrl);
+            }
 
-            TempData["ok"] = "Ata carregada e e-mail enviado.";
+            TempData["ok"] = "Ata carregada e moradores notificados por e-mail.";
             return RedirectToAction(nameof(Manage), new { meetingId });
         }
 

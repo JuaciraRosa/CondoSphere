@@ -7,6 +7,8 @@ namespace CondoSphere.Data.Interfaces
         Task<IEnumerable<MaintenanceRequest>> GetOpenRequestsAsync();
         Task<IEnumerable<MaintenanceRequest>> GetAllDetailedAsync();     // Include Condominium + SubmittedBy
         Task<MaintenanceRequest?> GetByIdDetailedAsync(int id);
+
+        Task<string?> GetRequesterEmailAsync(string userId);
     }
 
 }

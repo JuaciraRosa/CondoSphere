@@ -19,12 +19,9 @@
             return name switch
             {
                 "zoom" => _sp.GetRequiredService<ZoomOnlineMeetingProvider>(),
-                "google" => _sp.GetRequiredService<GoogleMeetOnlineMeetingProvider>(), // automático (Workspace)
-                                                                                       // "google-manual" => _sp.GetRequiredService<GoogleManualOnlineMeetingProvider>(),
-              /*  "teams" => _sp.GetRequiredService<TeamsOnlineMeetingProvider>(),      */// você já tem
+                "google" => _sp.GetRequiredService<GoogleMeetOnlineMeetingProvider>(),
                 _ => _sp.GetRequiredService<ZoomOnlineMeetingProvider>()
             };
         }
-
     }
 }

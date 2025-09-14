@@ -28,6 +28,17 @@ namespace CondoSphere.Data.Repositories
         }
 
 
+        public async Task<List<string>> GetOwnerEmailsAsync(int condominiumId)
+        {
+            return await _context.Units
+                .Where(u => u.CondominiumId == condominiumId && u.OwnerId != null && u.Owner!.Email != null)
+                .Select(u => u.Owner!.Email!)
+                .Distinct()
+                .ToListAsync();
+        }
+
+
+
     }
 
 }

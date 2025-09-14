@@ -76,7 +76,7 @@ namespace CondoSphere.Data
             {
                 Name = "CondoSphere Lda.",
                 TaxNumber = "123456789",
-                Email = "contact@condosphere.com"
+                Email = "contact.condosphere@yopmail.com"
             };
             ctx.Companies.Add(company);
             await ctx.SaveChangesAsync();
@@ -133,9 +133,9 @@ namespace CondoSphere.Data
                 return u;
             }
 
-            var admin = await EnsureUser("admin@condo.com", "Admin User", "Admin123$", "Administrator");
-            var manager = await EnsureUser("manager@condo.com", "Manager User", "Manager123$", "Manager");
-            var resident = await EnsureUser("resident@condo.com", "Resident User", "Resident123$", "Resident");
+            var admin = await EnsureUser("admin.condo@yopmail.com", "Admin User", "Admin123$", "Administrator");
+            var manager = await EnsureUser("manager.condo@yopmail.com", "Manager User", "Manager123$", "Manager");
+            var resident = await EnsureUser("resident.condo@yopmail.com", "Resident User", "Resident123$", "Resident");
             var test = await EnsureUser("condosphere.reset.test@yopmail.com",
                                             "ZZZ_Reset_Tester_Account_DO_NOT_USE",
                                             "Reset123$", "Resident");

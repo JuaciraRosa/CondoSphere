@@ -15,12 +15,10 @@ namespace CondoSphere.ViewModels
         public string UnitNumber { get; set; } = "";
 
         [Required]
-        public string Choice { get; set; } = ""; // "A favor" | "Contra" | "Abstenção"
+        public string Choice { get; set; } = "";
 
-        // Dropdown de unidades
-        public IEnumerable<SelectListItem> Units { get; set; } = new List<SelectListItem>();
-
-        // Para travar o formulário e mostrar a mensagem
         public bool AlreadyVoted { get; set; }
+
+        public IEnumerable<SelectListItem> Units { get; set; } = Enumerable.Empty<SelectListItem>();
     }
 }

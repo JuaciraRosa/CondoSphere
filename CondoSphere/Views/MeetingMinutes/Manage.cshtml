@@ -2,31 +2,31 @@
 @{
     ViewData["Title"] = "Atas / Documentos da Reunião";
 }
+
 <h2>Atas / Documentos — Reunião #@Model.Id</h2>
-<p><strong>Data:</strong> @Model.ScheduledDate.ToString("dd/MM/yyyy HH:mm")</p>
+<p><strong>Data:</strong> @Model.ScheduledDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</p>
 <p><strong>Pauta:</strong> @Model.Agenda</p>
 
 @if (!string.IsNullOrWhiteSpace(Model.MinutesDocumentPath))
 {
-        <p>
-            Documento atual: <a href="@Model.MinutesDocumentPath" target="_blank">Abrir</a>
-            &nbsp;|&nbsp;
-            <a href="/MeetingMinutes/Download/@Model.Id">Download</a>
-        </p>
-}
-else
-{
-        <p><em>Nenhum documento carregado.</em></p>
+    <p class="mb-2">
+        Documento atual:
+        <a href="@Model.MinutesDocumentPath" target="_blank" rel="noopener">Abrir</a>
+        &nbsp;|&nbsp;
+        <a asp-action="Download" asp-route-id="@Model.Id">Download</a>
+    </p>
 }
 
-<hr />
+<hr/>
 
-<form asp-action="Upload" method="post" enctype="multipart/form-data">
-    <div asp-validation-summary="All" class="text-danger mb-2"></div>
+<form asp-action="Upload" method="post" enctype="multipart/form-data" class="mt-3">
+    @Html.AntiForgeryToken()
     <input type="hidden" name="meetingId" value="@Model.Id" />
     <div class="mb-3">
         <label class="form-label">Carregar PDF da Ata</label>
         <input type="file" name="file" class="form-control" accept="application/pdf" required />
+        <div class="form-text">Apenas PDF (até 5 MB, se desejar validar).</div>
     </div>
     <button type="submit" class="btn btn-primary">Enviar</button>
+    <a asp-controller="Meetings" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary ms-2">Voltar</a>
 </form>

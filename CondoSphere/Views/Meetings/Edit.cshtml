@@ -18,11 +18,16 @@
                 <!-- mantém o caminho do ficheiro existente se não houver upload novo -->
                 <input type="hidden" asp-for="MinutesDocumentPath" />
 
-                <div class="mb-3">
-                    <label asp-for="ScheduledDate" class="form-label"></label>
-                    <input asp-for="ScheduledDate" class="form-control" />
-                    <span asp-validation-for="ScheduledDate" class="text-danger"></span>
-                </div>
+              <div class="mb-3">
+  <label asp-for="ScheduledDate" class="form-label">Scheduled</label>
+  <input asp-for="ScheduledDate"
+         type="datetime-local"
+         class="form-control"
+         step="60"
+         value="@Model.ScheduledDate.ToLocalTime().ToString("yyyy-MM-ddTHH:mm")" />
+  <span asp-validation-for="ScheduledDate" class="text-danger"></span>
+</div>
+
 
                 <div class="mb-3">
                     <label asp-for="Agenda" class="form-label"></label>
@@ -71,7 +76,6 @@
   <label class="form-label">Provedor</label>
   <select asp-for="OnlineProvider" class="form-select" id="providerSel">
     <option value="Zoom">Zoom</option>
-    <option value="Teams">Microsoft Teams</option>
      <option value="Google">Google</option>
   </select>
 </div>

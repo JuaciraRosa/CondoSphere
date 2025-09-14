@@ -1,5 +1,6 @@
 ﻿using CondoSphere.Data;
 using CondoSphere.Data.Interfaces;
+using CondoSphere.Messaging;
 using CondoSphere.Models;
 using CondoSphere.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -21,17 +22,20 @@ namespace CondoSphere.Controllers
         private readonly ICondominiumRepository _condos;
         private readonly IWebHostEnvironment _env;
         private readonly IOnlineMeetingProviderFactory _providers;
+        private readonly DomainNotificationService _notify;
 
         public MeetingsController(
             IMeetingRepository meetings,
             ICondominiumRepository condos,
             IWebHostEnvironment env,
-            IOnlineMeetingProviderFactory providers)
+            IOnlineMeetingProviderFactory providers,
+            DomainNotificationService notify)
         {
             _meetings = meetings;
             _condos = condos;
             _env = env;
             _providers = providers;
+            _notify = notify;
         }
 
         [AllowAnonymous]
@@ -98,6 +102,26 @@ namespace CondoSphere.Controllers
 
 
             await _meetings.AddAsync(meeting);
+            // ========= Enviar e-mails aos proprietários do condomínio =========
+            try
+            {
+                var emails = await _condos.GetOwnerEmailsAsync(meeting.CondominiumId);
+                if (emails.Count > 0)
+                {
+                    await _notify.MeetingScheduledAsync(emails, meeting);
+                    TempData["Success"] = $"Reunião marcada e {emails.Count} moradores notificados por e-mail.";
+                }
+                else
+                {
+                    TempData["Success"] = "Reunião marcada (nenhum e-mail de morador encontrado).";
+                }
+            }
+            catch (Exception ex)
+            {
+                // Não falhe a navegação por causa de e-mail
+                TempData["Success"] = $"Reunião marcada. (Aviso: falha ao enviar e-mails: {ex.Message})";
+            }
+           
             return RedirectToAction(nameof(Index));
         }
         [Authorize(Roles = "Administrator,Manager")]
@@ -127,7 +151,15 @@ namespace CondoSphere.Controllers
                 return View(meeting);
             }
 
-           
+            // Valores antigos (para decidir se avisa os moradores)
+            var oldDate = existingMeeting.ScheduledDate;
+            var oldAgenda = existingMeeting.Agenda;
+            var oldCondoId = existingMeeting.CondominiumId;
+            var oldJoinUrl = existingMeeting.OnlineJoinUrl;
+            var oldIsOnline = existingMeeting.IsOnline;
+
+
+
             if (meeting.MinutesFile != null && meeting.MinutesFile.Length > 0)
             {
                 await SaveMinutesFileAsync(meeting, replaceExisting: true);
@@ -199,6 +231,43 @@ namespace CondoSphere.Controllers
             _meetings.Update(existingMeeting);
             await _meetings.SaveChangesAsync();
 
+
+            // Decidir se vale avisar
+            bool changed =
+                existingMeeting.ScheduledDate != oldDate ||
+                existingMeeting.Agenda != oldAgenda ||
+                existingMeeting.CondominiumId != oldCondoId ||
+                existingMeeting.IsOnline != oldIsOnline ||
+                existingMeeting.OnlineJoinUrl != oldJoinUrl;
+
+            if (changed)
+            {
+                try
+                {
+                    var emails = await _condos.GetOwnerEmailsAsync(existingMeeting.CondominiumId);
+                    if (emails.Count > 0)
+                    {
+                        await _notify.MeetingScheduledAsync(emails, existingMeeting);
+                        TempData["Success"] = $"Reunião atualizada e {emails.Count} moradores notificados.";
+                    }
+                    else
+                    {
+                        TempData["Success"] = "Reunião atualizada.";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    TempData["Success"] = $"Reunião atualizada. (Aviso: falha ao enviar e-mails: {ex.Message})";
+                }
+            }
+            else
+            {
+                TempData["Success"] = "Reunião atualizada.";
+            }
+
+
+
+          
             return RedirectToAction(nameof(Index));
         }
 

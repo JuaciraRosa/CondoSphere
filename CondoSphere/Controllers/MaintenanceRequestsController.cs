@@ -132,6 +132,8 @@ namespace CondoSphere.Controllers
                 return View(model);
             }
 
+
+            var oldStatus = entity.Status;
             // mapeia apenas os campos que podem mesmo ser alterados
             entity.Title = model.Title;
             entity.Description = model.Description;
@@ -142,6 +144,26 @@ namespace CondoSphere.Controllers
 
             // como 'entity' já está rastreada, só gravar
             await _requests.SaveChangesAsync();
+
+
+            if (oldStatus != entity.Status)
+            {
+                try
+                {
+                    var to = await _requests.GetRequesterEmailAsync(entity.SubmittedById);
+                    if (!string.IsNullOrWhiteSpace(to))
+                    {
+                        await _notify.MaintenanceRequestStatusChangedAsync(
+                            to, entity, oldStatus.ToString()); // usa o método de 3 argumentos
+                    }
+                }
+                catch
+                {
+                    // não quebrar o fluxo por falha de e-mail
+                }
+            }
+
+            TempData["Success"] = "Pedido atualizado.";
 
             return RedirectToAction(nameof(Index));
         }

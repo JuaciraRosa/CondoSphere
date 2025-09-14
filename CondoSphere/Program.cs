@@ -1,6 +1,8 @@
 
 using CondoSphere.Data;
 using CondoSphere.Data.DependencyInjection;
+using CondoSphere.Data.Interfaces;
+using CondoSphere.Data.Repositories;
 using CondoSphere.Infrastructure;
 using CondoSphere.Messaging;
 using CondoSphere.Services;
@@ -64,13 +66,14 @@ builder.Services.AddScoped<IUserClaimsPrincipalFactory<User>, AppClaimsPrincipal
 builder.Services.AddScoped<ITenantProvider, HttpTenantProvider>();
 builder.Services.AddScoped<IQuotaService, QuotaService>();
 builder.Services.AddScoped<IPaymentService, PaymentServiceStripe>();
+builder.Services.AddScoped<IAnnouncementRepository, AnnouncementRepository>();
 builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<DomainNotificationService>();
 builder.Services.AddScoped<IChatBotService, ChatBotService>();
 builder.Services.AddAntiforgery(o => o.HeaderName = "RequestVerificationToken");
-
-
-
+builder.Services.AddScoped<IPollRepository, PollRepository>();
+builder.Services.AddScoped<IAnnouncementBadgeService, AnnouncementBadgeService>();
+builder.Services.AddScoped<IVotingRepository, VotingRepository>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<ZoomOnlineMeetingProvider>();
 builder.Services.AddScoped<IOnlineMeetingProviderFactory, OnlineMeetingProviderFactory>();
@@ -81,17 +84,13 @@ builder.Services.Configure<GoogleMeetOptions>(
     builder.Configuration.GetSection("OnlineMeetings:Google"));
 
 builder.Services.AddTransient<GoogleMeetOnlineMeetingProvider>();
-// builder.Services.AddTransient<TeamsOnlineMeetingProvider>(); // quando ativar
-// Google Meet (automático)
+builder.Services.AddScoped<IResidentEmailService, ResidentEmailService>();
+builder.Services.AddScoped<IChatAlertRepository, EfChatAlertRepository>();
+builder.Services.AddScoped<IStaffDirectory, StaffDirectory>();
+builder.Services.AddScoped<IChatAlertService, ChatAlertService>();
 
 
-
-
-// ...
-
-
-
-
+builder.Services.AddScoped<IAnnouncementReadService, AnnouncementReadService>();
 
 
 builder.Services.AddAuthentication()

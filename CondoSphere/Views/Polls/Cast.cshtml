@@ -1,0 +1,43 @@
+﻿@model CondoSphere.Models.Poll
+@{
+    ViewData["Title"] = "Vote";
+    bool already = ViewBag.AlreadyVoted ?? false;
+}
+
+@if (TempData["ok"] is string ok && !string.IsNullOrWhiteSpace(ok))
+{
+  <div class="alert alert-success">@ok</div>
+}
+
+<div class="container-xl">
+  <div class="card p-4 shadow-sm">
+    <h3 class="mb-2">@Model.Title</h3>
+    @if (!string.IsNullOrWhiteSpace(Model.Description))
+    {
+      <p class="text-muted">@Model.Description</p>
+    }
+
+    @if (already)
+    {
+      <div class="alert alert-info">Você já votou. Reenviar altera o voto.</div>
+    }
+
+    <form asp-action="Cast" method="post">
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="id" value="@Model.Id" />
+
+      <div class="mb-3">
+        @foreach (var o in Model.Options.OrderBy(x => x.Text))
+        {
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="optionId" value="@o.Id" id="opt@o.Id" required />
+            <label class="form-check-label" for="opt@o.Id">@o.Text</label>
+          </div>
+        }
+      </div>
+
+      <button class="btn btn-primary">Submit vote</button>
+      <a asp-action="Index" class="btn btn-outline-secondary ms-2">Back</a>
+    </form>
+  </div>
+</div>

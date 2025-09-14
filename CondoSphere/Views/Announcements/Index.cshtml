@@ -1,0 +1,30 @@
+﻿@model IEnumerable<CondoSphere.Models.Announcement>
+@{ ViewData["Title"] = "Communications"; bool isAdmin = User.IsInRole("Administrator") || User.IsInRole("Manager"); }
+<section class="section">
+  <div class="container">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h3 class="m-0">Communications</h3>
+      @if(isAdmin){ <a asp-action="Create" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i> New</a> }
+    </div>
+    <div class="card">
+      <div class="list-group list-group-flush">
+        @foreach (var a in Model)
+        {
+          <a class="list-group-item list-group-item-action" asp-action="Details" asp-route-id="@a.Id">
+            <div class="d-flex justify-content-between">
+              <div>
+                <strong>@a.Title</strong>
+                <div class="text-muted small">@a.CreatedAt.ToLocalTime()</div>
+              </div>
+              <span class="badge @(a.CondominiumId==null?"bg-secondary":"bg-primary")">
+                @(a.Condominium?.Name ?? "Global")
+              </span>
+            </div>
+          </a>
+        }
+        @if(!(Model?.Any() ?? false))
+        { <div class="list-group-item text-muted text-center py-4">No communications.</div> }
+      </div>
+    </div>
+  </div>
+</section>

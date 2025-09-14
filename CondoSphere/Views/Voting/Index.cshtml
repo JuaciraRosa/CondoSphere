@@ -1,0 +1,51 @@
+﻿@model IEnumerable<CondoSphere.ViewModels.VoteListItemVM>
+@{
+    ViewData["Title"] = "Voting";
+}
+
+<section class="page-title">
+  <div class="container">
+    <h1>Voting</h1>
+    <div class="breadcrumbs"><ol><li><a asp-controller="Home" asp-action="Index">Home</a></li><li>Voting</li></ol></div>
+  </div>
+</section>
+
+<div class="container-xl mt-3">
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-vcenter card-table">
+        <thead>
+          <tr>
+            <th>Meeting</th>
+            <th>Condominium</th>
+            <th>Agenda</th>
+            <th class="text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+        @foreach (var m in Model)
+        {
+          <tr>
+            <td>@m.ScheduledDate.ToString("yyyy-MM-dd HH:mm")</td>
+            <td>@m.Condominium</td>
+            <td>@m.Agenda</td>
+            <td class="text-end">
+              @if (m.AlreadyVoted)
+              {
+                <span class="badge bg-success">Voted</span>
+                <a class="btn btn-sm btn-outline-secondary ms-2"
+                   asp-action="Result" asp-route-meetingId="@m.MeetingId">Results</a>
+              }
+              else
+              {
+                <a class="btn btn-sm btn-primary"
+                   asp-action="Vote" asp-route-meetingId="@m.MeetingId">Vote</a>
+              }
+            </td>
+          </tr>
+        }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

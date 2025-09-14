@@ -1,4 +1,5 @@
 ﻿using CondoSphere.Data;
+using CondoSphere.Data.Interfaces;
 using CondoSphere.Hubs;
 using CondoSphere.Messaging;
 using CondoSphere.Models;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace CondoSphere.Controllers
 {
@@ -18,22 +20,25 @@ namespace CondoSphere.Controllers
         private readonly UserManager<User> _userManager;
         private readonly DomainNotificationService _notify;
         private readonly IHubContext<ChatHub> _hub;
+        private readonly IChatAlertService _chatAlerts;
 
         public ChatController(
             ApplicationDbContext db,
             UserManager<User> userManager,
             DomainNotificationService notify,
-            IHubContext<ChatHub> hub)
+            IHubContext<ChatHub> hub,
+            IChatAlertService chatAlerts)
         {
             _db = db;
             _userManager = userManager;
             _notify = notify;
             _hub = hub;
+            _chatAlerts = chatAlerts;
         }
 
         // ========== LISTA ==========
         // Admin/Manager: vê todos; Resident: só os próprios
-        // Controllers/ChatController.cs -> Index
+  
         [HttpGet]
         public async Task<IActionResult> Index(string? status = null, string? q = null)
         {
@@ -56,6 +61,8 @@ namespace CondoSphere.Controllers
             ViewBag.IsAdmin = isAdmin;
             ViewBag.FilterStatus = status;
             ViewBag.Q = q;
+
+            ViewBag.NewChatCount = isAdmin ? await _chatAlerts.CountUnseenAsync(days: 3) : 0;
             return View(await qry.Take(200).ToListAsync()); // limite
         }
 
@@ -146,7 +153,7 @@ namespace CondoSphere.Controllers
             if (!isAdmin && t.ResidentId != meId) return Forbid();
             if (!string.Equals(t.Status, "Open", StringComparison.OrdinalIgnoreCase))
             {
-                TempData["chat_err"] = "Este tópico está fechado.";
+                TempData["Error"] = "Este tópico está fechado.";
                 return RedirectToAction(nameof(Thread), new { id });
             }
 
@@ -164,6 +171,29 @@ namespace CondoSphere.Controllers
             t.LastActivityAt = msg.CreatedAt;
             await _db.SaveChangesAsync();
 
+
+
+            if (!isAdmin)
+            {
+                try
+                {
+                    var resident = await _userManager.GetUserAsync(User);
+                    var residentEmail = resident?.Email ?? User.FindFirstValue(ClaimTypes.Email) ?? "";
+                    var deeplink = Url.Action("Thread", "Chat", new { id = t.Id }, Request.Scheme)!;
+
+                    await _chatAlerts.CreateAlertAndNotifyAsync(
+                        residentId: t.ResidentId!,
+                        residentEmail: residentEmail,
+                        messagePreview: msg.Text,          // o serviço já trunca para 120 chars
+                        chatDeeplink: deeplink,
+                        condominiumId: t.CondominiumId     // se seu ChatThread tiver isso
+                    );
+                }
+                catch
+                {
+                    // não quebra o fluxo do chat se falhar o alerta/e-mail
+                }
+            }
             // Bot responde se quem falou foi o residente
             if (role == ChatRole.Resident)
             {
@@ -435,7 +465,7 @@ namespace CondoSphere.Controllers
             req.Headers["Accept"].ToString().Contains("application/json", StringComparison.OrdinalIgnoreCase);
 
         // ===== Upload via widget (somente Resident) =====
-        // ===== Upload via widget (somente Resident) =====
+     
         [HttpPost, Authorize(Roles = "Resident")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Upload(int id, IFormFile file, string? text)

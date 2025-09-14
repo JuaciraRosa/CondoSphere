@@ -1,0 +1,29 @@
+﻿@model CondoSphere.Models.Announcement
+@{
+    ViewData["Title"] = "Edit Announcement";
+}
+
+<div class="container-xl">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title"><i class="ti ti-edit"></i> Edit Announcement</h3>
+        </div>
+        <div class="card-body">
+            <form asp-action="Edit" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <partial name="_Form" model="Model" />
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ti ti-device-floppy"></i> Save
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="ti ti-arrow-left"></i> Back
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts { @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); } }
