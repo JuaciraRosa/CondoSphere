@@ -9,6 +9,7 @@ using CondoSphere.Data;
 using CondoSphere.Data.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using CondoSphere.Models;
+using CondoSphere.Messaging;
 
 namespace CondoSphere.Controllers
 {
@@ -18,17 +19,20 @@ namespace CondoSphere.Controllers
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ICompanyRepository _companyRepo;
         private readonly IUserRepository _userRepo;
+        private readonly IEmailSender _emailSender;
 
         public UsersController(
             IUserRepository userRepo,
             ICompanyRepository companyRepo,
             UserManager<User> userManager,
-            RoleManager<IdentityRole> roleManager)
+            RoleManager<IdentityRole> roleManager,
+            IEmailSender emailSender)
         {
             _userRepo = userRepo;
             _companyRepo = companyRepo;
             _userManager = userManager;
             _roleManager = roleManager;
+            _emailSender = emailSender;
         }
 
         // GET: Users
@@ -119,6 +123,34 @@ namespace CondoSphere.Controllers
                 await _roleManager.CreateAsync(new IdentityRole(roleName));
 
             await _userManager.AddToRoleAsync(newUser, roleName);
+
+            try
+            {
+                var token = await _userManager.GeneratePasswordResetTokenAsync(newUser);
+                var resetUrl = Url.Action(
+                    "ResetPassword", "Account",
+                    new { token, email = newUser.Email },
+                    protocol: Request.Scheme
+                );
+
+                var who = System.Net.WebUtility.HtmlEncode(newUser.FullName ?? newUser.Email ?? "Utilizador");
+                var html = $@"
+            <p>Olá {who},</p>
+            <p>Sua conta no <strong>CondoSphere</strong> foi criada.</p>
+            <p>Clique no link abaixo para definir a sua palavra-passe:</p>
+            <p><a href=""{resetUrl}"" target=""_blank"" rel=""noopener"">Definir palavra-passe</a></p>
+            <p>Se não reconhece este pedido, pode ignorar este e-mail.</p>";
+
+                await _emailSender.SendAsync(
+                    to: newUser.Email!,
+                    subject: "CondoSphere — Defina a sua palavra-passe",
+                    htmlBody: html
+                );
+            }
+            catch
+            {
+                // não bloqueia o fluxo se falhar o e-mail; logue se tiver logger
+            }
 
             return RedirectToAction(nameof(Index));
         }
