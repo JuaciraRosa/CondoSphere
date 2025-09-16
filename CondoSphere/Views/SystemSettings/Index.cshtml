@@ -1,0 +1,102 @@
+﻿@model CondoSphere.Models.SystemSettings
+@{
+    ViewData["Title"] = "Parâmetros Globais";
+}
+<h2 class="mb-3">Parâmetros Globais</h2>
+
+<div class="d-flex gap-2 mb-3">
+  <a class="btn btn-primary" asp-action="Edit">Editar</a>
+</div>
+
+<dl class="row">
+  <dt class="col-sm-3">Empresa</dt>
+  <dd class="col-sm-9">@(!string.IsNullOrWhiteSpace(Model.CompanyDisplayName) ? Model.CompanyDisplayName : "—")</dd>
+
+  <dt class="col-sm-3">E-mail de suporte</dt>
+  <dd class="col-sm-9">@(!string.IsNullOrWhiteSpace(Model.SupportEmail) ? Model.SupportEmail : "—")</dd>
+
+  <dt class="col-sm-3">Multa (%)</dt>
+  <dd class="col-sm-9">@Model.DefaultLateFeePercent</dd>
+
+  <dt class="col-sm-3">Juros mês (%)</dt>
+  <dd class="col-sm-9">@Model.DefaultInterestMonthlyPercent</dd>
+
+  <dt class="col-sm-3">Carência (dias)</dt>
+  <dd class="col-sm-9">@Model.GraceDaysForQuotas</dd>
+
+  <dt class="col-sm-3">Envio de e-mails</dt>
+  <dd class="col-sm-9">
+    @if (Model.EmailsEnabled)
+    { <span class="badge bg-success">Ativado</span> }
+    else
+    { <span class="badge bg-secondary">Desativado</span> }
+  </dd>
+
+  <dt class="col-sm-3">Boas-vindas por e-mail</dt>
+  <dd class="col-sm-9">
+    @if (Model.WelcomeEmailEnabled)
+    { <span class="badge bg-success">Ativado</span> }
+    else
+    { <span class="badge bg-secondary">Desativado</span> }
+  </dd>
+
+  <dt class="col-sm-3">Reset de palavra-passe por e-mail</dt>
+  <dd class="col-sm-9">
+    @if (Model.PasswordResetEmailEnabled)
+    { <span class="badge bg-success">Ativado</span> }
+    else
+    { <span class="badge bg-secondary">Desativado</span> }
+  </dd>
+
+  <dt class="col-sm-3">Welcome – Assunto</dt>
+  <dd class="col-sm-9">@(!string.IsNullOrWhiteSpace(Model.WelcomeUserEmailSubject) ? Model.WelcomeUserEmailSubject : "—")</dd>
+
+  <dt class="col-sm-3">Welcome – HTML</dt>
+  <dd class="col-sm-9">
+    @if (string.IsNullOrWhiteSpace(Model.WelcomeUserEmailHtml))
+    {
+      <span class="text-muted">—</span>
+    }
+    else
+    {
+      <div class="border rounded p-2 bg-light" style="white-space:pre-wrap">@Html.Raw(Model.WelcomeUserEmailHtml)</div>
+    }
+  </dd>
+
+  <dt class="col-sm-3">Reset – Assunto</dt>
+  <dd class="col-sm-9">@(!string.IsNullOrWhiteSpace(Model.PasswordResetEmailSubject) ? Model.PasswordResetEmailSubject : "—")</dd>
+
+  <dt class="col-sm-3">Reset – HTML</dt>
+  <dd class="col-sm-9">
+    @if (string.IsNullOrWhiteSpace(Model.PasswordResetEmailHtml))
+    {
+      <span class="text-muted">—</span>
+    }
+    else
+    {
+      <div class="border rounded p-2 bg-light" style="white-space:pre-wrap">@Html.Raw(Model.PasswordResetEmailHtml)</div>
+    }
+  </dd>
+  <dt class="col-sm-3">Comprovativo de pagamento</dt>
+<dd class="col-sm-9">
+  @(Model.PaymentReceiptEmailEnabled ? Html.Raw("<span class='badge bg-success'>Ativado</span>") : Html.Raw("<span class='badge bg-secondary'>Desativado</span>"))
+</dd>
+
+<dt class="col-sm-3">Comprovativo – Assunto</dt>
+<dd class="col-sm-9">@(!string.IsNullOrWhiteSpace(Model.PaymentReceiptEmailSubject) ? Model.PaymentReceiptEmailSubject : "—")</dd>
+
+<dt class="col-sm-3">Comprovativo – HTML</dt>
+<dd class="col-sm-9">
+  @if (string.IsNullOrWhiteSpace(Model.PaymentReceiptEmailHtml))
+  { <span class="text-muted">—</span> }
+  else
+  { <div class="border rounded p-2 bg-light" style="white-space:pre-wrap">@Html.Raw(Model.PaymentReceiptEmailHtml)</div> }
+</dd>
+
+
+  <dt class="col-sm-3">Última atualização</dt>
+  <dd class="col-sm-9">@Model.UpdatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</dd>
+
+
+
+</dl>

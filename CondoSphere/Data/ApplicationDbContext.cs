@@ -33,6 +33,8 @@ namespace CondoSphere.Data
 
         public DbSet<StaffChatAlert> StaffChatAlerts { get; set; }
 
+        public DbSet<SystemSettings> SystemSettings { get; set; } = default!;
+
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -230,6 +232,40 @@ namespace CondoSphere.Data
                  .WithMany()
                  .HasForeignKey(x => x.UserId)
                  .OnDelete(DeleteBehavior.Cascade);
+            });
+
+
+            modelBuilder.Entity<SystemSettings>(e =>
+            {
+                e.HasIndex(x => x.TenantId);
+                e.Property(x => x.DefaultLateFeePercent).HasColumnType("decimal(5,2)");
+                e.Property(x => x.DefaultInterestMonthlyPercent).HasColumnType("decimal(5,2)");
+            });
+
+            // seed de linha global (id=1)
+            modelBuilder.Entity<SystemSettings>().HasData(new SystemSettings
+            {
+                Id = 1,
+                TenantId = null,
+                CompanyDisplayName = "CondoSphere",
+                SupportEmail = "support@condosphere.app",
+                DefaultLateFeePercent = 2.00m,
+                DefaultInterestMonthlyPercent = 1.00m,
+                GraceDaysForQuotas = 5,
+                WelcomeUserEmailSubject = "Bem-vindo(a) ao CondoSphere",
+                WelcomeUserEmailHtml =
+                    "<p>Olá {{User.FullName}},</p><p>A sua conta foi criada.</p><p>Senha provisória: <code>{{TempPassword}}</code></p><p>Por favor altere aqui: <a href='{{ResetUrl}}'>Alterar palavra-passe</a></p><p>Cumprimentos,<br/>{{Company.Name}}</p>",
+                PasswordResetEmailSubject = "CondoSphere – Redefinição de palavra-passe",
+                PasswordResetEmailHtml =
+                    "<p>Olá {{User.Email}},</p><p>Clique para redefinir (válido por 4 dias): <a href='{{ResetUrl}}'>Reset</a></p><p>Se não foi você, ignore.</p>",
+                    PaymentReceiptEmailEnabled = true,
+                PaymentReceiptEmailSubject = "Comprovativo de pagamento",
+                PaymentReceiptEmailHtml =
+    "<p>Olá {{User.FullName}},</p>" +
+    "<p>Recebemos o seu pagamento de <strong>{{Payment.Amount}}</strong> em {{Payment.Date}}.</p>" +
+    "<p>Referência: <code>{{Payment.Reference}}</code> · Método: {{Payment.Method}}</p>" +
+    "<p>Pode consultar/guardar a fatura aqui: <a href='{{InvoiceUrl}}'>Ver fatura</a></p>" +
+    "<p>Cumprimentos,<br/>{{Company.Name}}</p>"
             });
 
 

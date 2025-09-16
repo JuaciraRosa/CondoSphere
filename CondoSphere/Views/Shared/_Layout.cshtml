@@ -4,12 +4,25 @@
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 
 @{
-    var user = HttpContextAccessor.HttpContext?.User;
-    var isAuth = user?.Identity?.IsAuthenticated == true;
-    var role = user?.FindFirst(ClaimTypes.Role)?.Value
-               ?? user?.FindFirst("role")?.Value;
+   var httpCtx = HttpContextAccessor.HttpContext ?? Context;
+    var user    = httpCtx?.User;
+    var isAuth  = user?.Identity?.IsAuthenticated == true;
+    var role    = user?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
+                  ?? user?.FindFirst("role")?.Value;
 
-   var anti = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+    string anti = "";
+    try
+    {
+        if (httpCtx != null && Antiforgery != null)
+        {
+            var tokens = Antiforgery.GetAndStoreTokens(httpCtx);
+            anti = tokens?.RequestToken ?? "";
+        }
+    }
+    catch { anti = ""; }
+
+     int? paymentId = null;
+    if (ViewData.Model is CondoSphere.Models.Payment pay) paymentId = pay.Id;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -60,6 +73,8 @@
       {
         <li><a asp-controller="Users" asp-action="Index">Users</a></li>
         <li><a asp-controller="Companies" asp-action="Index">Companies</a></li>
+        
+    <li><a asp-controller="SystemSettings" asp-action="Index">Parâmetros Globais</a></li>
       }
 
       @* Administrator or Manager *@
@@ -85,6 +100,14 @@
       @await Component.InvokeAsync("NewChatBadge", new { days = 3 })
     </a>
   </li>
+ @if (paymentId.HasValue && (role == "Administrator" || role == "Manager"))
+{
+  <form asp-controller="Payments" asp-action="ResendReceipt"
+        asp-route-id="@paymentId.Value" method="post" class="d-inline">
+    @Html.AntiForgeryToken()
+    <button type="submit" class="btn btn-outline-secondary btn-sm">Resend Receipt</button>
+  </form>
+}
 
       }
 
@@ -225,7 +248,10 @@
   const START_API = `${ORIGIN}/Chat/StartApi`;
   const POLL_URL  = (id, after) => `${ORIGIN}/Chat/Poll?id=${id}&after=${after}`;
   const SEND_API  = `${ORIGIN}/Chat/SendApi`;
-  const anti      = '@anti'; // já gerado no topo do _Layout
+ const anti = '@anti';
+const baseHeaders = {};
+if (anti) baseHeaders['RequestVerificationToken'] = anti;
+
 
   // elementos
   const toggle = document.getElementById('botToggle');
@@ -338,7 +364,7 @@
       });
       if (!r.ok) throw new Error('SendApi ' + r.status);
 
-      // 👇 usa o retorno do servidor para avançar o ponteiro
+      // usa o retorno do servidor para avançar o ponteiro
       const j = await r.json();               // { ok, id, when }
       append('Resident', t, j.when);          // eco local com timestamp real
       if (j?.id){

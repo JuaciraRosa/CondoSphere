@@ -1,15 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using CondoSphere.Data;
+using CondoSphere.Data.Interfaces;
+using CondoSphere.Messaging;
+using CondoSphere.Models;
+using CondoSphere.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using CondoSphere.Data;
-using CondoSphere.Data.Interfaces;
-using Microsoft.AspNetCore.Identity;
-using CondoSphere.Models;
-using CondoSphere.Messaging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace CondoSphere.Controllers
 {
@@ -20,19 +21,22 @@ namespace CondoSphere.Controllers
         private readonly ICompanyRepository _companyRepo;
         private readonly IUserRepository _userRepo;
         private readonly IEmailSender _emailSender;
+        private readonly ISystemSettingsService _systemSettingsService;
 
         public UsersController(
             IUserRepository userRepo,
             ICompanyRepository companyRepo,
             UserManager<User> userManager,
             RoleManager<IdentityRole> roleManager,
-            IEmailSender emailSender)
+            IEmailSender emailSender,
+             ISystemSettingsService systemSettingsService)
         {
             _userRepo = userRepo;
             _companyRepo = companyRepo;
             _userManager = userManager;
             _roleManager = roleManager;
             _emailSender = emailSender;
+            _systemSettingsService = systemSettingsService;
         }
 
         // GET: Users
@@ -117,43 +121,59 @@ namespace CondoSphere.Controllers
                 return View(user);
             }
 
-            // Garante que o role existe e atribui
+            // marca como provisória (4 dias)
+            newUser.MustChangePassword = true;
+            newUser.TempPasswordExpiresAt = DateTimeOffset.UtcNow.AddDays(4);
+            await _userManager.UpdateAsync(newUser);
+
+            // gera resetUrl (token/email codificados)
+            var token = await _userManager.GeneratePasswordResetTokenAsync(newUser);
+            var urlToken = System.Net.WebUtility.UrlEncode(token);
+            var urlEmail = System.Net.WebUtility.UrlEncode(newUser.Email);
+            var resetUrl = Url.Action("ResetPassword", "Account",
+                new { token = urlToken, email = urlEmail }, protocol: Request.Scheme);
+
+            // e-mail de boas-vindas (templates + switches)
+            var settings = await _systemSettingsService.GetCurrentAsync();
+            var subject = settings.WelcomeUserEmailSubject ?? "Bem-vindo(a)";
+
+            var defaultHtml = $@"
+<p>Olá {System.Net.WebUtility.HtmlEncode(newUser.FullName ?? newUser.Email ?? "Utilizador")},</p>
+<p>A sua conta no <strong>CondoSphere</strong> foi criada.</p>
+<p><strong>Palavra-passe provisória (válida por 4 dias):</strong> <code>{System.Net.WebUtility.HtmlEncode(initialPassword)}</code></p>
+<p>Por favor, para sua segurança, altere a sua palavra-passe neste link:</p>
+<p><a href=""{resetUrl}"" target=""_blank"" rel=""noopener"">Alterar palavra-passe</a></p>
+<p>Cumprimentos,<br/>CondoSphere</p>";
+
+            var body = string.IsNullOrWhiteSpace(settings.WelcomeUserEmailHtml)
+                ? defaultHtml
+                : _systemSettingsService.RenderTemplate(
+                    settings.WelcomeUserEmailHtml,
+                    new Dictionary<string, string>
+                    {
+                        ["User.FullName"] = newUser.FullName ?? newUser.Email ?? "Utilizador",
+                        ["User.Email"] = newUser.Email ?? "",
+                        ["TempPassword"] = initialPassword,
+                        ["ResetUrl"] = resetUrl,
+                        ["Company.Name"] = settings.CompanyDisplayName ?? "CondoSphere"
+                    });
+
+            if (settings.EmailsEnabled && settings.WelcomeEmailEnabled)
+            {
+                await _emailSender.SendAsync(newUser.Email!, subject, body);
+            }
+            // 👆 removido o envio duplicado
+
+            // role
             var roleName = user.Role.ToString();
             if (!await _roleManager.RoleExistsAsync(roleName))
                 await _roleManager.CreateAsync(new IdentityRole(roleName));
 
             await _userManager.AddToRoleAsync(newUser, roleName);
 
-            try
-            {
-                var token = await _userManager.GeneratePasswordResetTokenAsync(newUser);
-                var resetUrl = Url.Action(
-                    "ResetPassword", "Account",
-                    new { token, email = newUser.Email },
-                    protocol: Request.Scheme
-                );
-
-                var who = System.Net.WebUtility.HtmlEncode(newUser.FullName ?? newUser.Email ?? "Utilizador");
-                var html = $@"
-            <p>Olá {who},</p>
-            <p>Sua conta no <strong>CondoSphere</strong> foi criada.</p>
-            <p>Clique no link abaixo para definir a sua palavra-passe:</p>
-            <p><a href=""{resetUrl}"" target=""_blank"" rel=""noopener"">Definir palavra-passe</a></p>
-            <p>Se não reconhece este pedido, pode ignorar este e-mail.</p>";
-
-                await _emailSender.SendAsync(
-                    to: newUser.Email!,
-                    subject: "CondoSphere — Defina a sua palavra-passe",
-                    htmlBody: html
-                );
-            }
-            catch
-            {
-                // não bloqueia o fluxo se falhar o e-mail; logue se tiver logger
-            }
-
             return RedirectToAction(nameof(Index));
         }
+
 
         // GET: Users/Edit/{id}
         public async Task<IActionResult> Edit(string id)

@@ -1,0 +1,99 @@
+﻿@model CondoSphere.Models.SystemSettings
+@{
+    ViewData["Title"] = "Editar Parâmetros";
+}
+<h2>Editar Parâmetros</h2>
+<form asp-action="Edit" method="post">
+  @Html.AntiForgeryToken()
+  <input asp-for="Id" type="hidden" />
+
+  <div class="row">
+    <div class="col-md-6">
+      <div class="mb-3">
+        <label asp-for="CompanyDisplayName" class="form-label"></label>
+        <input asp-for="CompanyDisplayName" class="form-control" />
+        <span asp-validation-for="CompanyDisplayName" class="text-danger"></span>
+      </div>
+      <div class="mb-3">
+        <label asp-for="SupportEmail" class="form-label"></label>
+        <input asp-for="SupportEmail" class="form-control" />
+        <span asp-validation-for="SupportEmail" class="text-danger"></span>
+      </div>
+      <div class="mb-3">
+        <label asp-for="DefaultLateFeePercent" class="form-label"></label>
+        <input asp-for="DefaultLateFeePercent" class="form-control" />
+        <span asp-validation-for="DefaultLateFeePercent" class="text-danger"></span>
+      </div>
+      <div class="mb-3">
+        <label asp-for="DefaultInterestMonthlyPercent" class="form-label"></label>
+        <input asp-for="DefaultInterestMonthlyPercent" class="form-control" />
+        <span asp-validation-for="DefaultInterestMonthlyPercent" class="text-danger"></span>
+      </div>
+      <div class="mb-3">
+        <label asp-for="GraceDaysForQuotas" class="form-label"></label>
+        <input asp-for="GraceDaysForQuotas" class="form-control" />
+        <span asp-validation-for="GraceDaysForQuotas" class="text-danger"></span>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="mb-3">
+        <label asp-for="WelcomeUserEmailSubject" class="form-label"></label>
+        <input asp-for="WelcomeUserEmailSubject" class="form-control" />
+      </div>
+      <div class="mb-3">
+        <label asp-for="WelcomeUserEmailHtml" class="form-label"></label>
+        <textarea asp-for="WelcomeUserEmailHtml" class="form-control" rows="6"></textarea>
+        <small class="text-muted">Placeholders: {{User.FullName}}, {{User.Email}}, {{TempPassword}}, {{ResetUrl}}, {{Company.Name}}</small>
+      </div>
+      <div class="mb-3">
+        <label asp-for="PasswordResetEmailSubject" class="form-label"></label>
+        <input asp-for="PasswordResetEmailSubject" class="form-control" />
+      </div>
+      <div class="mb-3">
+        <label asp-for="PasswordResetEmailHtml" class="form-label"></label>
+        <textarea asp-for="PasswordResetEmailHtml" class="form-control" rows="6"></textarea>
+        <small class="text-muted">Placeholders: {{User.FullName}}, {{User.Email}}, {{ResetUrl}}, {{Company.Name}}</small>
+      </div>
+    </div>
+    <div class="form-check form-switch mb-3">
+  <input class="form-check-input" asp-for="EmailsEnabled" />
+  <label class="form-check-label" asp-for="EmailsEnabled">Ativar envio de e-mails</label>
+</div>
+
+<div class="form-check form-switch mb-3">
+  <input class="form-check-input" asp-for="WelcomeEmailEnabled" />
+  <label class="form-check-label" asp-for="WelcomeEmailEnabled">Enviar e-mail de boas-vindas</label>
+</div>
+
+<div class="form-check form-switch mb-3">
+  <input class="form-check-input" asp-for="PasswordResetEmailEnabled" />
+  <label class="form-check-label" asp-for="PasswordResetEmailEnabled">Enviar e-mail de reset de palavra-passe</label>
+</div>
+
+  </div>
+
+  <div class="form-check form-switch mb-3">
+  <input class="form-check-input" asp-for="PaymentReceiptEmailEnabled" />
+  <label class="form-check-label" asp-for="PaymentReceiptEmailEnabled">Enviar comprovativo de pagamento</label>
+</div>
+
+<div class="mb-3">
+  <label asp-for="PaymentReceiptEmailSubject" class="form-label"></label>
+  <input asp-for="PaymentReceiptEmailSubject" class="form-control" />
+</div>
+
+<div class="mb-3">
+  <label asp-for="PaymentReceiptEmailHtml" class="form-label"></label>
+  <textarea asp-for="PaymentReceiptEmailHtml" class="form-control" rows="6"></textarea>
+  <small class="text-muted">
+    Placeholders: {{User.FullName}}, {{User.Email}}, {{Payment.Amount}}, {{Payment.Date}},
+    {{Payment.Reference}}, {{Payment.Method}}, {{InvoiceUrl}}, {{Company.Name}}
+  </small>
+</div>
+
+
+  <button class="btn btn-primary" type="submit">Guardar</button>
+  <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+</form>
+@section Scripts{ @{await Html.RenderPartialAsync("_ValidationScriptsPartial");} }

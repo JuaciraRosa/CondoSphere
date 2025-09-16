@@ -4,6 +4,7 @@ using CondoSphere.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CondoSphere.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250916135730_AddTempPasswordExpiryToUser")]
+    partial class AddTempPasswordExpiryToUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -731,100 +734,6 @@ namespace CondoSphere.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("StaffChatAlerts");
-                });
-
-            modelBuilder.Entity("CondoSphere.Models.SystemSettings", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("CompanyDisplayName")
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
-
-                    b.Property<decimal>("DefaultInterestMonthlyPercent")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<decimal>("DefaultLateFeePercent")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<bool>("EmailsEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("GraceDaysForQuotas")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("PasswordResetEmailEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("PasswordResetEmailHtml")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PasswordResetEmailSubject")
-                        .HasMaxLength(160)
-                        .HasColumnType("nvarchar(160)");
-
-                    b.Property<bool>("PaymentReceiptEmailEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("PaymentReceiptEmailHtml")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PaymentReceiptEmailSubject")
-                        .HasMaxLength(160)
-                        .HasColumnType("nvarchar(160)");
-
-                    b.Property<string>("SupportEmail")
-                        .HasMaxLength(160)
-                        .HasColumnType("nvarchar(160)");
-
-                    b.Property<string>("TenantId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<bool>("WelcomeEmailEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("WelcomeUserEmailHtml")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("WelcomeUserEmailSubject")
-                        .HasMaxLength(160)
-                        .HasColumnType("nvarchar(160)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId");
-
-                    b.ToTable("SystemSettings");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CompanyDisplayName = "CondoSphere",
-                            DefaultInterestMonthlyPercent = 1.00m,
-                            DefaultLateFeePercent = 2.00m,
-                            EmailsEnabled = true,
-                            GraceDaysForQuotas = 5,
-                            PasswordResetEmailEnabled = true,
-                            PasswordResetEmailHtml = "<p>Olá {{User.Email}},</p><p>Clique para redefinir (válido por 4 dias): <a href='{{ResetUrl}}'>Reset</a></p><p>Se não foi você, ignore.</p>",
-                            PasswordResetEmailSubject = "CondoSphere – Redefinição de palavra-passe",
-                            PaymentReceiptEmailEnabled = true,
-                            PaymentReceiptEmailHtml = "<p>Olá {{User.FullName}},</p><p>Recebemos o seu pagamento de <strong>{{Payment.Amount}}</strong> em {{Payment.Date}}.</p><p>Referência: <code>{{Payment.Reference}}</code> · Método: {{Payment.Method}}</p><p>Pode consultar/guardar a fatura aqui: <a href='{{InvoiceUrl}}'>Ver fatura</a></p><p>Cumprimentos,<br/>{{Company.Name}}</p>",
-                            PaymentReceiptEmailSubject = "Comprovativo de pagamento",
-                            SupportEmail = "support@condosphere.app",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2025, 9, 16, 18, 12, 54, 556, DateTimeKind.Unspecified).AddTicks(95), new TimeSpan(0, 0, 0, 0, 0)),
-                            WelcomeEmailEnabled = true,
-                            WelcomeUserEmailHtml = "<p>Olá {{User.FullName}},</p><p>A sua conta foi criada.</p><p>Senha provisória: <code>{{TempPassword}}</code></p><p>Por favor altere aqui: <a href='{{ResetUrl}}'>Alterar palavra-passe</a></p><p>Cumprimentos,<br/>{{Company.Name}}</p>",
-                            WelcomeUserEmailSubject = "Bem-vindo(a) ao CondoSphere"
-                        });
                 });
 
             modelBuilder.Entity("CondoSphere.Models.Unit", b =>

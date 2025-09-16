@@ -1,4 +1,5 @@
-﻿using CondoSphere.Services.AppData;
+﻿using CondoSphere.Features.Ocurrences;
+using CondoSphere.Services.AppData;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -11,11 +12,11 @@ namespace CondoSphere.API
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class OccurrencesApiController : ControllerBase
     {
-        private readonly JsonFileStore<CondoSphere.Features.Ocurrences.OccurrenceDto> _store;
+        private readonly JsonFileStore<OccurrenceDto> _store;
 
         public OccurrencesApiController(IWebHostEnvironment env)
         {
-            _store = new JsonFileStore<CondoSphere.Features.Ocurrences.OccurrenceDto>(env, "appdata/occurrences.json");
+            _store = new JsonFileStore<OccurrenceDto>(env, "appdata/occurrences.json");
         }
 
         [HttpGet]
@@ -27,7 +28,7 @@ namespace CondoSphere.API
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CondoSphere.Features.Ocurrences.OccurrenceDto model)
+        public async Task<IActionResult> Create([FromBody] OccurrenceDto model)
         {
             var list = await _store.ReadAllAsync();
             model.CreatedAt = DateTime.UtcNow;

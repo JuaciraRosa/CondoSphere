@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using QuestPDF.Infrastructure;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,6 +51,11 @@ builder.Services.AddRepositories();
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Auth/Login";
+});
+
+builder.Services.Configure<DataProtectionTokenProviderOptions>(opt =>
+{
+    opt.TokenLifespan = TimeSpan.FromDays(4);
 });
 
 
@@ -88,6 +94,10 @@ builder.Services.AddScoped<IResidentEmailService, ResidentEmailService>();
 builder.Services.AddScoped<IChatAlertRepository, EfChatAlertRepository>();
 builder.Services.AddScoped<IStaffDirectory, StaffDirectory>();
 builder.Services.AddScoped<IChatAlertService, ChatAlertService>();
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+builder.Services.AddScoped<ISystemSettingsService, SystemSettingsService>();
+
+
 
 
 builder.Services.AddScoped<IAnnouncementReadService, AnnouncementReadService>();
@@ -99,13 +109,14 @@ builder.Services.AddAuthentication()
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = jwtIssuer,
             ValidateAudience = true,
-            ValidAudience = jwtAudience,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromMinutes(2)
+            ClockSkew = TimeSpan.FromMinutes(1)
         };
     });
 
@@ -282,5 +293,7 @@ using (var scope = app.Services.CreateScope())
             throw;
     }
 }
+
+QuestPDF.Settings.License = LicenseType.Community;
 
 app.Run();

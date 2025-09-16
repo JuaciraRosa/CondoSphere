@@ -394,47 +394,8 @@ namespace CondoSphere.Controllers
             return RedirectToAction("Login", "Auth");
         }
 
-        // GET: /Account/ForgotPassword
-        [HttpGet]
-        [AllowAnonymous]
-        public IActionResult ForgotPassword()
-        {
-            return View();
-        }
 
-        [HttpPost]
-        [AllowAnonymous]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
-        {
-            if (!ModelState.IsValid) return View(model);
 
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null || !(await _userManager.IsEmailConfirmedAsync(user)))
-            {
-                TempData["Success"] = "If that account exists, you will receive an email to reset the password.";
-                return RedirectToAction(nameof(ForgotPassword));
-            }
-
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var callbackUrl = Url.Action("ResetPassword", "Account",
-                new { token, email = user.Email }, protocol: Request.Scheme);
-
-            var body = $@"
-        <p>Hello {System.Net.WebUtility.HtmlEncode(user.Email)},</p>
-        <p>Click the link below to reset your password:</p>
-        <p><a href=""{callbackUrl}"">Reset Password</a></p>
-        <p>If you did not request this, you can ignore this email.</p>";
-
-            await _emailSender.SendAsync(
-                to: user.Email!,
-                subject: "CondoSphere - Reset your password",
-                htmlBody: body
-            );
-
-            TempData["Success"] = "Check your email for password reset instructions.";
-            return RedirectToAction(nameof(ForgotPassword));
-        }
 
         // GET: /Account/ResetPassword
         [HttpGet]
@@ -455,11 +416,28 @@ namespace CondoSphere.Controllers
             if (user == null) return RedirectToAction(nameof(ResetPasswordConfirmation));
 
             var result = await _userManager.ResetPasswordAsync(user, model.Token, model.Password);
+
             if (result.Succeeded)
+            {
+              
+                user.MustChangePassword = false;
+                user.TempPasswordExpiresAt = null;
+
+                // confirma o e-mail se ainda não estiver confirmado
+                if (!user.EmailConfirmed)
+                    user.EmailConfirmed = true;
+
+                // (opcional) invalida sessões/credenciais antigas
+                await _userManager.UpdateSecurityStampAsync(user);
+
+                await _userManager.UpdateAsync(user);
+
+                TempData["Success"] = "Palavra-passe alterada com sucesso.";
                 return RedirectToAction(nameof(ResetPasswordConfirmation));
+            }
 
             foreach (var error in result.Errors)
-                ModelState.AddModelError("", error.Description);
+                ModelState.AddModelError(string.Empty, error.Description);
 
             return View(model);
         }

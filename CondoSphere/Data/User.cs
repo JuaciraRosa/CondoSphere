@@ -21,5 +21,9 @@ namespace CondoSphere.Data
         public ICollection<Unit> OwnedUnits { get; set; } // For residents
 
         public string ProfileImagePath { get; set; } = "";
+
+
+        public bool MustChangePassword { get; set; }               // senha provisória ainda ativa?
+        public DateTimeOffset? TempPasswordExpiresAt { get; set; }
     }
 }

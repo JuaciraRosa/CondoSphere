@@ -1,0 +1,19 @@
+﻿@model CondoSphere.Models.Payment
+@{
+    ViewData["Title"] = $"Fatura #{Model.Id}";
+}
+<div class="container my-4">
+  <h3>Fatura / Recibo</h3>
+  <hr />
+  <p><strong>Nº:</strong> @Model.Id</p>
+  <p><strong>Data:</strong> @( (Model.PaidAt ?? Model.CreatedAt).ToLocalTime().ToString("yyyy-MM-dd HH:mm") )</p>
+  <p><strong>Valor:</strong> @Model.Amount.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("pt-PT"))</p>
+  <p><strong>Método:</strong> @Model.Method</p>
+  <p><strong>Referência:</strong> @(string.IsNullOrWhiteSpace(Model.ProviderReference) ? Model.ProviderPaymentId : Model.ProviderReference)</p>
+  @if (!string.IsNullOrWhiteSpace(Model.ReceiptUrl))
+  {
+    <p><strong>Recibo do provedor:</strong> <a href="@Model.ReceiptUrl" target="_blank">@Model.ReceiptUrl</a></p>
+  }
+  <hr />
+  <p class="text-muted">Este documento é válido como comprovativo de pagamento.</p>
+</div>

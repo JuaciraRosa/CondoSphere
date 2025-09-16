@@ -12,11 +12,11 @@ namespace CondoSphere.API
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class VotingApiController : ControllerBase
     {
-        private readonly JsonFileStore<CondoSphere.Features.Voting.MeetingVoteDto> _store;
+        private readonly JsonFileStore<MeetingVoteDto> _store;
 
         public VotingApiController(IWebHostEnvironment env)
         {
-            _store = new JsonFileStore<CondoSphere.Features.Voting.MeetingVoteDto>(env, "appdata/votes.json");
+            _store = new JsonFileStore<MeetingVoteDto>(env, "appdata/votes.json");
         }
 
         [HttpPost("cast")]
@@ -47,7 +47,7 @@ namespace CondoSphere.API
         {
             var list = await _store.ReadAllAsync();
             var m = list.Where(x => x.MeetingId == meetingId).ToList();
-            var res = new CondoSphere.Features.Voting.MeetingVoteResultDto
+            var res = new MeetingVoteResultDto
             {
                 MeetingId = meetingId,
                 Total = m.Count,
