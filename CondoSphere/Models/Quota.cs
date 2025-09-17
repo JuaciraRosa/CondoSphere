@@ -23,6 +23,11 @@ namespace CondoSphere.Models
 
         [ValidateNever]
         public Payment? Payment { get; set; } // relação 1:1
+
+       
+        public string? DebtorUserId { get; set; }
+        public string? DebtorEmail { get; set; }
+        public string? DebtorName { get; set; }
     }
 
 }

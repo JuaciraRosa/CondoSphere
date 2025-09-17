@@ -35,6 +35,9 @@ namespace CondoSphere.Data
 
         public DbSet<SystemSettings> SystemSettings { get; set; } = default!;
 
+        public DbSet<UnitOwnership> UnitOwnerships { get; set; } = default!;
+
+
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -269,6 +272,42 @@ namespace CondoSphere.Data
             });
 
 
+           modelBuilder.Entity<Quota>()
+ .HasIndex(q => new { q.DebtorUserId, q.DueDate });
+
+
+
+            // UNIQUE: número por condomínio
+            // Unit: número único dentro do condomínio
+            modelBuilder.Entity<Unit>()
+             .HasIndex(u => new { u.CondominiumId, u.Number })
+             .IsUnique();
+
+            // UnitOwnership: relações
+            modelBuilder.Entity<UnitOwnership>()
+             .HasOne(x => x.Unit)
+             .WithMany(u => u.OwnershipHistory)
+             .HasForeignKey(x => x.UnitId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<UnitOwnership>()
+             .HasOne(x => x.Owner)
+             .WithMany()               // sem coleção reversa obrigatória
+             .HasForeignKey(x => x.OwnerId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            // Proteções usuais
+            modelBuilder.Entity<Quota>()
+             .HasOne(q => q.Unit)
+             .WithMany(u => u.Quotas)
+             .HasForeignKey(q => q.UnitId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Payment>()
+             .HasOne(p => p.Quota)
+             .WithOne(q => q.Payment)
+             .HasForeignKey<Payment>(p => p.QuotaId)
+             .OnDelete(DeleteBehavior.Restrict);
 
         }
 

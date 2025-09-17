@@ -3,14 +3,18 @@
 
 @{
     ViewData["Title"] = "Quotas";
+     var now = DateTime.UtcNow;
+    var thisYear = now.Year;
+    var thisMonth = now.Month;
+    var to = now.AddMonths(2);
 }
 
 @* Flash messages *@
-@if (TempData["Ok"] is string ok && !string.IsNullOrWhiteSpace(ok))
+@if (TempData["Success"] is string ok && !string.IsNullOrWhiteSpace(ok))
 {
     <div class="alert alert-success">@ok</div>
 }
-@if (TempData["Err"] is string err && !string.IsNullOrWhiteSpace(err))
+@if (TempData["Error"] is string err && !string.IsNullOrWhiteSpace(err))
 {
     <div class="alert alert-danger">@err</div>
 }
@@ -41,9 +45,47 @@
             <button class="btn btn-primary w-100">Generate</button>
         </div>
     </form>
+   <hr class="my-4" />
 
+    <h6 class="mb-3">Generate quotas by range (multiple months)</h6>
 
-    
+    <form asp-action="GenerateRangeMonthly" method="post" class="row g-2">
+        <div asp-validation-summary="All" class="text-danger mb-2"></div>
+        @Html.AntiForgeryToken()
+
+        <div class="col-md-4">
+            <label class="form-label">Condominium</label>
+            <select name="condominiumId" class="form-select" asp-items="ViewBag.Condominiums"></select>
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label">From (Year)</label>
+            <input name="fromYear" type="number" class="form-control" value="@thisYear" required />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">From (Month)</label>
+            <input name="fromMonth" type="number" min="1" max="12" class="form-control" value="@thisMonth" required />
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label">To (Year)</label>
+            <input name="toYear" type="number" class="form-control" value="@to.Year" required />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">To (Month)</label>
+            <input name="toMonth" type="number" min="1" max="12" class="form-control" value="@to.Month" required />
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Amount per unit (€)</label>
+            <input name="amount" type="number" step="0.01" class="form-control" required />
+        </div>
+
+        <div class="col-md-1 d-flex align-items-end">
+            <button class="btn btn-outline-primary w-100">Generate Range</button>
+        </div>
+    </form>
+</div>
 </div>
 
 <div class="card shadow-sm">
@@ -62,7 +104,7 @@
                 @foreach (var item in Model)
                 {
                     <tr>
-                        <td>@(item?.Unit?.Number ?? $"#{item.UnitId}")</td>
+                        <td>@(item?.Unit?.Number ?? $"{item.UnitId}")</td>
                         <td>@item.Amount.ToString("C", new CultureInfo("pt-PT"))</td>
                         <td>@item.DueDate.ToString("yyyy-MM-dd")</td>
                         <td>

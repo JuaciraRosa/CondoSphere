@@ -35,6 +35,10 @@ namespace CondoSphere.Models
         [ValidateNever]
         public ICollection<Quota> Quotas { get; set; }
 
+        public bool IsActive { get; set; } = true;   // soft delete
+
+        [ValidateNever]
+        public ICollection<UnitOwnership> OwnershipHistory { get; set; } = new List<UnitOwnership>();
 
     }
 

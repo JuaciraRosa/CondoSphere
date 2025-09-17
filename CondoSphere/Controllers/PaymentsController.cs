@@ -9,6 +9,7 @@ using CondoSphere.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -83,7 +84,7 @@ namespace CondoSphere.Controllers
         }
 
 
-        // ------- Delete -------
+        // GET: Payments/Delete/{id}
         [HttpGet]
         public async Task<IActionResult> Delete(int id)
         {
@@ -92,10 +93,24 @@ namespace CondoSphere.Controllers
             return View(payment);
         }
 
-        [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
+        // POST: Payments/Delete/{id}
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            await _payments.DeleteAsync(id);
+            try
+            {
+                await _payments.DeleteAsync(id);
+                TempData["Success"] = "Payment deleted successfully.";
+            }
+            catch (DbUpdateException)
+            {
+                TempData["Error"] = "Payment could not be deleted due to related records.";
+            }
+            catch
+            {
+                TempData["Error"] = "An unexpected error occurred while deleting the payment.";
+            }
             return RedirectToAction(nameof(Index));
         }
 

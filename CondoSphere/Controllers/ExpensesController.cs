@@ -81,6 +81,7 @@ namespace CondoSphere.Controllers
             return View(expense);
         }
 
+        // GET: Expenses/Delete/5
         public async Task<IActionResult> Delete(int id)
         {
             var expense = await _expenseRepo.GetByIdDetailedAsync(id);
@@ -88,13 +89,28 @@ namespace CondoSphere.Controllers
             return View(expense);
         }
 
+        // POST: Expenses/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            await _expenseRepo.DeleteAsync(id);
+            try
+            {
+                await _expenseRepo.DeleteAsync(id);
+                TempData["Success"] = "Expense deleted successfully.";
+            }
+            catch (DbUpdateException)
+            {
+                TempData["Error"] = "Expense could not be deleted because it is referenced by other records.";
+            }
+            catch
+            {
+                TempData["Error"] = "An unexpected error occurred while deleting the expense.";
+            }
+
             return RedirectToAction(nameof(Index));
         }
+
 
         private async Task LoadCondominiumsSelectAsync(int? selectedId = null)
         {

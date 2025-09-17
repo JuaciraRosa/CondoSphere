@@ -2,6 +2,7 @@
 using CondoSphere.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 
 namespace CondoSphere.Controllers
@@ -69,8 +70,7 @@ namespace CondoSphere.Controllers
             await _companyRepo.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
-
-        // GET: /Companies/Delete/5
+        // GET: Companies/Delete/5
         public async Task<IActionResult> Delete(int id)
         {
             var company = await _companyRepo.GetByIdAsync(id);
@@ -78,14 +78,28 @@ namespace CondoSphere.Controllers
             return View(company);
         }
 
-        // POST: /Companies/Delete/5
+        // POST: Companies/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            await _companyRepo.DeleteAsync(id);
+            try
+            {
+                await _companyRepo.DeleteAsync(id);
+                TempData["Success"] = "Company deleted successfully.";
+            }
+            catch (DbUpdateException)
+            {
+                TempData["Error"] = "Company cannot be deleted because it has related data (e.g., condominiums, users, units).";
+            }
+            catch
+            {
+                TempData["Error"] = "An unexpected error occurred while deleting the company.";
+            }
+
             return RedirectToAction(nameof(Index));
         }
+
     }
 }
 

@@ -51,6 +51,14 @@ namespace CondoSphere.Data.Repositories
                 .AsNoTracking()
                 .ToListAsync();
         }
+
+
+        public async Task UpdateAsync(Quota quota)
+        {
+            _context.Quotas.Update(quota);
+            await _context.SaveChangesAsync();
+        }
+
     }
 
 }

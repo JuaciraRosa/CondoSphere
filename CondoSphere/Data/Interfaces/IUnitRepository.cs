@@ -13,6 +13,12 @@ namespace CondoSphere.Data.Interfaces
 
 
         Task<List<string>> GetNumbersByCondominiumIdAsync(int condominiumId);
+
+
+        Task<bool> NumberExistsInCondoAsync(int condominiumId, string number, int? exceptId = null);
+
+     
+
     }
 
 }

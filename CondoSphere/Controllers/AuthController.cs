@@ -70,6 +70,13 @@ namespace CondoSphere.Controllers
                 return View(model);
             }
 
+            if (!user.IsActive)
+            {
+                ModelState.AddModelError("", "A sua conta está desativada. Contacte o administrador.");
+                return View(model);
+            }
+
+
             var result = await _signInManager.PasswordSignInAsync(
                 user.UserName!, model.Password, model.RememberMe, lockoutOnFailure: true);
 

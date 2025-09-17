@@ -1,66 +1,64 @@
-﻿@model CondoSphere.Data.User
+﻿@model CondoSphere.ViewModels.EditUserViewModel
+@using CondoSphere.Models
 
 @{
     ViewData["Title"] = "Edit User";
 }
 
 <section class="section">
-    <div class="container">
-        <div class="card p-4 shadow-sm">
-            <h4 class="mb-4"><i class="bi bi-pencil-square"></i> Edit User</h4>
-            <form asp-action="Edit" method="post">
-                @Html.AntiForgeryToken()
-                <input type="hidden" asp-for="Id" />
-                <div asp-validation-summary="All" class="text-danger mb-2"></div>
+  <div class="container">
+    <div class="card p-4 shadow-sm">
+      <h4 class="mb-4"><i class="bi bi-pencil-square"></i> Edit User</h4>
 
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label asp-for="FullName" class="form-label"></label>
-                        <input asp-for="FullName" class="form-control" />
-                        <span asp-validation-for="FullName" class="text-danger"></span>
-                    </div>
+      <form asp-action="Edit" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <div asp-validation-summary="All" class="text-danger mb-2"></div>
 
-                    <div class="col-md-6">
-                        <label asp-for="Email" class="form-label"></label>
-                        <input asp-for="Email" class="form-control" />
-                        <span asp-validation-for="Email" class="text-danger"></span>
-                    </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label asp-for="FullName" class="form-label"></label>
+            <input asp-for="FullName" class="form-control" />
+            <span asp-validation-for="FullName" class="text-danger"></span>
+          </div>
 
-                    <div class="col-md-6">
-                        <label class="form-label">Password</label>
-                        <input asp-for="PasswordHash" type="text" class="form-control" />
-                        <small class="text-muted">* Apenas para testes neste projeto.</small>
-                        <span asp-validation-for="PasswordHash" class="text-danger"></span>
-                    </div>
+          <div class="col-md-6">
+            <label asp-for="Email" class="form-label"></label>
+          <input asp-for="Email" class="form-control" readonly />
+            <span asp-validation-for="Email" class="text-danger"></span>
+          </div>
 
-                    <div class="col-md-3">
-                        <label asp-for="Role" class="form-label"></label>
-                        <select asp-for="Role" class="form-select"
-                                asp-items="Html.GetEnumSelectList<CondoSphere.Models.UserRole>()"></select>
-                        <span asp-validation-for="Role" class="text-danger"></span>
-                    </div>
+          <div class="col-md-6">
+            <label class="form-label">Company</label>
+            <select asp-for="CompanyId" class="form-select" asp-items="ViewBag.CompanyId">
+              <option value="">-- select --</option>
+            </select>
+            <span asp-validation-for="CompanyId" class="text-danger"></span>
+          </div>
 
-                    <div class="col-md-3 d-flex align-items-end">
-                        <div class="form-check">
-                            <input class="form-check-input" asp-for="IsActive" />
-                            <label class="form-check-label" asp-for="IsActive"></label>
-                        </div>
-                    </div>
+          <div class="col-md-3">
+            <label asp-for="Role" class="form-label"></label>
+            <select asp-for="Role" class="form-select" asp-items="Html.GetEnumSelectList<UserRole>()"></select>
+            <span asp-validation-for="Role" class="text-danger"></span>
+          </div>
 
-                </div>
-
-                <div class="mt-4 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-check2"></i> Save</button>
-                    <a class="btn btn-outline-secondary" asp-action="Index"><i class="bi bi-arrow-left"></i> Back</a>
-                </div>
-            </form>
+          <div class="col-md-3 d-flex align-items-end">
+            <div class="form-check">
+              <input class="form-check-input" asp-for="IsActive"  />
+              <label class="form-check-label" asp-for="IsActive"></label>
+            </div>
+          </div>
         </div>
+
+        <div class="mt-4 d-flex gap-2">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check2"></i> Save</button>
+          <a class="btn btn-outline-secondary" asp-action="Index"><i class="bi bi-arrow-left"></i> Back</a>
+        </div>
+      </form>
     </div>
+  </div>
 </section>
 
-
 @section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+  @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
 }

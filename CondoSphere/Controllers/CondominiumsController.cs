@@ -83,6 +83,7 @@ namespace CondoSphere.Controllers
             return View(condominium);
         }
 
+        // GET: Condominiums/Delete/5
         public async Task<IActionResult> Delete(int id)
         {
             var condo = await _condoRepo.GetByIdAsync(id);
@@ -90,11 +91,25 @@ namespace CondoSphere.Controllers
             return View(condo);
         }
 
+        // POST: Condominiums/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            await _condoRepo.DeleteAsync(id);
+            try
+            {
+                await _condoRepo.DeleteAsync(id);
+                TempData["Success"] = "Condominium deleted successfully.";
+            }
+            catch (DbUpdateException)
+            {
+                TempData["Error"] = "Condominium cannot be deleted because it has related data (e.g., units, quotas, payments).";
+            }
+            catch
+            {
+                TempData["Error"] = "An unexpected error occurred while deleting the condominium.";
+            }
+
             return RedirectToAction(nameof(Index));
         }
 

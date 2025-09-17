@@ -4,6 +4,7 @@ using CondoSphere.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace CondoSphere.Controllers
@@ -37,6 +38,8 @@ namespace CondoSphere.Controllers
             if (User.IsInRole("Resident"))
                 items = items.Where(r => r.SubmittedById == me);
 
+
+
             return View(items);
         }
 
@@ -53,6 +56,7 @@ namespace CondoSphere.Controllers
         }
 
         // GET: MaintenanceRequests/Create
+        [Authorize(Roles = "Administrator,Manager,Staff")]
         public async Task<IActionResult> Create()
         {
             await PopulateSelectsAsync();
@@ -66,6 +70,7 @@ namespace CondoSphere.Controllers
         // POST: MaintenanceRequests/Create
       
         [HttpPost]
+        [Authorize(Roles = "Administrator,Manager,Staff")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(MaintenanceRequest model)
         {
@@ -99,6 +104,7 @@ namespace CondoSphere.Controllers
 
 
         // GET: MaintenanceRequests/Edit/5
+        [Authorize(Roles = "Administrator,Manager,Staff")]
         public async Task<IActionResult> Edit(int id)
         {
             var req = await _requests.GetByIdDetailedAsync(id);
@@ -114,6 +120,7 @@ namespace CondoSphere.Controllers
         // POST: MaintenanceRequests/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Administrator,Manager,Staff")]
         public async Task<IActionResult> Edit(int id, MaintenanceRequest model)
         {
             if (id != model.Id) return NotFound();
@@ -168,13 +175,14 @@ namespace CondoSphere.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-
         // GET: MaintenanceRequests/Delete/5
+        [Authorize(Roles = "Administrator,Manager,Staff")]
         public async Task<IActionResult> Delete(int id)
         {
             var req = await _requests.GetByIdDetailedAsync(id);
             if (req == null) return NotFound();
 
+            // Residents are not allowed to delete
             if (User.IsInRole("Resident") && req.SubmittedById != User.FindFirstValue(ClaimTypes.NameIdentifier))
                 return Forbid();
 
@@ -182,20 +190,40 @@ namespace CondoSphere.Controllers
         }
 
         // POST: MaintenanceRequests/Delete/5
+        [Authorize(Roles = "Administrator,Manager,Staff")]
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var req = await _requests.GetByIdAsync(id);
-            if (req == null) return NotFound();
+            try
+            {
+                var req = await _requests.GetByIdAsync(id);
+                if (req == null)
+                {
+                    TempData["Error"] = "Request not found.";
+                    return RedirectToAction(nameof(Index));
+                }
 
-            if (User.IsInRole("Resident") && req.SubmittedById != User.FindFirstValue(ClaimTypes.NameIdentifier))
-                return Forbid();
+                if (User.IsInRole("Resident") && req.SubmittedById != User.FindFirstValue(ClaimTypes.NameIdentifier))
+                    return Forbid();
 
-            await _requests.DeleteAsync(id);
-            await _requests.SaveChangesAsync();
+                await _requests.DeleteAsync(id);
+                await _requests.SaveChangesAsync();
+
+                TempData["Success"] = "Request deleted successfully.";
+            }
+            catch (DbUpdateException)
+            {
+                TempData["Error"] = "Request could not be deleted due to related records.";
+            }
+            catch
+            {
+                TempData["Error"] = "An unexpected error occurred while deleting the request.";
+            }
+
             return RedirectToAction(nameof(Index));
         }
+
 
         // Helpers
         private async Task PopulateSelectsAsync(string? submittedById = null, int? condominiumId = null)

@@ -272,6 +272,7 @@ namespace CondoSphere.Controllers
         }
 
 
+        // GET: Meetings/Delete/{id}
         [Authorize(Roles = "Administrator,Manager")]
         [HttpGet]
         public async Task<IActionResult> Delete(int id)
@@ -281,19 +282,37 @@ namespace CondoSphere.Controllers
             return View(meeting);
         }
 
-        [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
+        // POST: Meetings/Delete/{id}
         [Authorize(Roles = "Administrator,Manager")]
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var meeting = await _meetings.GetByIdAsync(id);
-            if (meeting != null)
+            try
             {
+                var meeting = await _meetings.GetByIdAsync(id);
+                if (meeting == null)
+                {
+                    TempData["Error"] = "Meeting not found.";
+                    return RedirectToAction(nameof(Index));
+                }
+
                 DeletePhysicalFileIfExists(meeting.MinutesDocumentPath);
                 await _meetings.DeleteAsync(id);
+
+                TempData["Success"] = "Meeting deleted successfully.";
             }
+            catch (DbUpdateException)
+            {
+                TempData["Error"] = "Meeting could not be deleted due to related records.";
+            }
+            catch
+            {
+                TempData["Error"] = "An unexpected error occurred while deleting the meeting.";
+            }
+
             return RedirectToAction(nameof(Index));
         }
-
 
         // ===== helper (padrão) =====
         private async Task LoadCondominiumsSelectAsync(int? selectedId = null)

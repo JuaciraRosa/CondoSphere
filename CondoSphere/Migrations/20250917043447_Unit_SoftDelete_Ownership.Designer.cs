@@ -4,6 +4,7 @@ using CondoSphere.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CondoSphere.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250917043447_Unit_SoftDelete_Ownership")]
+    partial class Unit_SoftDelete_Ownership
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -831,7 +834,7 @@ namespace CondoSphere.Migrations
                             PaymentReceiptEmailHtml = "<p>Olá {{User.FullName}},</p><p>Recebemos o seu pagamento de <strong>{{Payment.Amount}}</strong> em {{Payment.Date}}.</p><p>Referência: <code>{{Payment.Reference}}</code> · Método: {{Payment.Method}}</p><p>Pode consultar/guardar a fatura aqui: <a href='{{InvoiceUrl}}'>Ver fatura</a></p><p>Cumprimentos,<br/>{{Company.Name}}</p>",
                             PaymentReceiptEmailSubject = "Comprovativo de pagamento",
                             SupportEmail = "support@condosphere.app",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2025, 9, 17, 12, 37, 53, 268, DateTimeKind.Unspecified).AddTicks(6692), new TimeSpan(0, 0, 0, 0, 0)),
+                            UpdatedAt = new DateTimeOffset(new DateTime(2025, 9, 17, 4, 34, 46, 321, DateTimeKind.Unspecified).AddTicks(2027), new TimeSpan(0, 0, 0, 0, 0)),
                             WelcomeEmailEnabled = true,
                             WelcomeUserEmailHtml = "<p>Olá {{User.FullName}},</p><p>A sua conta foi criada.</p><p>Senha provisória: <code>{{TempPassword}}</code></p><p>Por favor altere aqui: <a href='{{ResetUrl}}'>Alterar palavra-passe</a></p><p>Cumprimentos,<br/>{{Company.Name}}</p>",
                             WelcomeUserEmailSubject = "Bem-vindo(a) ao CondoSphere"
@@ -898,9 +901,9 @@ namespace CondoSphere.Migrations
 
                     b.HasIndex("OwnerId");
 
-                    b.HasIndex("UnitId");
+                    b.HasIndex("UnitId", "StartAt");
 
-                    b.ToTable("UnitOwnerships");
+                    b.ToTable("UnitOwnership");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -1263,12 +1266,12 @@ namespace CondoSphere.Migrations
                     b.HasOne("CondoSphere.Data.User", "Owner")
                         .WithMany()
                         .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("CondoSphere.Models.Unit", "Unit")
                         .WithMany("OwnershipHistory")
                         .HasForeignKey("UnitId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Owner");

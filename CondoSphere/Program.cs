@@ -8,6 +8,7 @@ using CondoSphere.Messaging;
 using CondoSphere.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -19,6 +20,13 @@ using QuestPDF.Infrastructure;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var keyPath = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "keys");
+Directory.CreateDirectory(keyPath);
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keyPath))
+    .SetApplicationName("CondoSphere");
 
 // 2) Resources nos assemblies
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
@@ -46,11 +54,19 @@ builder.Services.AddRepositories();
 
 
 
-// MVC (cookies) for web
-// Cookies para MVC
+
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Auth/Login";
+    options.LogoutPath = "/Auth/Logout";
+
+    // tempo do cookie quando RememberMe = true
+    options.ExpireTimeSpan = TimeSpan.FromDays(14);
+    options.SlidingExpiration = true;
+
+    // evita que o GDPR CookieConsent bloqueie o cookie de auth
+    options.Cookie.IsEssential = true;
+
 });
 
 builder.Services.Configure<DataProtectionTokenProviderOptions>(opt =>
@@ -87,8 +103,7 @@ builder.Services.AddSingleton<GoogleCalendarServiceFactory>();
 builder.Services.AddTransient<GoogleMeetOnlineMeetingProvider>();
 builder.Services.AddTransient<GoogleManualOnlineMeetingProvider>(); // se usar fallback
 builder.Services.Configure<GoogleMeetOptions>(
-    builder.Configuration.GetSection("OnlineMeetings:Google"));
-
+builder.Configuration.GetSection("OnlineMeetings:Google"));
 builder.Services.AddTransient<GoogleMeetOnlineMeetingProvider>();
 builder.Services.AddScoped<IResidentEmailService, ResidentEmailService>();
 builder.Services.AddScoped<IChatAlertRepository, EfChatAlertRepository>();
@@ -96,6 +111,7 @@ builder.Services.AddScoped<IStaffDirectory, StaffDirectory>();
 builder.Services.AddScoped<IChatAlertService, ChatAlertService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<ISystemSettingsService, SystemSettingsService>();
+builder.Services.AddScoped<IUnitOwnershipRepository, UnitOwnershipRepository>();
 
 
 

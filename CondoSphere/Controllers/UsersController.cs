@@ -3,14 +3,12 @@ using CondoSphere.Data.Interfaces;
 using CondoSphere.Messaging;
 using CondoSphere.Models;
 using CondoSphere.Services;
+using CondoSphere.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CondoSphere.Controllers
 {
@@ -81,44 +79,53 @@ namespace CondoSphere.Controllers
         {
             var companies = await _companyRepo.GetAllAsync();
             ViewBag.CompanyId = new SelectList(companies, "Id", "Name");
-            return View();
+            return View(new CreateUserViewModel { IsActive = true });
         }
 
         // POST: Users/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(User user, string? password)
+        public async Task<IActionResult> Create(CreateUserViewModel vm)
         {
-            ModelState.Remove("Company");
+          
             ModelState.Remove("OwnedUnits");
 
-            if (!ModelState.IsValid)
+            // helper para recarregar dropdown e voltar à view com erros
+            async Task<IActionResult> ReturnViewAsync()
             {
                 var companiesReload = await _companyRepo.GetAllAsync();
-                ViewBag.CompanyId = new SelectList(companiesReload, "Id", "Name", user.CompanyId);
-                return View(user);
+                ViewBag.CompanyId = new SelectList(companiesReload, "Id", "Name", vm.CompanyId);
+                return View(vm);
             }
+
+            // Validações adicionais (além do [Compare] no VM)
+            if (!string.Equals(vm.Password, vm.ConfirmPassword, StringComparison.Ordinal))
+                ModelState.AddModelError("ConfirmPassword", "As palavras-passe não coincidem.");
+
+            if (!vm.CompanyId.HasValue)
+                ModelState.AddModelError("CompanyId", "Selecione a empresa.");
+
+            if (!ModelState.IsValid)
+                return await ReturnViewAsync();
 
             var newUser = new User
             {
-                Email = user.Email?.Trim(),
-                UserName = user.Email?.Trim(),
-                FullName = user.FullName?.Trim() ?? "",
-                CompanyId = user.CompanyId,
-                IsActive = user.IsActive,
+                Email = vm.Email.Trim(),
+                UserName = vm.Email.Trim(),
+                FullName = vm.FullName.Trim(),
+                CompanyId = vm.CompanyId,
+                IsActive = vm.IsActive,
                 EmailConfirmed = true,
-                ProfileImagePath = "/images/default-user.png"
+                ProfileImagePath = "/images/default-user.png",
+                Role = vm.Role
             };
-
-            var initialPassword = string.IsNullOrWhiteSpace(password) ? "ChangeMe123$" : password;
-
-            var createRes = await _userManager.CreateAsync(newUser, initialPassword);
+            // cria o utilizador com a password validada
+            var createRes = await _userManager.CreateAsync(newUser, vm.Password);
             if (!createRes.Succeeded)
             {
-                foreach (var e in createRes.Errors) ModelState.AddModelError("", e.Description);
-                var companiesReload = await _companyRepo.GetAllAsync();
-                ViewBag.CompanyId = new SelectList(companiesReload, "Id", "Name", user.CompanyId);
-                return View(user);
+                foreach (var e in createRes.Errors)
+                    ModelState.AddModelError("", e.Description);
+                return await ReturnViewAsync();
             }
 
             // marca como provisória (4 dias)
@@ -140,7 +147,7 @@ namespace CondoSphere.Controllers
             var defaultHtml = $@"
 <p>Olá {System.Net.WebUtility.HtmlEncode(newUser.FullName ?? newUser.Email ?? "Utilizador")},</p>
 <p>A sua conta no <strong>CondoSphere</strong> foi criada.</p>
-<p><strong>Palavra-passe provisória (válida por 4 dias):</strong> <code>{System.Net.WebUtility.HtmlEncode(initialPassword)}</code></p>
+<p><strong>Palavra-passe provisória (válida por 4 dias):</strong> <code>{System.Net.WebUtility.HtmlEncode(vm.Password)}</code></p>
 <p>Por favor, para sua segurança, altere a sua palavra-passe neste link:</p>
 <p><a href=""{resetUrl}"" target=""_blank"" rel=""noopener"">Alterar palavra-passe</a></p>
 <p>Cumprimentos,<br/>CondoSphere</p>";
@@ -153,7 +160,7 @@ namespace CondoSphere.Controllers
                     {
                         ["User.FullName"] = newUser.FullName ?? newUser.Email ?? "Utilizador",
                         ["User.Email"] = newUser.Email ?? "",
-                        ["TempPassword"] = initialPassword,
+                        ["TempPassword"] = vm.Password,
                         ["ResetUrl"] = resetUrl,
                         ["Company.Name"] = settings.CompanyDisplayName ?? "CondoSphere"
                     });
@@ -162,10 +169,8 @@ namespace CondoSphere.Controllers
             {
                 await _emailSender.SendAsync(newUser.Email!, subject, body);
             }
-            // 👆 removido o envio duplicado
-
-            // role
-            var roleName = user.Role.ToString();
+          
+            var roleName = vm.Role.ToString();
             if (!await _roleManager.RoleExistsAsync(roleName))
                 await _roleManager.CreateAsync(new IdentityRole(roleName));
 
@@ -187,50 +192,64 @@ namespace CondoSphere.Controllers
 
             if (user == null) return NotFound();
 
+            // Role atual
             var roles = await _userManager.GetRolesAsync(user);
-            if (roles.Count > 0 && Enum.TryParse<UserRole>(roles[0], out var r))
-                user.Role = r;
+            var roleEnum = UserRole.Resident;
+            if (roles.Count > 0 && Enum.TryParse<UserRole>(roles[0], out var parsed))
+                roleEnum = parsed;
 
+            // Carrega empresas para o dropdown
             var companies = await _companyRepo.GetAllAsync();
             ViewBag.CompanyId = new SelectList(companies, "Id", "Name", user.CompanyId);
-            return View(user);
+
+            // Monta a ViewModel de edição
+            var vm = new EditUserViewModel
+            {
+                Id = user.Id,
+                Email = user.Email ?? "",
+                FullName = user.FullName ?? "",
+                CompanyId = user.CompanyId,
+                Role = roleEnum,
+                IsActive = user.IsActive
+            };
+
+            return View(vm);
         }
 
         // POST: Users/Edit/{id}
+        // POST: Users/Edit/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(string id, User user)
+        public async Task<IActionResult> Edit(string id, EditUserViewModel vm)
         {
-            ModelState.Remove("Company");
-            ModelState.Remove("OwnedUnits");
-
-            if (id != user.Id) return NotFound();
+            if (id != vm.Id) return NotFound();
 
             if (!ModelState.IsValid)
             {
                 var companiesReload = await _companyRepo.GetAllAsync();
-                ViewBag.CompanyId = new SelectList(companiesReload, "Id", "Name", user.CompanyId);
-                return View(user);
+                ViewBag.CompanyId = new SelectList(companiesReload, "Id", "Name", vm.CompanyId);
+                return View(vm);
             }
 
             var dbUser = await _userManager.FindByIdAsync(id);
             if (dbUser == null) return NotFound();
 
-            // Atualiza campos
-            var newEmail = user.Email?.Trim();
-            dbUser.FullName = user.FullName?.Trim() ?? dbUser.FullName;
-            if (!string.Equals(dbUser.Email, newEmail, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(newEmail))
+          
+            if (!string.Equals(dbUser.Email, vm.Email, StringComparison.OrdinalIgnoreCase))
             {
-                dbUser.Email = newEmail;
-                dbUser.UserName = newEmail;
-                dbUser.NormalizedEmail = newEmail.ToUpperInvariant();
-                dbUser.NormalizedUserName = newEmail.ToUpperInvariant();
+                ModelState.AddModelError("Email", "O email não pode ser alterado aqui.");
+                var companiesReload = await _companyRepo.GetAllAsync();
+                ViewBag.CompanyId = new SelectList(companiesReload, "Id", "Name", vm.CompanyId);
+                return View(vm);
             }
-            dbUser.CompanyId = user.CompanyId;
-            dbUser.IsActive = user.IsActive;
 
-            // Sincroniza Role
-            var targetRole = user.Role.ToString();
+         
+            dbUser.FullName = vm.FullName?.Trim() ?? dbUser.FullName;
+            dbUser.CompanyId = vm.CompanyId;
+            dbUser.IsActive = vm.IsActive;
+
+         
+            var targetRole = vm.Role.ToString();
             if (!await _roleManager.RoleExistsAsync(targetRole))
                 await _roleManager.CreateAsync(new IdentityRole(targetRole));
 
@@ -242,30 +261,70 @@ namespace CondoSphere.Controllers
                 await _userManager.AddToRoleAsync(dbUser, targetRole);
             }
 
+            dbUser.Role = vm.Role; 
+
             var res = await _userManager.UpdateAsync(dbUser);
             if (!res.Succeeded)
             {
                 foreach (var e in res.Errors) ModelState.AddModelError("", e.Description);
                 var companiesReload = await _companyRepo.GetAllAsync();
-                ViewBag.CompanyId = new SelectList(companiesReload, "Id", "Name", user.CompanyId);
-                return View(user);
+                ViewBag.CompanyId = new SelectList(companiesReload, "Id", "Name", vm.CompanyId);
+                return View(vm);
             }
 
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: Users/Delete/{id}
-        public async Task<IActionResult> Delete(string id)
+
+
+        [Authorize(Roles = "Administrator,Manager")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Deactivate(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id)) return NotFound();
+            var me = _userManager.GetUserId(User);
+            if (id == me)
+            {
+                TempData["Error"] = "Não pode desativar a sua própria conta.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var u = await _userManager.FindByIdAsync(id);
+            if (u == null) return NotFound();
+
+            if (!u.IsActive)
+            {
+                TempData["Success"] = "Este utilizador já está inativo.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            u.IsActive = false;
+            var res = await _userManager.UpdateAsync(u);
+            TempData[res.Succeeded ? "Success" : "Error"] =
+                res.Succeeded ? "Utilizador desativado." : string.Join("; ", res.Errors.Select(e => e.Description));
+            return RedirectToAction(nameof(Index));
+        }
+
+        [Authorize(Roles = "Administrator,Manager")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Activate(string id)
         {
             if (string.IsNullOrWhiteSpace(id)) return NotFound();
 
-            var user = await _userManager.Users
-                .AsNoTracking()
-                .Include(u => u.Company)
-                .FirstOrDefaultAsync(u => u.Id == id);
+            var u = await _userManager.FindByIdAsync(id);
+            if (u == null) return NotFound();
 
-            if (user == null) return NotFound();
-            return View(user);
+            if (u.IsActive)
+            {
+                TempData["Success"] = "Este utilizador já está ativo.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            u.IsActive = true;
+            var res = await _userManager.UpdateAsync(u);
+            TempData[res.Succeeded ? "Success" : "Error"] =
+                res.Succeeded ? "Utilizador ativado." : string.Join("; ", res.Errors.Select(e => e.Description));
+            return RedirectToAction(nameof(Index));
         }
 
         // POST: Users/Delete/{id}
@@ -273,30 +332,50 @@ namespace CondoSphere.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
-            // Se possui unidades → desativa (soft delete)
-            var hasUnits = await _userRepo.Query()
-                .Where(u => u.Id == id)
-                .Select(u => u.OwnedUnits.Any())
-                .FirstOrDefaultAsync();
-
-            if (hasUnits)
+            try
             {
-                var u = await _userManager.FindByIdAsync(id);
-                if (u == null) return NotFound();
-                u.IsActive = false;
-                await _userManager.UpdateAsync(u);
-                TempData["Success"] = "Usuário possui unidades vinculadas. A conta foi desativada.";
-                return RedirectToAction(nameof(Index));
+                var hasUnits = await _userRepo.Query()
+                    .Where(u => u.Id == id)
+                    .Select(u => u.OwnedUnits.Any())
+                    .FirstOrDefaultAsync();
+
+                if (hasUnits)
+                {
+                    var u = await _userManager.FindByIdAsync(id);
+                    if (u == null)
+                    {
+                        TempData["Error"] = "User not found.";
+                        return RedirectToAction(nameof(Index));
+                    }
+
+                    u.IsActive = false;
+                    await _userManager.UpdateAsync(u);
+                    TempData["Success"] = "User has linked units. The account was deactivated.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                var dbUser = await _userManager.FindByIdAsync(id);
+                if (dbUser == null)
+                {
+                    TempData["Error"] = "User not found.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                var result = await _userManager.DeleteAsync(dbUser);
+                TempData[result.Succeeded ? "Success" : "Error"] =
+                    result.Succeeded ? "User deleted successfully." : "User could not be deleted.";
             }
-
-            var dbUser = await _userManager.FindByIdAsync(id);
-            if (dbUser == null) return NotFound();
-
-            var result = await _userManager.DeleteAsync(dbUser);
-            TempData[result.Succeeded ? "Success" : "Error"] =
-                result.Succeeded ? "Usuário excluído com sucesso." : "Não foi possível excluir o usuário.";
+            catch (DbUpdateException)
+            {
+                TempData["Error"] = "User could not be deleted due to related records.";
+            }
+            catch
+            {
+                TempData["Error"] = "An unexpected error occurred while deleting the user.";
+            }
 
             return RedirectToAction(nameof(Index));
         }
+
     }
 }

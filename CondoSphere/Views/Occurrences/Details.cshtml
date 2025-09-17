@@ -1,0 +1,91 @@
+﻿@model CondoSphere.Features.Ocurrences.OccurrenceDto
+@using System.Security.Claims
+
+@{
+    ViewData["Title"] = "Detalhes da ocorrência";
+
+    var role = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
+    var isStaff = string.Equals(role, "Administrator", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(role, "Manager", StringComparison.OrdinalIgnoreCase);
+
+    var map = ViewBag.CondoLookup as Dictionary<int, (string Condo, string Company)>;
+    var condoDisplay = Model.CondominiumId.ToString();
+    if (map != null && map.TryGetValue(Model.CondominiumId, out var info))
+        condoDisplay = string.IsNullOrWhiteSpace(info.Company) ? info.Condo : $"{info.Condo} ({info.Company})";
+
+    string statusBadgeClass = Model.Status switch
+    {
+        "Open" => "badge bg-secondary",
+        "InProgress" => "badge bg-warning text-dark",
+        "Resolved" => "badge bg-success",
+        _ => "badge bg-light text-dark"
+    };
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="mb-0">Ocorrência</h2>
+    <a asp-action="Index" asp-route-condominiumId="@Model.CondominiumId" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h4 class="mb-1">@Model.Title</h4>
+                <span class="@statusBadgeClass">@Model.Status</span>
+            </div>
+
+            @if (isStaff)
+            {
+                <div class="text-nowrap">
+                    <form asp-action="ChangeStatus" method="post" class="d-inline me-1">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <button class="btn btn-sm btn-outline-warning" name="status" value="InProgress">Em progresso</button>
+                        <button class="btn btn-sm btn-outline-success" name="status" value="Resolved">Resolver</button>
+                    </form>
+
+                    <form asp-action="Delete"
+                          asp-route-condominiumId="@Model.CondominiumId"
+                          method="post"
+                          class="d-inline"
+                          onsubmit="return confirm('Apagar esta ocorrência?');">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-trash"></i> Apagar
+                        </button>
+                    </form>
+                </div>
+            }
+        </div>
+
+        <hr />
+
+        <dl class="row">
+            <dt class="col-sm-3">Condomínio</dt>
+            <dd class="col-sm-9">@condoDisplay</dd>
+
+            <dt class="col-sm-3">Unidade</dt>
+            <dd class="col-sm-9">@Model.UnitNumber</dd>
+
+            <dt class="col-sm-3">Criada por</dt>
+            <dd class="col-sm-9">@Model.CreatedBy</dd>
+
+            <dt class="col-sm-3">Criada em</dt>
+            <dd class="col-sm-9">@Model.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
+
+            <dt class="col-sm-3">Fechada em</dt>
+            <dd class="col-sm-9">
+                @(Model.ClosedAt.HasValue ? Model.ClosedAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "—")
+            </dd>
+
+            <dt class="col-sm-3">Descrição</dt>
+            <dd class="col-sm-9">
+                <div class="border rounded p-2 bg-light" style="white-space:pre-wrap">@Model.Description</div>
+            </dd>
+        </dl>
+    </div>
+</div>

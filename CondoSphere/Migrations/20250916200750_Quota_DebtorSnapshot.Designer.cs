@@ -4,6 +4,7 @@ using CondoSphere.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CondoSphere.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250916200750_Quota_DebtorSnapshot")]
+    partial class Quota_DebtorSnapshot
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -694,7 +697,7 @@ namespace CondoSphere.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("DebtorUserId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("DueDate")
                         .HasColumnType("datetime2");
@@ -708,8 +711,6 @@ namespace CondoSphere.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("UnitId");
-
-                    b.HasIndex("DebtorUserId", "DueDate");
 
                     b.ToTable("Quotas");
                 });
@@ -831,7 +832,7 @@ namespace CondoSphere.Migrations
                             PaymentReceiptEmailHtml = "<p>Olá {{User.FullName}},</p><p>Recebemos o seu pagamento de <strong>{{Payment.Amount}}</strong> em {{Payment.Date}}.</p><p>Referência: <code>{{Payment.Reference}}</code> · Método: {{Payment.Method}}</p><p>Pode consultar/guardar a fatura aqui: <a href='{{InvoiceUrl}}'>Ver fatura</a></p><p>Cumprimentos,<br/>{{Company.Name}}</p>",
                             PaymentReceiptEmailSubject = "Comprovativo de pagamento",
                             SupportEmail = "support@condosphere.app",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2025, 9, 17, 12, 37, 53, 268, DateTimeKind.Unspecified).AddTicks(6692), new TimeSpan(0, 0, 0, 0, 0)),
+                            UpdatedAt = new DateTimeOffset(new DateTime(2025, 9, 16, 20, 7, 49, 555, DateTimeKind.Unspecified).AddTicks(1819), new TimeSpan(0, 0, 0, 0, 0)),
                             WelcomeEmailEnabled = true,
                             WelcomeUserEmailHtml = "<p>Olá {{User.FullName}},</p><p>A sua conta foi criada.</p><p>Senha provisória: <code>{{TempPassword}}</code></p><p>Por favor altere aqui: <a href='{{ResetUrl}}'>Alterar palavra-passe</a></p><p>Cumprimentos,<br/>{{Company.Name}}</p>",
                             WelcomeUserEmailSubject = "Bem-vindo(a) ao CondoSphere"
@@ -853,9 +854,6 @@ namespace CondoSphere.Migrations
                     b.Property<int>("CondominiumId")
                         .HasColumnType("int");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
                     b.Property<string>("Number")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -866,41 +864,11 @@ namespace CondoSphere.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OwnerId");
+                    b.HasIndex("CondominiumId");
 
-                    b.HasIndex("CondominiumId", "Number")
-                        .IsUnique();
+                    b.HasIndex("OwnerId");
 
                     b.ToTable("Units");
-                });
-
-            modelBuilder.Entity("CondoSphere.Models.UnitOwnership", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTimeOffset?>("EndAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("OwnerId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTimeOffset>("StartAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<int>("UnitId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OwnerId");
-
-                    b.HasIndex("UnitId");
-
-                    b.ToTable("UnitOwnerships");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -1234,7 +1202,7 @@ namespace CondoSphere.Migrations
                     b.HasOne("CondoSphere.Models.Unit", "Unit")
                         .WithMany("Quotas")
                         .HasForeignKey("UnitId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Unit");
@@ -1256,24 +1224,6 @@ namespace CondoSphere.Migrations
                     b.Navigation("Condominium");
 
                     b.Navigation("Owner");
-                });
-
-            modelBuilder.Entity("CondoSphere.Models.UnitOwnership", b =>
-                {
-                    b.HasOne("CondoSphere.Data.User", "Owner")
-                        .WithMany()
-                        .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("CondoSphere.Models.Unit", "Unit")
-                        .WithMany("OwnershipHistory")
-                        .HasForeignKey("UnitId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Owner");
-
-                    b.Navigation("Unit");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -1398,8 +1348,6 @@ namespace CondoSphere.Migrations
 
             modelBuilder.Entity("CondoSphere.Models.Unit", b =>
                 {
-                    b.Navigation("OwnershipHistory");
-
                     b.Navigation("Quotas");
                 });
 #pragma warning restore 612, 618

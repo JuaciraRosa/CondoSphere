@@ -5,6 +5,7 @@ using CondoSphere.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace CondoSphere.Controllers
@@ -131,10 +132,24 @@ namespace CondoSphere.Controllers
         }
 
         [Authorize(Roles = "Administrator,Manager")]
-        [HttpPost, ValidateAntiForgeryToken]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
-            await _repo.DeleteAsync(id);
+            try
+            {
+                await _repo.DeleteAsync(id);
+                TempData["Success"] = "Record deleted successfully.";
+            }
+            catch (DbUpdateException)
+            {
+                TempData["Error"] = "Record could not be deleted because it is referenced by other data.";
+            }
+            catch
+            {
+                TempData["Error"] = "An unexpected error occurred while deleting the record.";
+            }
+
             return RedirectToAction(nameof(Index));
         }
 

@@ -1,9 +1,14 @@
 ﻿using CondoSphere.Data;
+using CondoSphere.Messaging;
 using CondoSphere.Models;
-using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Stripe;
 using Stripe.Checkout;
+using System.Security.Claims;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+
 
 namespace CondoSphere.Services
 {
@@ -11,12 +16,18 @@ namespace CondoSphere.Services
     {
         private readonly ApplicationDbContext _db;
         private readonly IConfiguration _cfg;
-
-        public PaymentServiceStripe(ApplicationDbContext db, IConfiguration cfg)
+        private readonly IHttpContextAccessor _http;
+        private readonly IEmailSender _email;
+        private readonly ISystemSettingsService _settings;
+        public PaymentServiceStripe(ApplicationDbContext db, IConfiguration cfg, IHttpContextAccessor http, IEmailSender email, ISystemSettingsService settings)
         {
             _db = db;
             _cfg = cfg;
+            _http = http;
+            _email = email;
+            _settings = settings;
             StripeConfiguration.ApiKey = _cfg["Stripe:SecretKey"];
+          
         }
 
         // ---------- 1) Checkout Session (sem duplicar session_id) ----------
@@ -30,11 +41,15 @@ namespace CondoSphere.Services
             // IMPORTANTE: manter o placeholder literal, sem codificar!
             var successUrlWithParam = successUrl + (successUrl.Contains("?") ? "&" : "?") + "session_id={CHECKOUT_SESSION_ID}";
 
+            var payerEmail = _http.HttpContext?.User?.FindFirst(ClaimTypes.Email)?.Value;
+
+
             var options = new SessionCreateOptions
             {
                 Mode = "payment",
                 SuccessUrl = successUrlWithParam,
                 CancelUrl = cancelUrl,
+                CustomerEmail = string.IsNullOrWhiteSpace(payerEmail) ? null : payerEmail,
                 PaymentMethodTypes = new List<string> { "card" },
                 LineItems = new List<SessionLineItemOptions>
         {
@@ -129,8 +144,72 @@ namespace CondoSphere.Services
             quota.Payment = payment;
 
             await _db.SaveChangesAsync();
+            await TrySendReceiptEmailAsync(payment.Id);
             return payment.Id.ToString();
         }
+
+        private async Task TrySendReceiptEmailAsync(int paymentId)
+        {
+            var s = await _settings.GetCurrentAsync();
+            if (!(s.EmailsEnabled && s.PaymentReceiptEmailEnabled))
+                return;
+
+            var payment = await _db.Payments
+                .Include(p => p.Quota)
+                    .ThenInclude(q => q.Unit)
+                .FirstOrDefaultAsync(p => p.Id == paymentId);
+            if (payment == null) return;
+
+            // e-mail do utilizador autenticado (checkout self-service)
+            var to = _http.HttpContext?.User?.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrWhiteSpace(to)) return;
+
+            var userName = _http.HttpContext?.User?.Identity?.Name ?? to;
+
+            var pt = CultureInfo.GetCultureInfo("pt-PT");
+            var amountTx = payment.Amount.ToString("C2", pt);
+            var paidAt = (payment.PaidAt ?? payment.CreatedAt).ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+            var reference = !string.IsNullOrWhiteSpace(payment.ProviderReference)
+                                ? payment.ProviderReference!
+                                : payment.ProviderPaymentId;
+            var method = payment.Method.ToString();
+
+            // Link público (PDF) assinado e com expiração
+            var invoiceUrl = MakePublicInvoiceUrl(payment.Id, TimeSpan.FromDays(7), pdf: true);
+
+            var subject = s.PaymentReceiptEmailSubject ?? "Comprovativo de pagamento";
+
+            var defaultHtml =
+        $@"
+<p>Olá {System.Net.WebUtility.HtmlEncode(userName)},</p>
+<p>Recebemos o seu pagamento de <strong>{System.Net.WebUtility.HtmlEncode(amountTx)}</strong> em {paidAt}.</p>
+<p>Referência: <code>{System.Net.WebUtility.HtmlEncode(reference)}</code> · Método: {System.Net.WebUtility.HtmlEncode(method)}</p>"
+        + (string.IsNullOrWhiteSpace(payment.ReceiptUrl) ? "" :
+           $@"<p>Recibo do provedor: <a href=""{payment.ReceiptUrl}"">{payment.ReceiptUrl}</a></p>")
+        + $@"
+<p>Pode consultar/guardar a fatura aqui: <a href=""{invoiceUrl}"">Ver fatura (PDF)</a></p>
+<p>Cumprimentos,<br/>{System.Net.WebUtility.HtmlEncode(s.CompanyDisplayName ?? "CondoSphere")}</p>";
+
+            var html = string.IsNullOrWhiteSpace(s.PaymentReceiptEmailHtml)
+                ? defaultHtml
+                : _settings.RenderTemplate(
+                    s.PaymentReceiptEmailHtml,
+                    new Dictionary<string, string>
+                    {
+                        ["User.FullName"] = userName,
+                        ["User.Email"] = to,
+                        ["Payment.Amount"] = amountTx,
+                        ["Payment.Date"] = paidAt,
+                        ["Payment.Reference"] = reference,
+                        ["Payment.Method"] = method,
+                        ["InvoiceUrl"] = invoiceUrl,
+                        ["Company.Name"] = s.CompanyDisplayName ?? "CondoSphere",
+                        ["Provider.ReceiptUrl"] = payment.ReceiptUrl ?? ""
+                    });
+
+            await _email.SendAsync(to, subject, html);
+        }
+
 
         // ---------- 3) Webhook (opcional; útil em produção) ----------
         public async Task HandleWebhookAsync(string json, string signatureHeader)
@@ -192,6 +271,42 @@ namespace CondoSphere.Services
 
 
         }
+
+        private string MakePublicInvoiceUrl(int paymentId, TimeSpan validFor, bool pdf = false)
+        {
+            // baseUrl a partir do request atual; se estiver null (ex.: job), usa App:BaseUrl
+            var baseUrl =
+                $"{_http.HttpContext?.Request?.Scheme}://{_http.HttpContext?.Request?.Host.Value}".TrimEnd('/');
+            if (string.IsNullOrWhiteSpace(baseUrl))
+                baseUrl = _cfg["App:BaseUrl"]?.TrimEnd('/');
+
+            if (string.IsNullOrWhiteSpace(baseUrl))
+                throw new InvalidOperationException("Configure App:BaseUrl no appsettings quando não houver HttpContext.");
+
+            var exp = DateTimeOffset.UtcNow.Add(validFor).ToUnixTimeSeconds();
+            var payload = $"{paymentId}.{exp}";
+            var sig = Base64Url(HmacSha256(Encoding.UTF8.GetBytes(GetInvoiceSecret()), payload));
+
+            var action = pdf ? "PublicInvoicePdf" : "PublicInvoice";
+            return $"{baseUrl}/Payments/{action}?id={paymentId}&exp={exp}&sig={sig}";
+        }
+
+        private string GetInvoiceSecret()
+        {
+            var secret = _cfg["InvoiceLinks:Secret"] ?? _cfg["Jwt:Key"];
+            if (string.IsNullOrWhiteSpace(secret))
+                throw new InvalidOperationException("Configure InvoiceLinks:Secret (ou Jwt:Key) para links públicos de fatura.");
+            return secret!;
+        }
+
+        private static byte[] HmacSha256(byte[] key, string data)
+        {
+            using var h = new HMACSHA256(key);
+            return h.ComputeHash(Encoding.UTF8.GetBytes(data));
+        }
+
+        private static string Base64Url(byte[] data) =>
+            Convert.ToBase64String(data).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
         public async Task<(string clientSecret, string paymentIntentId)> CreateCardIntentAsync(int quotaId)
         {

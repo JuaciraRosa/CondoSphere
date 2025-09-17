@@ -50,9 +50,37 @@
     </div>
 </div>
 
+@section Scripts{
+  @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+  <script>
+    (function(){
+      const condo = document.querySelector('select[name="CondominiumId"]');
+      const owner = document.querySelector('select[name="OwnerId"]');
+      if (!condo || !owner) return;
 
-@section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+      async function reloadOwners(){
+        const id = condo.value;
+        const current = owner.value;
+        owner.innerHTML = '<option value="">— Select —</option>';
+        if(!id) return;
+
+        try{
+          const r = await fetch(`/Units/OwnersByCondominium?condominiumId=${encodeURIComponent(id)}`);
+          if(!r.ok) return;
+          const items = await r.json(); // [{value,text}]
+          for(const it of items){
+            const opt = document.createElement('option');
+            opt.value = it.value;
+            opt.textContent = it.text;
+            owner.appendChild(opt);
+          }
+          if (current) owner.value = current; // mantém seleção atual
+        } catch(e){ /* silencia */ }
+      }
+
+      condo.addEventListener('change', reloadOwners);
+      // carrega ao abrir (útil no Edit)
+      if (condo.value) reloadOwners();
+    })();
+  </script>
 }

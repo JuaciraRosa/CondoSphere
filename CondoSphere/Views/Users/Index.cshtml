@@ -21,6 +21,7 @@
                             <th>Email</th>
                             <th>Role</th>
                             <th>Active</th>
+                            <th>Company</th>
                             <th class="text-end">Actions</th>
                         </tr>
                     </thead>
@@ -31,6 +32,7 @@
                                 <td>@u.FullName</td>
                                 <td>@u.Email</td>
                                 <td>@u.Role</td>
+                                <td>@(u.Company?.Name)</td>
                                 <td>
                                     @if (u.IsActive)
                                     {

@@ -12,6 +12,9 @@ namespace CondoSphere.Data.Interfaces
         Task<Quota?> GetByIdWithUnitAsync(int id);
 
         Task<List<Quota>> GetAllDetailedAsync();
+
+        Task UpdateAsync(Quota quota);
+
     }
 
 }

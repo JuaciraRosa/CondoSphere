@@ -22,10 +22,14 @@ namespace CondoSphere.Data.Repositories
            .ToListAsync();
 
         public async Task<Unit?> GetByIdDetailedAsync(int id)
-            => await _context.Units
-                .Include(u => u.Condominium)
-                .Include(u => u.Owner)
-                .FirstOrDefaultAsync(u => u.Id == id);
+         => await _context.Units
+             .AsNoTracking()
+             .Include(u => u.Condominium)
+             .Include(u => u.Owner)
+             .Include(u => u.OwnershipHistory)               
+                 .ThenInclude(h => h.Owner)                  
+             .FirstOrDefaultAsync(u => u.Id == id);
+
 
 
         public async Task<List<string>> GetNumbersByCondominiumIdAsync(int condominiumId)
@@ -35,6 +39,18 @@ namespace CondoSphere.Data.Repositories
          .OrderBy(u => u.Number)
          .Select(u => u.Number)
          .ToListAsync();
+
+
+        public async Task<bool> NumberExistsInCondoAsync(int condominiumId, string number, int? exceptId = null)
+        {
+            var query = _context.Units
+                .AsNoTracking()
+                .Where(u => u.CondominiumId == condominiumId && u.Number == number);
+            if (exceptId.HasValue)
+                query = query.Where(u => u.Id != exceptId.Value);
+            return await query.AnyAsync();
+        }
+
     }
 
 }
