@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /CondoSphere/appsettings.json
 *.zip
+/CondoSphere/App_Data/keys/key-3e2cc29d-c018-4793-a8c9-758d3029e721.xml
