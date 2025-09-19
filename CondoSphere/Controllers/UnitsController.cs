@@ -171,22 +171,38 @@ namespace CondoSphere.Controllers
                 return View(unit);
             }
 
-            // estado anterior (para detectar troca de dono)
-            var before = await _units.GetByIdAsync(id);
+            // Carrega a entidade rastreada
+            var db = await _units.GetByIdAsync(id);
+            if (db is null) return NotFound();
 
+            // Guarda o dono anterior para histórico
+            var oldOwnerId = db.OwnerId;
 
-            _units.Update(unit);
+            // Copia os campos permitidos
+            db.Number = unit.Number?.Trim();
+            db.Area = unit.Area;
+            db.CondominiumId = unit.CondominiumId;
+            db.OwnerId = unit.OwnerId;
+            db.IsActive = unit.IsActive; // se editar este campo no formulário
+
+            // Salva (não chame Update aqui)
             await _units.SaveChangesAsync();
 
-
-            if (before != null && before.OwnerId != unit.OwnerId)
+            // Histórico: se o dono mudou, fecha e abre registro
+            if (!string.Equals(oldOwnerId, db.OwnerId, StringComparison.Ordinal))
             {
-                await _ownerships.CloseOpenAsync(unit.Id);
-                await _ownerships.AddStartAsync(unit.Id, unit.OwnerId);
+                await _ownerships.CloseOpenAsync(db.Id);
+
+                if (!string.IsNullOrWhiteSpace(db.OwnerId))
+                    await _ownerships.AddStartAsync(db.Id, db.OwnerId);
+
                 await _ownerships.SaveChangesAsync();
             }
+
+            TempData["Success"] = "Unit updated successfully.";
             return RedirectToAction(nameof(Index));
         }
+
 
 
         // POST: Units/Delete/5  (soft delete)

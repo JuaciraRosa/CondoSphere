@@ -1,0 +1,45 @@
+﻿@model IEnumerable<CondoSphere.Models.ForumCategory>
+@using System.Security.Claims
+
+@{
+    ViewData["Title"] = "Forum";
+    var isAuth = User?.Identity?.IsAuthenticated == true;
+}
+
+<div class="container-xl">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Forum</h3>
+  </div>
+
+  @if (TempData["Success"] is string ok && !string.IsNullOrWhiteSpace(ok))
+  {
+    <div class="alert alert-success">@ok</div>
+  }
+  @if (TempData["Error"] is string err && !string.IsNullOrWhiteSpace(err))
+  {
+    <div class="alert alert-danger">@err</div>
+  }
+
+  @if (!(Model?.Any() ?? false))
+  {
+    <div class="alert alert-info">No categories available.</div>
+  }
+  else
+  {
+    <div class="list-group">
+      @foreach (var c in Model)
+      {
+        <a class="list-group-item list-group-item-action" asp-action="Category" asp-route-id="@c.Id">
+          <div class="d-flex justify-content-between">
+            <div>
+              @if (c.IsLocked) { <span class="badge bg-secondary me-2">Locked</span> }
+              <strong>@c.Name</strong>
+            </div>
+          </div>
+          @* Se teu ForumCategory tiver Description, podes mostrar aqui:
+             <div class="small text-muted mt-1">@c.Description</div> *@
+        </a>
+      }
+    </div>
+  }
+</div>

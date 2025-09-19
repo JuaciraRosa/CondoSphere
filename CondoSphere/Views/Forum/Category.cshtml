@@ -1,0 +1,87 @@
+﻿@model IEnumerable<CondoSphere.Models.ForumTopic>
+
+@{
+    var cat = ViewBag.Category as CondoSphere.Models.ForumCategory;
+    int pg  = ViewBag.Page       is int p  ? p  : 1;
+    int tpg = ViewBag.TotalPages is int tp ? tp : 1;
+    ViewData["Title"] = "Category - " + (cat?.Name ?? "Category");
+    bool catLocked = cat?.IsLocked ?? false;
+}
+
+<div class="container-xl">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">@cat?.Name</h3>
+    @if (!catLocked && User?.Identity?.IsAuthenticated == true)
+    {
+      <a class="btn btn-success" asp-action="NewTopic" asp-route-categoryId="@(cat?.Id ?? 0)">
+        <i class="bi bi-plus-lg"></i> New topic
+      </a>
+    }
+  </div>
+
+  @if (TempData["Success"] is string ok && !string.IsNullOrWhiteSpace(ok))
+  {
+    <div class="alert alert-success">@ok</div>
+  }
+  @if (TempData["Error"] is string err && !string.IsNullOrWhiteSpace(err))
+  {
+    <div class="alert alert-danger">@err</div>
+  }
+
+  @if (!(Model?.Any() ?? false))
+  {
+    <div class="alert alert-info">No topics yet.</div>
+  }
+  else
+  {
+    <div class="list-group">
+      @foreach (var t in Model)
+      {
+        <a class="list-group-item list-group-item-action" asp-action="Topic" asp-route-id="@t.Id">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="me-3">
+              @if (t.IsPinned)
+              {
+                <span class="badge bg-warning text-dark me-2">Pinned</span>
+              }
+              <strong>@t.Title</strong>
+            </div>
+            <small class="text-muted">
+              Last activity:
+              @t.LastPostAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+              @* opcional: mostrar views *@
+              <span class="ms-2"><i class="bi bi-eye"></i> @t.ViewsCount</span>
+            </small>
+          </div>
+        </a>
+      }
+    </div>
+
+    @if (tpg > 1)
+    {
+      <nav class="mt-3">
+        <ul class="pagination">
+          <li class="page-item @(pg <= 1 ? "disabled" : "")">
+            <a class="page-link"
+               asp-action="Category"
+               asp-route-id="@(cat?.Id ?? 0)"
+               asp-route-page="@(pg - 1)">Prev</a>
+          </li>
+          <li class="page-item disabled">
+            <span class="page-link">@pg / @tpg</span>
+          </li>
+          <li class="page-item @(pg >= tpg ? "disabled" : "")">
+            <a class="page-link"
+               asp-action="Category"
+               asp-route-id="@(cat?.Id ?? 0)"
+               asp-route-page="@(pg + 1)">Next</a>
+          </li>
+        </ul>
+      </nav>
+    }
+  }
+
+  <div class="mt-3">
+    <a class="btn btn-outline-secondary" asp-action="Index"><i class="bi bi-arrow-left"></i> Back to categories</a>
+  </div>
+</div>

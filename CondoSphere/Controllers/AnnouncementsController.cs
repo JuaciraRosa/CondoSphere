@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 using System.Security.Claims;
 
 namespace CondoSphere.Controllers
@@ -18,15 +19,17 @@ namespace CondoSphere.Controllers
         private readonly IWebHostEnvironment _env;
         private readonly DomainNotificationService _notify;
         private readonly IAnnouncementReadService _reads;
+        private readonly IUserRepository _users;
 
         public AnnouncementsController(
             IAnnouncementRepository repo,
             ICondominiumRepository condos,
             IWebHostEnvironment env,
             DomainNotificationService notify,
-            IAnnouncementReadService reads)
+            IAnnouncementReadService reads,
+            IUserRepository users)
         {
-            _repo = repo; _condos = condos; _env = env; _notify = notify; _reads = reads; 
+            _repo = repo; _condos = condos; _env = env; _notify = notify; _reads = reads; _users = users;
         }
 
         // Morador vê o que for global + do seu condomínio
@@ -79,13 +82,40 @@ namespace CondoSphere.Controllers
                 a.AttachmentPath = await SaveAttachmentAsync(file);
 
             await _repo.AddAsync(a);
+            // se o seu repo não persiste aqui, descomente:
+            // await _repo.SaveChangesAsync();
 
-            // Envia agora se não for agendado
+            var attachmentUrl = AbsoluteUrl(a.AttachmentPath);
+
             if (a.ScheduledAtUtc is null)
-                _ = Task.Run(() => BroadcastAsync(a));
+            {
+                try
+                {
+                    var recipients = await GetAnnouncementRecipientsAsync(a.CondominiumId);
+                    if (recipients.Count > 0)
+                    {
+                        await _notify.AnnouncementCreatedAsync(recipients, a, attachmentUrl);
+                        TempData["Success"] = "Announcement created and notifications sent.";
+                    }
+                    else
+                    {
+                        TempData["Success"] = "Announcement created (no recipients found).";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    TempData["Success"] = $"Announcement created. (Warning: e-mail failed: {ex.Message})";
+                }
+            }
+            else
+            {
+                TempData["Success"] = "Announcement scheduled.";
+            }
 
             return RedirectToAction(nameof(Index));
         }
+
+
 
         [Authorize(Roles = "Administrator,Manager")]
         [HttpGet]
@@ -102,8 +132,15 @@ namespace CondoSphere.Controllers
         public async Task<IActionResult> Edit(int id, Announcement form, IFormFile? file)
         {
             if (id != form.Id) return NotFound();
+
             var a = await _repo.GetByIdAsync(id);
             if (a == null) return NotFound();
+
+            // snapshot (valores antigos) — AGORA depois do null-check
+            var oldTitle = a.Title;
+            var oldBody = a.Body;
+            var oldCondoId = a.CondominiumId;
+            var oldAttachment = a.AttachmentPath;
 
             if (!ModelState.IsValid)
             {
@@ -124,12 +161,47 @@ namespace CondoSphere.Controllers
             _repo.Update(a);
             await _repo.SaveChangesAsync();
 
-            // Se virou “enviar agora”, dispara
-            if (a.ScheduledAtUtc is null)
-                _ = Task.Run(() => BroadcastAsync(a));
+            bool contentChanged =
+                !string.Equals(a.Title, oldTitle, StringComparison.Ordinal) ||
+                !string.Equals(a.Body, oldBody, StringComparison.Ordinal) ||
+                a.CondominiumId != oldCondoId;
+
+            bool attachmentChanged =
+                !string.Equals(a.AttachmentPath, oldAttachment, StringComparison.OrdinalIgnoreCase);
+
+            if (contentChanged || attachmentChanged)
+            {
+                try
+                {
+                    var recipients = await GetAnnouncementRecipientsAsync(a.CondominiumId);
+                    if (recipients.Count > 0)
+                    {
+                        await _notify.AnnouncementUpdatedAsync(
+                            recipients,
+                            a,
+                            attachmentChanged,
+                            AbsoluteUrl(a.AttachmentPath)
+                        );
+                        TempData["Success"] = "Announcement updated and notifications sent.";
+                    }
+                    else
+                    {
+                        TempData["Success"] = "Announcement updated.";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    TempData["Success"] = $"Announcement updated. (Warning: e-mail failed: {ex.Message})";
+                }
+            }
+            else
+            {
+                TempData["Success"] = "Announcement updated.";
+            }
 
             return RedirectToAction(nameof(Index));
         }
+
 
         [Authorize(Roles = "Administrator,Manager")]
         [HttpPost]
@@ -138,8 +210,31 @@ namespace CondoSphere.Controllers
         {
             try
             {
+                var a = await _repo.GetByIdAsync(id);
+                if (a == null) return NotFound();
+
+                var recipients = await GetAnnouncementRecipientsAsync(a.CondominiumId);
+
                 await _repo.DeleteAsync(id);
-                TempData["Success"] = "Record deleted successfully.";
+                // se o seu repo não persiste aqui, descomente:
+                // await _repo.SaveChangesAsync();
+
+                if (recipients.Count > 0)
+                {
+                    try
+                    {
+                        await _notify.AnnouncementDeletedAsync(recipients, a);
+                        TempData["Success"] = "Announcement deleted and cancellation sent.";
+                    }
+                    catch (Exception ex)
+                    {
+                        TempData["Success"] = $"Announcement deleted. (Warning: e-mail failed: {ex.Message})";
+                    }
+                }
+                else
+                {
+                    TempData["Success"] = "Announcement deleted.";
+                }
             }
             catch (DbUpdateException)
             {
@@ -152,6 +247,8 @@ namespace CondoSphere.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+
+
 
         // ===== helpers =====
         private async Task LoadCondoSelectAsync(int? selected = null)
@@ -177,12 +274,12 @@ namespace CondoSphere.Controllers
         }
 
 
-        [HttpGet, AllowAnonymous]
+        [AllowAnonymous]
+        [HttpGet]
         public async Task<IActionResult> Download(int id)
         {
             var a = await _repo.GetByIdAsync(id);
-            if (a == null || string.IsNullOrWhiteSpace(a.AttachmentPath))
-                return NotFound();
+            if (a == null || string.IsNullOrWhiteSpace(a.AttachmentPath)) return NotFound();
 
             var rel = a.AttachmentPath.TrimStart('/');
             var full = Path.Combine(_env.WebRootPath, rel.Replace('/', Path.DirectorySeparatorChar));
@@ -194,9 +291,9 @@ namespace CondoSphere.Controllers
             else if (ext == ".doc") contentType = "application/msword";
             else if (ext == ".docx") contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-            var fileName = Path.GetFileName(full);
-            return PhysicalFile(full, contentType, fileName); 
+            return PhysicalFile(full, contentType, Path.GetFileName(full));
         }
+
 
         private async Task BroadcastAsync(Announcement a)
         {
@@ -221,5 +318,62 @@ namespace CondoSphere.Controllers
                     deeplink: $"/Announcements/Details/{a.Id}");
             }
         }
+
+
+
+        private async Task<List<string>> GetAnnouncementRecipientsAsync(int? condominiumId)
+        {
+            // Se for direcionado a um condomínio específico → e-mails dos proprietários desse condomínio
+            if (condominiumId.HasValue)
+                return await _condos.GetOwnerEmailsAsync(condominiumId.Value);
+
+            // Caso contrário → todos os residentes ativos (ajuste se precisar limitar por empresa)
+            var allUsers = await _users.GetAllAsync();
+            return allUsers
+                .Where(u => u.IsActive && u.Role == UserRole.Resident && !string.IsNullOrWhiteSpace(u.Email))
+                .Select(u => u.Email!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private async Task BroadcastAsync(Announcement a, string? attachmentUrl)
+        {
+            var recipients = await GetAnnouncementRecipientsAsync(a.CondominiumId);
+            if (recipients.Count == 0) return;
+
+            // assunto / corpo simples (use seu template se preferir)
+            var subject = string.IsNullOrWhiteSpace(a.Title) ? "Comunicado" : a.Title!;
+            var body = $@"
+        <h3>{WebUtility.HtmlEncode(a.Title)}</h3>
+        <p>{(string.IsNullOrWhiteSpace(a.Body) ? "" : WebUtility.HtmlEncode(a.Body).Replace("\n", "<br/>"))}</p>";
+
+            await _notify.SendAnnouncementEmailAsync(
+                subject: subject,
+                htmlBody: body,
+                condoId: a.CondominiumId,
+                attachmentUrl: attachmentUrl,
+                recipients: recipients
+            );
+        }
+
+        // AnnouncementsController
+        private string? AbsoluteUrl(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return null;
+
+            // Se já for absoluta, devolve como está
+            if (Uri.IsWellFormedUriString(path, UriKind.Absolute)) return path;
+
+            var req = HttpContext?.Request;
+            if (req == null) return path;
+
+            var baseUrl = $"{req.Scheme}://{req.Host}";
+            var p = path.StartsWith("~") ? path[1..] : path;
+            if (!p.StartsWith("/")) p = "/" + p;
+
+            return baseUrl + p;
+        }
+
+
     }
 }

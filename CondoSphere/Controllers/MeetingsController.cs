@@ -102,28 +102,42 @@ namespace CondoSphere.Controllers
 
 
             await _meetings.AddAsync(meeting);
-            // ========= Enviar e-mails aos proprietários do condomínio =========
+            await _meetings.SaveChangesAsync(); // ensure Id is generated
+                                                // Build attachment download URL if exists
+            string? attachmentUrl = null;
+            if (!string.IsNullOrWhiteSpace(meeting.MinutesDocumentPath))
+            {
+                attachmentUrl = Url.Action("Download", "Meetings", new { id = meeting.Id }, Request.Scheme);
+            }
+
+            // Notify owners
             try
             {
                 var emails = await _condos.GetOwnerEmailsAsync(meeting.CondominiumId);
                 if (emails.Count > 0)
                 {
-                    await _notify.MeetingScheduledAsync(emails, meeting);
-                    TempData["Success"] = $"Reunião marcada e {emails.Count} moradores notificados por e-mail.";
+                    if (attachmentUrl != null)
+                        await _notify.MeetingScheduledAsync(emails, meeting, attachmentUrl);
+                    else
+                        await _notify.MeetingScheduledAsync(emails, meeting); // your original method
+
+                    TempData["Success"] = $"Meeting created and {emails.Count} residents notified by email.";
                 }
                 else
                 {
-                    TempData["Success"] = "Reunião marcada (nenhum e-mail de morador encontrado).";
+                    TempData["Success"] = "Meeting created (no resident e-mails found).";
                 }
             }
             catch (Exception ex)
             {
-                // Não falhe a navegação por causa de e-mail
-                TempData["Success"] = $"Reunião marcada. (Aviso: falha ao enviar e-mails: {ex.Message})";
+                TempData["Success"] = $"Meeting created. (Warning: failed sending e-mails: {ex.Message})";
             }
-           
+
             return RedirectToAction(nameof(Index));
         }
+
+
+
         [Authorize(Roles = "Administrator,Manager")]
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
@@ -157,6 +171,8 @@ namespace CondoSphere.Controllers
             var oldCondoId = existingMeeting.CondominiumId;
             var oldJoinUrl = existingMeeting.OnlineJoinUrl;
             var oldIsOnline = existingMeeting.IsOnline;
+            var oldMinutes = existingMeeting.MinutesDocumentPath;
+
 
 
 
@@ -240,14 +256,24 @@ namespace CondoSphere.Controllers
                 existingMeeting.IsOnline != oldIsOnline ||
                 existingMeeting.OnlineJoinUrl != oldJoinUrl;
 
-            if (changed)
+            // foi adicionado um anexo nesta edição?
+            bool attachmentAdded =
+                string.IsNullOrEmpty(oldMinutes) &&
+                !string.IsNullOrWhiteSpace(existingMeeting.MinutesDocumentPath);
+
+            // se tiver anexo novo, prepara link de download
+            string? attachmentUrl = attachmentAdded
+                ? Url.Action("Download", "Meetings", new { id = existingMeeting.Id }, Request.Scheme)
+                : null;
+
+            if (changed || attachmentAdded)
             {
                 try
                 {
                     var emails = await _condos.GetOwnerEmailsAsync(existingMeeting.CondominiumId);
                     if (emails.Count > 0)
                     {
-                        await _notify.MeetingScheduledAsync(emails, existingMeeting);
+                        await _notify.MeetingUpdatedAsync(emails, existingMeeting, attachmentAdded, attachmentUrl);
                         TempData["Success"] = $"Reunião atualizada e {emails.Count} moradores notificados.";
                     }
                     else
@@ -265,10 +291,8 @@ namespace CondoSphere.Controllers
                 TempData["Success"] = "Reunião atualizada.";
             }
 
-
-
-          
             return RedirectToAction(nameof(Index));
+
         }
 
 
@@ -297,10 +321,21 @@ namespace CondoSphere.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
+                // Notify cancellation BEFORE deleting
+                try
+                {
+                    var emails = await _condos.GetOwnerEmailsAsync(meeting.CondominiumId);
+                    if (emails.Count > 0)
+                        await _notify.MeetingCanceledAsync(emails, meeting);
+                }
+                catch { /* don't block delete on email failure */ }
+
+                // Delete physical file then record
                 DeletePhysicalFileIfExists(meeting.MinutesDocumentPath);
                 await _meetings.DeleteAsync(id);
+                await _meetings.SaveChangesAsync();
 
-                TempData["Success"] = "Meeting deleted successfully.";
+                TempData["Success"] = "Meeting deleted successfully (canceled e-mail sent).";
             }
             catch (DbUpdateException)
             {

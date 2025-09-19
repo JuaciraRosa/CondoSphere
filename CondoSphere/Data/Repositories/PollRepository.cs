@@ -162,5 +162,22 @@ namespace CondoSphere.Data.Repositories
         public Task<bool> HasUserVotedAsync(int pollId, string userId) =>
             _ctx.PollVotes.AsNoTracking()
                 .AnyAsync(v => v.PollId == pollId && v.UserId == userId);
+
+
+        public async Task<IEnumerable<Poll>> GetAllWithCondoAsync(int? condominiumId = null)
+        {
+            IQueryable<Poll> q = _ctx.Polls.AsNoTracking();
+
+            if (condominiumId.HasValue)
+                q = q.Where(p => p.CondominiumId == condominiumId.Value);
+
+            q = q.Include(p => p.Condominium);
+
+            return await q
+                .OrderByDescending(p => p.CreatedAtUtc)
+                .ToListAsync();
+        }
+
+
     }
 }

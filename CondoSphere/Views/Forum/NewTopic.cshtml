@@ -1,0 +1,55 @@
+﻿@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    var cat = ViewBag.Category as CondoSphere.Models.ForumCategory;
+    var condos = ViewBag.Condominiums as IEnumerable<SelectListItem>; // opcional
+    ViewData["Title"] = "New topic";
+}
+<div class="container-xl">
+  <div class="card shadow-sm">
+    <div class="card-header">
+      <h3 class="mb-0">New topic — @cat?.Name</h3>
+    </div>
+
+    <div class="card-body">
+      <form asp-action="NewTopic" method="post" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="categoryId" value="@cat?.Id" />
+
+        <div class="mb-3">
+          <label class="form-label">Title</label>
+          <input name="title" class="form-control" maxlength="140" required />
+        </div>
+
+        @* Só mostra se o controller preencher ViewBag.Condominiums *@
+        @if (condos != null)
+        {
+          <div class="mb-3">
+            <label class="form-label">Condominium (optional)</label>
+            <select name="condominiumId" class="form-select" asp-items="condos">
+              <option value="">— All (company-wide) —</option>
+            </select>
+          </div>
+        }
+
+        <div class="mb-3">
+          <label class="form-label">Message</label>
+          <textarea name="body" class="form-control" rows="8" required></textarea>
+          <div class="form-text">Plain text (mentions/attachments handled by backend).</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Attachments (optional)</label>
+          <input type="file" name="files" class="form-control" multiple />
+          <div class="form-text">Allowed: .png .jpg .jpeg .gif .pdf .doc .docx (max 8MB each).</div>
+        </div>
+
+        <div class="text-end">
+          <button class="btn btn-primary"><i class="bi bi-send"></i> Create topic</button>
+          <a asp-action="Category" asp-route-id="@cat?.Id" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+@section Scripts { @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); } }

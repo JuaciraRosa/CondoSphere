@@ -5,6 +5,7 @@ using CondoSphere.Data.Interfaces;
 using CondoSphere.Data.Repositories;
 using CondoSphere.Infrastructure;
 using CondoSphere.Messaging;
+using CondoSphere.Models;
 using CondoSphere.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -112,6 +113,8 @@ builder.Services.AddScoped<IChatAlertService, ChatAlertService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<ISystemSettingsService, SystemSettingsService>();
 builder.Services.AddScoped<IUnitOwnershipRepository, UnitOwnershipRepository>();
+builder.Services.AddScoped<IForumRepository, ForumRepository>();
+
 
 
 
@@ -284,6 +287,9 @@ app.MapHub<CondoSphere.Hubs.ChatHub>("/hubs/chat", opt =>
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+
+
 
 // (seu bloco de migrate/seed permanece igual)
 using (var scope = app.Services.CreateScope())

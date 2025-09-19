@@ -4,6 +4,7 @@ using CondoSphere.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CondoSphere.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250918174601_Forum_Initial")]
+    partial class Forum_Initial
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -161,7 +164,7 @@ namespace CondoSphere.Migrations
 
                     b.HasIndex("CondominiumId");
 
-                    b.ToTable("Announcements", (string)null);
+                    b.ToTable("Announcements");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.AnnouncementRead", b =>
@@ -189,7 +192,7 @@ namespace CondoSphere.Migrations
                     b.HasIndex("AnnouncementId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("AnnouncementReads", (string)null);
+                    b.ToTable("AnnouncementReads");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.ChatAttachment", b =>
@@ -228,7 +231,7 @@ namespace CondoSphere.Migrations
 
                     b.HasIndex("MessageId");
 
-                    b.ToTable("ChatAttachments", (string)null);
+                    b.ToTable("ChatAttachments");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.ChatMessage", b =>
@@ -266,7 +269,7 @@ namespace CondoSphere.Migrations
 
                     b.HasIndex("ThreadId");
 
-                    b.ToTable("ChatMessages", (string)null);
+                    b.ToTable("ChatMessages");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.ChatThread", b =>
@@ -315,7 +318,7 @@ namespace CondoSphere.Migrations
 
                     b.HasIndex("ResidentId");
 
-                    b.ToTable("ChatThreads", (string)null);
+                    b.ToTable("ChatThreads");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.Company", b =>
@@ -345,7 +348,7 @@ namespace CondoSphere.Migrations
                     b.HasIndex("TaxNumber")
                         .IsUnique();
 
-                    b.ToTable("Companies", (string)null);
+                    b.ToTable("Companies");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.Condominium", b =>
@@ -373,7 +376,7 @@ namespace CondoSphere.Migrations
 
                     b.HasIndex("CompanyId");
 
-                    b.ToTable("Condominiums", (string)null);
+                    b.ToTable("Condominiums");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.Expense", b =>
@@ -403,46 +406,7 @@ namespace CondoSphere.Migrations
 
                     b.HasIndex("CondominiumId");
 
-                    b.ToTable("Expenses", (string)null);
-                });
-
-            modelBuilder.Entity("CondoSphere.Models.ForumAttachment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ContentType")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<string>("Path")
-                        .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
-
-                    b.Property<int>("PostId")
-                        .HasColumnType("int");
-
-                    b.Property<long>("Size")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PostId");
-
-                    b.ToTable("ForumAttachments", (string)null);
+                    b.ToTable("Expenses");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.ForumCategory", b =>
@@ -452,12 +416,6 @@ namespace CondoSphere.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("CompanyId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("CondominiumId")
-                        .HasColumnType("int");
 
                     b.Property<bool>("IsLocked")
                         .HasColumnType("bit");
@@ -478,7 +436,7 @@ namespace CondoSphere.Migrations
 
                     b.HasIndex("Slug");
 
-                    b.ToTable("ForumCategories", (string)null);
+                    b.ToTable("ForumCategories");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.ForumPost", b =>
@@ -499,9 +457,6 @@ namespace CondoSphere.Migrations
 
                     b.Property<string>("CreatedById")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("DeleteReason")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("DeletedById")
@@ -518,41 +473,9 @@ namespace CondoSphere.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedById");
-
                     b.HasIndex("TopicId", "CreatedAtUtc");
 
-                    b.ToTable("ForumPosts", (string)null);
-                });
-
-            modelBuilder.Entity("CondoSphere.Models.ForumReaction", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Emoji")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("PostId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PostId", "UserId", "Emoji")
-                        .IsUnique();
-
-                    b.ToTable("ForumReactions", (string)null);
+                    b.ToTable("ForumPosts");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.ForumSubscription", b =>
@@ -583,7 +506,7 @@ namespace CondoSphere.Migrations
                     b.HasIndex("TopicId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("ForumSubscriptions", (string)null);
+                    b.ToTable("ForumSubscriptions");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.ForumTopic", b =>
@@ -595,12 +518,6 @@ namespace CondoSphere.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("CategoryId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("CompanyId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("CondominiumId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAtUtc")
@@ -634,7 +551,7 @@ namespace CondoSphere.Migrations
 
                     b.HasIndex("CategoryId", "IsPinned", "LastPostAtUtc");
 
-                    b.ToTable("ForumTopics", (string)null);
+                    b.ToTable("ForumTopics");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.MaintenanceRequest", b =>
@@ -674,7 +591,7 @@ namespace CondoSphere.Migrations
 
                     b.HasIndex("SubmittedById");
 
-                    b.ToTable("MaintenanceRequests", (string)null);
+                    b.ToTable("MaintenanceRequests");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.Meeting", b =>
@@ -719,7 +636,7 @@ namespace CondoSphere.Migrations
 
                     b.HasIndex("CondominiumId");
 
-                    b.ToTable("Meetings", (string)null);
+                    b.ToTable("Meetings");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.Notification", b =>
@@ -745,7 +662,7 @@ namespace CondoSphere.Migrations
 
                     b.HasIndex("CondominiumId");
 
-                    b.ToTable("Notifications", (string)null);
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.Payment", b =>
@@ -798,7 +715,7 @@ namespace CondoSphere.Migrations
                     b.HasIndex("QuotaId")
                         .IsUnique();
 
-                    b.ToTable("Payments", (string)null);
+                    b.ToTable("Payments");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.Poll", b =>
@@ -847,7 +764,7 @@ namespace CondoSphere.Migrations
 
                     b.HasIndex("CondominiumId", "StartsAtUtc", "EndsAtUtc");
 
-                    b.ToTable("Polls", (string)null);
+                    b.ToTable("Polls");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.PollOption", b =>
@@ -870,7 +787,7 @@ namespace CondoSphere.Migrations
 
                     b.HasIndex("PollId");
 
-                    b.ToTable("PollOptions", (string)null);
+                    b.ToTable("PollOptions");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.PollVote", b =>
@@ -903,7 +820,7 @@ namespace CondoSphere.Migrations
                     b.HasIndex("PollId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("PollVotes", (string)null);
+                    b.ToTable("PollVotes");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.Quota", b =>
@@ -942,7 +859,7 @@ namespace CondoSphere.Migrations
 
                     b.HasIndex("DebtorUserId", "DueDate");
 
-                    b.ToTable("Quotas", (string)null);
+                    b.ToTable("Quotas");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.StaffChatAlert", b =>
@@ -972,7 +889,7 @@ namespace CondoSphere.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("StaffChatAlerts", (string)null);
+                    b.ToTable("StaffChatAlerts");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.SystemSettings", b =>
@@ -1044,7 +961,7 @@ namespace CondoSphere.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("SystemSettings", (string)null);
+                    b.ToTable("SystemSettings");
 
                     b.HasData(
                         new
@@ -1062,7 +979,7 @@ namespace CondoSphere.Migrations
                             PaymentReceiptEmailHtml = "<p>Olá {{User.FullName}},</p><p>Recebemos o seu pagamento de <strong>{{Payment.Amount}}</strong> em {{Payment.Date}}.</p><p>Referência: <code>{{Payment.Reference}}</code> · Método: {{Payment.Method}}</p><p>Pode consultar/guardar a fatura aqui: <a href='{{InvoiceUrl}}'>Ver fatura</a></p><p>Cumprimentos,<br/>{{Company.Name}}</p>",
                             PaymentReceiptEmailSubject = "Comprovativo de pagamento",
                             SupportEmail = "support@condosphere.app",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2025, 9, 19, 8, 55, 56, 922, DateTimeKind.Unspecified).AddTicks(1202), new TimeSpan(0, 0, 0, 0, 0)),
+                            UpdatedAt = new DateTimeOffset(new DateTime(2025, 9, 18, 17, 46, 0, 640, DateTimeKind.Unspecified).AddTicks(5541), new TimeSpan(0, 0, 0, 0, 0)),
                             WelcomeEmailEnabled = true,
                             WelcomeUserEmailHtml = "<p>Olá {{User.FullName}},</p><p>A sua conta foi criada.</p><p>Senha provisória: <code>{{TempPassword}}</code></p><p>Por favor altere aqui: <a href='{{ResetUrl}}'>Alterar palavra-passe</a></p><p>Cumprimentos,<br/>{{Company.Name}}</p>",
                             WelcomeUserEmailSubject = "Bem-vindo(a) ao CondoSphere"
@@ -1102,7 +1019,7 @@ namespace CondoSphere.Migrations
                     b.HasIndex("CondominiumId", "Number")
                         .IsUnique();
 
-                    b.ToTable("Units", (string)null);
+                    b.ToTable("Units");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.UnitOwnership", b =>
@@ -1131,7 +1048,7 @@ namespace CondoSphere.Migrations
 
                     b.HasIndex("UnitId");
 
-                    b.ToTable("UnitOwnerships", (string)null);
+                    b.ToTable("UnitOwnerships");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -1364,32 +1281,13 @@ namespace CondoSphere.Migrations
                     b.Navigation("Condominium");
                 });
 
-            modelBuilder.Entity("CondoSphere.Models.ForumAttachment", b =>
-                {
-                    b.HasOne("CondoSphere.Models.ForumPost", "Post")
-                        .WithMany("Attachments")
-                        .HasForeignKey("PostId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Post");
-                });
-
             modelBuilder.Entity("CondoSphere.Models.ForumPost", b =>
                 {
-                    b.HasOne("CondoSphere.Data.User", "CreatedBy")
-                        .WithMany()
-                        .HasForeignKey("CreatedById")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("CondoSphere.Models.ForumTopic", "Topic")
                         .WithMany("Posts")
                         .HasForeignKey("TopicId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("CreatedBy");
 
                     b.Navigation("Topic");
                 });
@@ -1661,11 +1559,6 @@ namespace CondoSphere.Migrations
             modelBuilder.Entity("CondoSphere.Models.ForumCategory", b =>
                 {
                     b.Navigation("Topics");
-                });
-
-            modelBuilder.Entity("CondoSphere.Models.ForumPost", b =>
-                {
-                    b.Navigation("Attachments");
                 });
 
             modelBuilder.Entity("CondoSphere.Models.ForumTopic", b =>

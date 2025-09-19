@@ -34,6 +34,12 @@ namespace CondoSphere.Data
             // 5) quotas (4 em aberto: -1, 0, +1, +2)
             await EnsureQuotasAsync(ctx, unit.Id);
 
+            // >>> NOVO: categorias do fórum
+            await EnsureForumCategoriesAsync(ctx);
+
+            // opcional: garantir pasta de uploads do fórum existe
+            await EnsureForumUploadsFolderAsync(env);
+
             // 6) corrigir avatars vazios
             await FixMissingAvatarsAsync(ctx, paths.DefaultAvatarWebPath);
         }
@@ -212,6 +218,44 @@ namespace CondoSphere.Data
 
                 await ctx.SaveChangesAsync();
             }
+        }
+
+
+        private static async Task EnsureForumCategoriesAsync(ApplicationDbContext ctx)
+        {
+            // Não setamos Id manualmente para evitar IDENTITY_INSERT.
+            async Task AddIfMissing(string name, int sort, bool locked = false)
+            {
+                var exists = await ctx.ForumCategories.AnyAsync(c => c.Name == name);
+                if (!exists)
+                {
+                    ctx.ForumCategories.Add(new ForumCategory
+                    {
+                        Name = name,
+                        SortOrder = sort,
+                        IsLocked = locked,
+                        // CompanyId / CondominiumId ficam nulos (escopo global),
+                        // ajuste aqui se quiser escopo por empresa/condomínio.
+                    });
+                }
+            }
+
+            await AddIfMissing("General", 1);
+            await AddIfMissing("Maintenance", 2);
+            await AddIfMissing("Buy & Sell", 3);
+
+            await ctx.SaveChangesAsync();
+        }
+
+        private static Task EnsureForumUploadsFolderAsync(IWebHostEnvironment env)
+        {
+            var root = env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            var forumDir = Path.Combine(root, "uploads", "forum");
+            Directory.CreateDirectory(forumDir);
+
+            var keep = Path.Combine(forumDir, ".gitkeep");
+            if (!File.Exists(keep)) File.WriteAllText(keep, "");
+            return Task.CompletedTask;
         }
     }
 }

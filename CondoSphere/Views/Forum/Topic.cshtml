@@ -1,0 +1,330 @@
+﻿@model IEnumerable<CondoSphere.Models.ForumPost>
+@using System.Security.Claims
+@{
+    var topic = ViewBag.Topic as CondoSphere.Models.ForumTopic;
+    var p  = ViewBag.Page       is int p1  ? p1  : 1;
+    var tp = ViewBag.TotalPages is int tp1 ? tp1 : 1;
+    bool isSubscribed = ViewBag.IsSubscribed ?? false;
+    bool isStaff = User.IsInRole("Administrator") || User.IsInRole("Manager");
+    var myId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    ViewData["Title"] = topic?.Title ?? "Topic";
+
+    // opcional: attachments enviados pelo controller
+    var attDict = ViewBag.Attachments as IDictionary<int, IEnumerable<CondoSphere.Models.ForumAttachment>>;
+    IEnumerable<CondoSphere.Models.ForumAttachment> GetAtts(int postId)
+        => attDict != null && attDict.TryGetValue(postId, out var list) ? list
+           : Enumerable.Empty<CondoSphere.Models.ForumAttachment>();
+
+
+            var countsBag = ViewBag.ReactionCounts as IDictionary<int, IDictionary<string, int>> 
+                    ?? new Dictionary<int, IDictionary<string, int>>();
+    var myBag     = ViewBag.UserReactions as IDictionary<int, HashSet<string>> 
+                    ?? new Dictionary<int, HashSet<string>>();
+
+    Func<int, string, int> Cnt = (postId, em) => 
+        countsBag.TryGetValue(postId, out var d) && d.TryGetValue(em, out var c) ? c : 0;
+
+    Func<int, string, bool> Mine = (postId, em) => 
+        myBag.TryGetValue(postId, out var set) && set.Contains(em);
+
+    string[] emojis = new[] { "👍","❤️","🎉","😂","😮" };
+}
+
+
+
+<div class="container-xl">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+   <h3 class="mb-0">
+  @topic?.Title
+  @if (isSubscribed)
+  {
+    <span class="badge bg-primary ms-2">Subscribed</span>
+  }
+  else
+  {
+    <span class="badge bg-secondary ms-2">Not subscribed</span>
+  }
+</h3>
+
+    <div class="d-flex gap-2">
+      @if (User.Identity?.IsAuthenticated == true)
+      {
+        if (isSubscribed)
+        {
+          <form asp-action="Unsubscribe" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="topicId" value="@topic!.Id" />
+            <button class="btn btn-outline-secondary btn-sm">Unsubscribe</button>
+          </form>
+        }
+        else
+        {
+          <form asp-action="Subscribe" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="topicId" value="@topic!.Id" />
+            <button class="btn btn-outline-primary btn-sm">Subscribe</button>
+          </form>
+        }
+      }
+
+      @if (isStaff)
+      {
+        <form asp-action="Pin" method="post" class="d-inline">
+          @Html.AntiForgeryToken()
+          <input type="hidden" name="topicId" value="@topic!.Id" />
+          <input type="hidden" name="pin" value="@(!topic!.IsPinned)" />
+          <button class="btn btn-outline-warning btn-sm">@((topic!.IsPinned) ? "Unpin" : "Pin")</button>
+        </form>
+        <form asp-action="Lock" method="post" class="d-inline">
+          @Html.AntiForgeryToken()
+          <input type="hidden" name="topicId" value="@topic!.Id" />
+          <input type="hidden" name="locked" value="@(!topic!.IsLocked)" />
+          <button class="btn btn-outline-danger btn-sm">@((topic!.IsLocked) ? "Unlock" : "Lock")</button>
+        </form>
+      }
+    </div>
+  </div>
+
+  <div class="mb-2">
+  <a class="btn btn-outline-secondary btn-sm"
+     asp-action="Category"
+     asp-route-id="@(ViewBag.CategoryId ?? topic?.CategoryId)">
+    ← Back to category
+  </a>
+</div>
+
+
+  <div class="list-group mb-3">
+    @foreach (var pItem in Model)
+    {
+      var attachments = GetAtts(pItem.Id);
+       <div id="p@pItem.Id" class="list-group-item">
+        <div class="d-flex justify-content-between">
+          <small class="text-muted">
+            @pItem.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+            @if (pItem.IsDeleted) { <span class="text-danger ms-2">(deleted)</span> }
+          </small>
+
+          <div class="d-flex gap-2">
+            @if (pItem.IsDeleted && isStaff)
+            {
+              <form asp-action="RestorePost" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@pItem.Id" />
+                <input type="hidden" name="topicId" value="@topic!.Id" />
+                <button class="btn btn-sm btn-outline-success">Restore</button>
+              </form>
+            }
+
+            @if (!pItem.IsDeleted && (isStaff || pItem.CreatedById == myId))
+            {
+              <form asp-action="DeletePost" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@pItem.Id" />
+                <input type="hidden" name="topicId" value="@topic!.Id" />
+                <button class="btn btn-sm btn-outline-danger">Delete</button>
+              </form>
+            }
+          </div>
+        </div>
+
+        <div class="mt-2">
+          @if (pItem.IsDeleted)
+          {
+            <em class="text-muted">This post has been deleted.</em>
+          }
+          else
+          {
+            <pre class="mb-2" style="white-space:pre-wrap">@pItem.Body</pre>
+
+            @* Anexos do post *@
+            @if (attachments.Any())
+            {
+              <div class="mt-2">
+                <div class="small text-muted mb-1">Attachments:</div>
+                <ul class="list-unstyled">
+                   @foreach (var a in attachments)
+                  {
+                 var ext = System.IO.Path.GetExtension(a.FileName ?? "").ToLowerInvariant();
+                 var isImg = ext is ".png" or ".jpg" or ".jpeg" or ".gif";
+                 var isPdf = ext == ".pdf";
+
+                 <li class="mb-2">
+                 <a asp-action="Attachment" asp-route-id="@a.Id">
+                 <i class="bi bi-paperclip"></i> @a.FileName
+                 </a>
+
+                 @if (isImg)
+                 {
+                 <div class="mt-1">
+                 <img src="@a.Path" alt="@a.FileName" class="img-thumbnail" style="max-width: 240px; height:auto;" />
+                 </div>
+                  }
+                else if (isPdf)
+                {
+               <div class="mt-2 ratio ratio-16x9 border rounded">
+               <iframe src="@a.Path" title="@a.FileName" loading="lazy"></iframe>
+              </div>
+
+               }
+
+               </li>
+               }
+                </ul>
+              </div>
+
+            }
+         
+        <div class="mt-2 d-flex flex-wrap gap-2 react-toolbar">
+  @foreach (var e in emojis)
+  {
+    var count  = Cnt(pItem.Id, e);
+    var active = Mine(pItem.Id, e);
+
+    <form asp-action="React" method="post" class="d-inline react-form">
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="topicId" value="@topic!.Id" />
+      <input type="hidden" name="postId"  value="@pItem.Id" />
+      <input type="hidden" name="emoji"   value="@e" />
+      <input type="hidden" name="page"    value="@p" />
+      <button type="submit"
+              class="btn btn-sm @(active ? "btn-primary" : "btn-outline-secondary")"
+              data-emoji="@e">
+        @e <span class="ms-1 count">@count</span>
+      </button>
+    </form>
+  }
+</div>
+
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+
+
+  @if (tp > 1)
+  {
+    <nav class="mb-3">
+      <ul class="pagination">
+        <li class="page-item @(p<=1 ? "disabled" : "")">
+          <a class="page-link" asp-action="Topic" asp-route-id="@topic!.Id" asp-route-page="@(p-1)">Prev</a>
+        </li>
+        <li class="page-item disabled"><span class="page-link">@p / @tp</span></li>
+        <li class="page-item @(p>=tp ? "disabled" : "")">
+          <a class="page-link" asp-action="Topic" asp-route-id="@topic!.Id" asp-route-page="@(p+1)">Next</a>
+        </li>
+      </ul>
+    </nav>
+  }
+
+  @if (User.Identity?.IsAuthenticated == true)
+  {
+    if (topic!.IsLocked && !isStaff)
+    {
+      <div class="alert alert-warning">This topic is locked.</div>
+    }
+    else
+    {
+      <form asp-action="Reply" method="post" class="card card-body" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="topicId" value="@topic!.Id" />
+        <div class="mb-2">
+          <label class="form-label">Reply</label>
+          <textarea name="body" class="form-control" rows="5"></textarea>
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label">Attachments (optional)</label>
+          <input type="file" name="files" class="form-control" multiple
+                 accept=".png,.jpg,.jpeg,.gif,.pdf,.doc,.docx" />
+          <small class="text-muted">Allowed: PNG, JPG, GIF, PDF, DOC, DOCX (max 8MB each)</small>
+        </div>
+
+        <div class="text-end">
+          <button class="btn btn-primary">Send</button>
+        </div>
+      </form>
+    }
+  }
+  else
+  {
+    <div class="alert alert-info">Please sign in to reply.</div>
+  }
+</div>
+@section Scripts {
+<script>
+(() => {
+  // Controladores de requisições por post (cancela a anterior antes de enviar outra)
+  const inflightByPost = new Map();
+
+  // Delegação: captura qualquer submit de .react-form
+  document.addEventListener('submit', async (ev) => {
+    const form = ev.target;
+    if (!form.classList?.contains('react-form')) return;
+    ev.preventDefault();
+
+    const fd = new FormData(form);
+    const postId = fd.get('postId');
+    const topicId = fd.get('topicId');
+    const emoji = fd.get('emoji');
+
+    // toolbar do post
+    const postBox = document.querySelector('#p' + postId);
+    const toolbar = postBox?.querySelector('.react-toolbar') || form.closest('.react-toolbar');
+    if (!toolbar) return;
+
+    // botão clicado
+    const btn = form.querySelector('button[data-emoji]');
+    const countSpan = btn?.querySelector('.count');
+
+    // ===== UI OTIMISTA: aplica imediatamente =====
+    const wasActive = btn.classList.contains('btn-primary');
+    const oldCount = countSpan ? parseInt(countSpan.textContent || '0', 10) || 0 : 0;
+
+    // toggle visual + contador local
+    btn.classList.toggle('btn-primary', !wasActive);
+    btn.classList.toggle('btn-outline-secondary', wasActive);
+    if (countSpan) countSpan.textContent = Math.max(0, oldCount + (wasActive ? -1 : 1));
+
+    // Cancela request anterior desse post, se houver (troca rápida de reação)
+    const prev = inflightByPost.get(postId);
+    if (prev) prev.abort();
+    const ctrl = new AbortController();
+    inflightByPost.set(postId, ctrl);
+
+    try {
+      const resp = await fetch(form.action, {
+        method: 'POST',
+        body: fd,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin',
+        signal: ctrl.signal,
+        cache: 'no-store'
+      });
+      if (!resp.ok) return; // mantém UI otimista
+      const data = await resp.json();
+      if (!data || !data.ok) return;
+
+      // Reconciliar com o que veio do servidor (contagens + quais são minhas)
+      toolbar.querySelectorAll('form.react-form button[data-emoji]').forEach(b => {
+        const em = b.dataset.emoji;
+        const span = b.querySelector('.count');
+        const srvCount = (data.counts && data.counts[em]) ? data.counts[em] : 0;
+        const mine = Array.isArray(data.mine) && data.mine.includes(em);
+
+        if (span) span.textContent = srvCount;
+        b.classList.toggle('btn-primary', mine);
+        b.classList.toggle('btn-outline-secondary', !mine);
+      });
+    } catch (e) {
+      // Se foi abortado, ignorar; se erro real, poderia reverter (opcional)
+    } finally {
+      // limpa só se esse ainda é o último controller do post
+      if (inflightByPost.get(postId) === ctrl) inflightByPost.delete(postId);
+    }
+  }, { passive: false });
+})();
+</script>
+}

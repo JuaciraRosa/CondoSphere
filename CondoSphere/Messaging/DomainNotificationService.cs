@@ -1,5 +1,6 @@
 ﻿using CondoSphere.Models;
 using System.Globalization;
+using System.Net;
 
 namespace CondoSphere.Messaging
 {
@@ -207,9 +208,244 @@ namespace CondoSphere.Messaging
         }
 
 
+        // Overload: meeting scheduled WITH optional attachment link
+        public async Task MeetingScheduledAsync(IEnumerable<string> recipients, Meeting meeting, string? attachmentUrl)
+        {
+            if (recipients == null) return;
+
+            var when = meeting.ScheduledDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+            var subject = $"[CondoSphere] Meeting scheduled — {when}";
+
+            var agenda = WebUtility.HtmlEncode(meeting.Agenda ?? "");
+
+            string joinHtml = "";
+            if (meeting.IsOnline && !string.IsNullOrWhiteSpace(meeting.OnlineJoinUrl))
+            {
+                var url = WebUtility.HtmlEncode(meeting.OnlineJoinUrl);
+                joinHtml = $@"<p><strong>Join link:</strong> <a href=""{url}"" target=""_blank"" rel=""noopener"">{url}</a></p>";
+            }
+
+            string attachHtml = string.IsNullOrWhiteSpace(attachmentUrl)
+                ? ""
+                : $@"<p><strong>Attachment:</strong> <a href=""{WebUtility.HtmlEncode(attachmentUrl)}"">Download</a></p>";
+
+            var html = $@"
+<p>A meeting has been scheduled for <strong>{when}</strong>.</p>
+<p><strong>Agenda:</strong> {agenda}</p>
+{joinHtml}
+{attachHtml}";
+
+            foreach (var to in recipients.Where(e => !string.IsNullOrWhiteSpace(e))
+                                         .Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                await _email.SendAsync(to, subject, html);
+            }
+        }
+
+        // Meeting updated (optionally include that a new attachment was added)
+        public async Task MeetingUpdatedAsync(IEnumerable<string> recipients, Meeting meeting, bool attachmentAdded, string? attachmentUrl = null)
+        {
+            if (recipients == null) return;
+
+            var when = meeting.ScheduledDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+            var subject = $"[CondoSphere] Meeting updated — {when}";
+
+            var agenda = WebUtility.HtmlEncode(meeting.Agenda ?? "");
+
+            string joinHtml = "";
+            if (meeting.IsOnline && !string.IsNullOrWhiteSpace(meeting.OnlineJoinUrl))
+            {
+                var url = WebUtility.HtmlEncode(meeting.OnlineJoinUrl);
+                joinHtml = $@"<p><strong>Join link:</strong> <a href=""{url}"">{url}</a></p>";
+            }
+
+            string attachHtml = attachmentAdded && !string.IsNullOrWhiteSpace(attachmentUrl)
+                ? $@"<p><strong>New attachment added:</strong> <a href=""{WebUtility.HtmlEncode(attachmentUrl)}"">Download</a></p>"
+                : "";
+
+            var html = $@"
+<p>A meeting has been <strong>updated</strong> for <strong>{when}</strong>.</p>
+<p><strong>Agenda:</strong> {agenda}</p>
+{joinHtml}
+{attachHtml}";
+
+            foreach (var to in recipients.Where(e => !string.IsNullOrWhiteSpace(e))
+                                         .Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                await _email.SendAsync(to, subject, html);
+            }
+        }
+
+        // Meeting canceled (deleted)
+        public async Task MeetingCanceledAsync(IEnumerable<string> recipients, Meeting meeting)
+        {
+            if (recipients == null) return;
+
+            var when = meeting.ScheduledDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+            var subject = $"[CondoSphere] Meeting canceled — {when}";
+
+            var agenda = WebUtility.HtmlEncode(meeting.Agenda ?? "");
+            var html = $@"
+<p>The meeting scheduled for <strong>{when}</strong> has been <strong>canceled</strong>.</p>
+<p><strong>Agenda:</strong> {agenda}</p>";
+
+            foreach (var to in recipients.Where(e => !string.IsNullOrWhiteSpace(e))
+                                         .Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                await _email.SendAsync(to, subject, html);
+            }
+        }
+
+
+
+public async Task AnnouncementCreatedAsync(
+    IEnumerable<string> recipients,
+    Announcement a,
+    string? attachmentUrl)
+    {
+        // overload simples que reusa a versão com body opcional
+        await AnnouncementCreatedAsync(recipients, a, attachmentUrl, bodyHtml: null);
+    }
+
+    public async Task AnnouncementCreatedAsync(
+        IEnumerable<string> recipients,
+        Announcement a,
+        string? attachmentUrl,
+        string? bodyHtml)
+    {
+        if (recipients == null) return;
+
+        var subject = $"[CondoSphere] Announcement — {a.Title}";
+        var body = $@"
+<p>New announcement was posted.</p>
+<p><strong>Title:</strong> {System.Net.WebUtility.HtmlEncode(a.Title ?? "Untitled")}</p>
+{(string.IsNullOrWhiteSpace(bodyHtml) ? "" : bodyHtml)}
+{(string.IsNullOrWhiteSpace(attachmentUrl) ? "" : $@"<p><a href=""{System.Net.WebUtility.HtmlEncode(attachmentUrl)}"" target=""_blank"">Attachment</a></p>")}
+";
+
+        foreach (var to in recipients.Where(x => !string.IsNullOrWhiteSpace(x))
+                                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            await SendAsync(to, subject, body);
+        }
+    }
+
+    public async Task AnnouncementUpdatedAsync(
+        IEnumerable<string> recipients,
+        Announcement a,
+        bool attachmentChanged,
+        string? attachmentUrl,
+        string? bodyHtml = null)
+    {
+        if (recipients == null) return;
+
+        var subject = $"[CondoSphere] Announcement updated — {a.Title}";
+        var attachBlock = attachmentChanged
+            ? (string.IsNullOrWhiteSpace(attachmentUrl)
+                ? "<p><em>Attachment removed.</em></p>"
+                : $@"<p><strong>Attachment updated:</strong> <a href=""{System.Net.WebUtility.HtmlEncode(attachmentUrl)}"" target=""_blank"">Open</a></p>")
+            : (string.IsNullOrWhiteSpace(attachmentUrl) ? "" : $@"<p><a href=""{System.Net.WebUtility.HtmlEncode(attachmentUrl)}"">Attachment</a></p>");
+
+        var body = $@"
+<p>An announcement has been updated.</p>
+<p><strong>Title:</strong> {System.Net.WebUtility.HtmlEncode(a.Title ?? "Untitled")}</p>
+{(string.IsNullOrWhiteSpace(bodyHtml) ? "" : bodyHtml)}
+{attachBlock}
+";
+
+        foreach (var to in recipients.Where(x => !string.IsNullOrWhiteSpace(x))
+                                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            await SendAsync(to, subject, body);
+        }
+    }
+
+    public async Task AnnouncementDeletedAsync(
+        IEnumerable<string> recipients,
+        Announcement a)
+    {
+        if (recipients == null) return;
+
+        var subject = $"[CondoSphere] Announcement canceled — {a.Title}";
+        var body = $@"
+<p>The following announcement was canceled/removed.</p>
+<p><strong>Title:</strong> {System.Net.WebUtility.HtmlEncode(a.Title ?? "Untitled")}</p>
+";
+
+        foreach (var to in recipients.Where(x => !string.IsNullOrWhiteSpace(x))
+                                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            await SendAsync(to, subject, body);
+        }
+    }
+
+
+        public async Task ForumNewTopicAsync(IEnumerable<string> recipients, ForumTopic topic, string authorEmail, string topicUrl)
+        {
+            if (recipients == null) return;
+            var subj = $"[Forum] New topic: {topic.Title}";
+            var html = $@"
+<p>New topic created by <strong>{System.Net.WebUtility.HtmlEncode(authorEmail)}</strong>.</p>
+<p><a href=""{System.Net.WebUtility.HtmlEncode(topicUrl)}"">Open topic</a></p>";
+            foreach (var to in recipients.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase))
+                await SendAsync(to, subj, html);
+        }
+
+        public async Task ForumNewReplyAsync(IEnumerable<string> recipients, ForumTopic topic, string authorEmail, string topicUrl, string preview)
+        {
+            if (recipients == null) return;
+            var subj = $"[Forum] New reply in: {topic.Title}";
+            var html = $@"
+<p>New reply by <strong>{System.Net.WebUtility.HtmlEncode(authorEmail)}</strong>.</p>
+<p><em>{System.Net.WebUtility.HtmlEncode(preview)}</em></p>
+<p><a href=""{System.Net.WebUtility.HtmlEncode(topicUrl)}"">Open topic</a></p>";
+            foreach (var to in recipients.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase))
+                await SendAsync(to, subj, html);
+        }
+
+        public async Task ForumNewPostAsync(IEnumerable<string> recipients, string topicTitle, string messagePreview, string topicUrl)
+        {
+            if (recipients == null) return;
+            var subject = $"[Forum] New reply — {topicTitle}";
+            var html = $@"
+        <p>There is a new reply in <strong>{System.Net.WebUtility.HtmlEncode(topicTitle)}</strong>.</p>
+        <blockquote>{System.Net.WebUtility.HtmlEncode(messagePreview)}</blockquote>
+        <p><a href=""{System.Net.WebUtility.HtmlEncode(topicUrl)}"">Open topic</a></p>";
+
+            foreach (var to in recipients.Where(e => !string.IsNullOrWhiteSpace(e)).Distinct(StringComparer.OrdinalIgnoreCase))
+                await _email.SendAsync(to, subject, html);
+        }
+
+        public async Task ForumMentionAsync(IEnumerable<string> recipients, string topicTitle, string messagePreview, string topicUrl)
+        {
+            if (recipients == null) return;
+            var subject = $"[Forum] You were mentioned — {topicTitle}";
+            var html = $@"
+        <p>You were mentioned in <strong>{System.Net.WebUtility.HtmlEncode(topicTitle)}</strong>.</p>
+        <blockquote>{System.Net.WebUtility.HtmlEncode(messagePreview)}</blockquote>
+        <p><a href=""{System.Net.WebUtility.HtmlEncode(topicUrl)}"">Open topic</a></p>";
+
+            foreach (var to in recipients.Where(e => !string.IsNullOrWhiteSpace(e)).Distinct(StringComparer.OrdinalIgnoreCase))
+                await _email.SendAsync(to, subject, html);
+        }
+
+
+
+
+
+
+
 
     }
 
 
+
+
+
+
+
 }
+
+
+
 

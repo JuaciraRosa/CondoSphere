@@ -67,6 +67,8 @@
     @if (isAuth)
     {
       <li><a asp-controller="Dashboard" asp-action="Index">Dashboard</a></li>
+       
+   
 
       @* Administrator *@
       @if (role == "Administrator")
@@ -125,6 +127,12 @@
         <li><a asp-controller="Polls" asp-action="Index">Voting</a></li>
         <li><a asp-controller="MaintenanceRequests" asp-action="Index">Maintenance Requests</a></li>
           <li><a asp-controller="Quotas" asp-action="Index">Quotas</a></li>
+             <li>
+        <a class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Forum" ? "active" : "")"
+           asp-controller="Forum" asp-action="Index">
+          Forum
+        </a>
+      </li>
       }
 
       @* Account dropdown *@
@@ -402,4 +410,3 @@ if (anti) baseHeaders['RequestVerificationToken'] = anti;
     @RenderSection("Scripts", required: false)
   </body>
 </html>
-

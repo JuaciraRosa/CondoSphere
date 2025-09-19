@@ -38,6 +38,17 @@ namespace CondoSphere.Data
         public DbSet<UnitOwnership> UnitOwnerships { get; set; } = default!;
 
 
+        public DbSet<ForumCategory> ForumCategories { get; set; }
+        public DbSet<ForumTopic> ForumTopics { get; set; }
+        public DbSet<ForumPost> ForumPosts { get; set; }
+        public DbSet<ForumSubscription> ForumSubscriptions { get; set; }
+
+        public DbSet<ForumAttachment> ForumAttachments { get; set; }
+
+        public DbSet<ForumReaction> ForumReactions { get; set; } = default!;
+
+
+
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -309,9 +320,66 @@ namespace CondoSphere.Data
              .HasForeignKey<Payment>(p => p.QuotaId)
              .OnDelete(DeleteBehavior.Restrict);
 
+
+            // Forum
+            modelBuilder.Entity<ForumCategory>(e =>
+            {
+                e.HasIndex(x => x.Slug);
+                e.Property(x => x.Name).HasMaxLength(80).IsRequired();
+            });
+
+            modelBuilder.Entity<ForumTopic>(e =>
+            {
+                e.HasOne(t => t.Category)
+                 .WithMany(c => c.Topics)
+                 .HasForeignKey(t => t.CategoryId)
+                 .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasIndex(t => new { t.CategoryId, t.IsPinned, t.LastPostAtUtc });
+                e.Property(t => t.Title).HasMaxLength(140).IsRequired();
+            });
+
+            modelBuilder.Entity<ForumPost>(e =>
+            {
+                e.HasOne(p => p.Topic)
+                 .WithMany(t => t.Posts)
+                 .HasForeignKey(p => p.TopicId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasIndex(p => new { p.TopicId, p.CreatedAtUtc });
+                e.Property(p => p.Body).HasMaxLength(8000).IsRequired();
+            });
+
+            modelBuilder.Entity<ForumSubscription>(e =>
+            {
+                e.HasIndex(s => new { s.TopicId, s.UserId }).IsUnique();
+            });
+
+
+
+            modelBuilder.Entity<ForumAttachment>(b =>
+            {
+                b.HasKey(x => x.Id);
+                b.HasOne(x => x.Post)
+                 .WithMany(p => p.Attachments)
+                 .HasForeignKey(x => x.PostId)
+                 .OnDelete(DeleteBehavior.Cascade);
+                b.Property(x => x.FileName).HasMaxLength(255);
+                b.Property(x => x.Path).HasMaxLength(512);
+                b.Property(x => x.ContentType).HasMaxLength(200);
+            });
+
+
+            modelBuilder.Entity<ForumReaction>()
+    .HasIndex(r => new { r.PostId, r.UserId, r.Emoji })
+    .IsUnique();
+
+
+
+
         }
 
-
     }
+
 
 }

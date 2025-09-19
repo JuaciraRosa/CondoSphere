@@ -115,5 +115,30 @@ namespace CondoSphere.Controllers
 
             return View(vm);
         }
+
+
+
+        [HttpGet]
+        [Authorize(Roles = "Administrator,Manager")]
+        public async Task<IActionResult> Manage(int? condominiumId = null)
+        {
+            IEnumerable<Poll> list;
+
+            if (User.IsInRole("Administrator"))
+            {
+                // Admin vê tudo (com filtro opcional de condomínio)
+                list = await _polls.GetAllWithCondoAsync(condominiumId);
+            }
+            else
+            {
+                // Manager vê as que criou (também com filtro opcional)
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+                list = await _polls.GetByCreatorAsync(userId, condominiumId);
+            }
+
+            ViewBag.CondoId = condominiumId;
+            return View(list); // Views/Polls/Manage.cshtml
+        }
+
     }
 }

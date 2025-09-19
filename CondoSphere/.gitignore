@@ -1,2 +1,4 @@
 *.zip
 *.zip
+/CondoSphere/wwwroot/uploads/forum/*
+!/CondoSphere/wwwroot/uploads/forum/.gitkeep

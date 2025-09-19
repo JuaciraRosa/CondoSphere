@@ -19,5 +19,7 @@ namespace CondoSphere.Data.Interfaces
 
         Task<IEnumerable<Poll>> GetOpenForUserAsync(string userId);
         Task<bool> HasUserVotedAsync(int pollId, string userId);
+
+        Task<IEnumerable<Poll>> GetAllWithCondoAsync(int? condominiumId = null);
     }
 }
