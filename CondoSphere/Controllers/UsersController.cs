@@ -137,7 +137,7 @@ namespace CondoSphere.Controllers
             var token = await _userManager.GeneratePasswordResetTokenAsync(newUser);
             var urlToken = System.Net.WebUtility.UrlEncode(token);
             var urlEmail = System.Net.WebUtility.UrlEncode(newUser.Email);
-            var resetUrl = Url.Action("ResetPassword", "Account",
+            var resetUrl = Url.Action("ResetPassword", "Auth",
                 new { token = urlToken, email = urlEmail }, protocol: Request.Scheme);
 
             // e-mail de boas-vindas (templates + switches)
