@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
+using System.Net.Mail;
 using System.Security.Claims;
 
 namespace CondoSphere.Controllers
@@ -86,16 +87,18 @@ namespace CondoSphere.Controllers
             // await _repo.SaveChangesAsync();
 
             var attachmentUrl = AbsoluteUrl(a.AttachmentPath);
-
             if (a.ScheduledAtUtc is null)
             {
                 try
                 {
                     var recipients = await GetAnnouncementRecipientsAsync(a.CondominiumId);
-                    if (recipients.Count > 0)
+                    var count = recipients?.Count ?? 0;
+
+                    if (count > 0)
                     {
                         await _notify.AnnouncementCreatedAsync(recipients, a, attachmentUrl);
-                        TempData["Success"] = "Announcement created and notifications sent.";
+                        // Se for BCC OK, já foi tudo num envio. Se o BCC falhar, o método faz fallback individual.
+                        TempData["Success"] = $"Announcement created and notifications sent ({count} recipients; BCC or fallback).";
                     }
                     else
                     {
@@ -111,6 +114,7 @@ namespace CondoSphere.Controllers
             {
                 TempData["Success"] = "Announcement scheduled.";
             }
+
 
             return RedirectToAction(nameof(Index));
         }

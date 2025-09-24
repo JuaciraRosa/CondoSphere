@@ -5,6 +5,8 @@ VisualStudioVersion = 17.13.35931.197
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CondoSphere", "CondoSphere\CondoSphere.csproj", "{7A2A22F1-937F-455E-A5A6-9E5461416178}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CondoSphereMobile", "CondoSphereMobile\CondoSphereMobile.csproj", "{938083E6-A8F5-43F5-9269-98CFED4542AF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,12 @@ Global
 		{7A2A22F1-937F-455E-A5A6-9E5461416178}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7A2A22F1-937F-455E-A5A6-9E5461416178}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7A2A22F1-937F-455E-A5A6-9E5461416178}.Release|Any CPU.Build.0 = Release|Any CPU
+		{938083E6-A8F5-43F5-9269-98CFED4542AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{938083E6-A8F5-43F5-9269-98CFED4542AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{938083E6-A8F5-43F5-9269-98CFED4542AF}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{938083E6-A8F5-43F5-9269-98CFED4542AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{938083E6-A8F5-43F5-9269-98CFED4542AF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{938083E6-A8F5-43F5-9269-98CFED4542AF}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

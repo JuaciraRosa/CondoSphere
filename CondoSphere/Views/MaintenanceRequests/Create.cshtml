@@ -4,6 +4,7 @@
 @{
     ViewData["Title"] = "Create Request";
     var isResident = User.IsInRole("Resident");
+    var isManager  = User.IsInRole("Administrator") || User.IsInRole("Manager"); 
     var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 }
 
@@ -49,12 +50,23 @@
                         <span asp-validation-for="Description" class="text-danger"></span>
                     </div>
 
-                    <div class="col-md-4">
-                        <label asp-for="Status" class="form-label"></label>
-                        <select asp-for="Status" class="form-select"
-                                asp-items="Html.GetEnumSelectList<CondoSphere.Models.RequestStatus>()"></select>
-                        <span asp-validation-for="Status" class="text-danger"></span>
-                    </div>
+                @if (isManager)
+{
+    <div class="col-md-6">
+        <label asp-for="Status" class="form-label"></label>
+        <select asp-for="Status" class="form-select"
+                asp-items="Html.GetEnumSelectList<RequestStatus>()"></select>
+        <span asp-validation-for="Status" class="text-danger"></span>
+    </div>
+}
+else
+{
+    <input type="hidden" asp-for="Status" value="@RequestStatus.Open" />
+    <div class="col-md-6">
+        <label class="form-label">Status</label>
+        <input class="form-control" value="Open" readonly />
+    </div>
+}
 
                     <div class="col-md-4">
                         <label asp-for="CondominiumId" class="form-label"></label>

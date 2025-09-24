@@ -397,55 +397,6 @@ namespace CondoSphere.Controllers
 
 
 
-        // GET: /Account/ResetPassword
-        [HttpGet]
-        [AllowAnonymous]
-        public IActionResult ResetPassword(string token, string email)
-        {
-            return View(new ResetPasswordViewModel { Token = token, Email = email });
-        }
-
-        [HttpPost]
-        [AllowAnonymous]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
-        {
-            if (!ModelState.IsValid) return View(model);
-
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null) return RedirectToAction(nameof(ResetPasswordConfirmation));
-
-            var result = await _userManager.ResetPasswordAsync(user, model.Token, model.Password);
-
-            if (result.Succeeded)
-            {
-              
-                user.MustChangePassword = false;
-                user.TempPasswordExpiresAt = null;
-
-                // confirma o e-mail se ainda não estiver confirmado
-                if (!user.EmailConfirmed)
-                    user.EmailConfirmed = true;
-
-                // (opcional) invalida sessões/credenciais antigas
-                await _userManager.UpdateSecurityStampAsync(user);
-
-                await _userManager.UpdateAsync(user);
-
-                TempData["Success"] = "Palavra-passe alterada com sucesso.";
-                return RedirectToAction(nameof(ResetPasswordConfirmation));
-            }
-
-            foreach (var error in result.Errors)
-                ModelState.AddModelError(string.Empty, error.Description);
-
-            return View(model);
-        }
-
-        [HttpGet]
-        [AllowAnonymous]
-        public IActionResult ResetPasswordConfirmation() => View();
-
 
     }
 }

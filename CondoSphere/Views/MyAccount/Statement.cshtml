@@ -1,0 +1,85 @@
+﻿@model CondoSphere.ViewModels.AccountStatementViewModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Conta Corrente";
+    var pt = CultureInfo.GetCultureInfo("pt-PT");
+    string Money(decimal v) => v.ToString("C2", pt);
+}
+
+<section class="section">
+    <div class="container">
+        <div class="card shadow-sm p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">
+                    <i class="bi bi-receipt"></i> Conta Corrente — Unidade @Model.UnitLabel
+                </h4>
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left"></i> Voltar
+                </a>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="fw-semibold text-muted">Saldo inicial</div>
+                    <div>@Money(Model.OpeningBalance)</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fw-semibold text-muted">Saldo atual</div>
+                    <div class="fs-5">@Money(Model.RunningBalance)</div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-striped align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 120px;">Data</th>
+                            <th>Descrição</th>
+                            <th class="text-end" style="width: 140px;">Débito</th>
+                            <th class="text-end" style="width: 140px;">Crédito</th>
+                            <th style="width: 160px;">Estado</th>
+                            <th class="text-end" style="width: 120px;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var l in Model.Lines)
+                        {
+                            var badge = l.Status switch
+                            {
+                                "Paid" => "bg-success",
+                                "Awaiting approval" => "bg-warning",
+                                "Payment pending" => "bg-warning",
+                                _ => "bg-secondary"
+                            };
+                            <tr>
+                                <td>@l.Date.ToString("yyyy-MM-dd")</td>
+                                <td>@l.Description</td>
+                                <td class="text-end">@Money(l.Debit)</td>
+                                <td class="text-end">@Money(l.Credit)</td>
+                                <td>
+                                    <span class="badge @badge">@l.Status</span>
+                                </td>
+                                <td class="text-end">
+                                    @if (l.PaymentId.HasValue)
+                                    {
+                                        <a asp-controller="Payments" asp-action="Details" asp-route-id="@l.PaymentId.Value"
+                                           class="btn btn-sm btn-outline-info">
+                                            <i class="bi bi-eye"></i> Detalhes
+                                        </a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        @if (Model.Lines.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">Sem movimentos.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+</section>

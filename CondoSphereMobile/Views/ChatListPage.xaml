@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CondoSphereMobile.Views.ChatListPage"
+             Title="Suporte (Chat)">
+
+    <VerticalStackLayout Padding="16" Spacing="12">
+        <Button Text="Novo chat" Clicked="OnNewChatClicked" />
+
+        <CollectionView x:Name="ThreadsView"
+                        SelectionMode="Single"
+                        SelectionChanged="OnThreadSelected">
+            <CollectionView.EmptyView>
+                <VerticalStackLayout Padding="24" Spacing="8">
+                    <Label Text="Sem conversas" FontAttributes="Bold" FontSize="16" HorizontalOptions="Center" />
+                    <Label Text="Toque em “Novo chat” para começar."
+                           FontSize="12"
+                           TextColor="Gray"
+                           HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Padding="8" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
+                        <!-- ponto de não lido -->
+                        <Label Grid.Row="0"
+                               Grid.Column="0"
+                               Text="●"
+                               FontSize="18"
+                               TextColor="#7C3AED"
+                               IsVisible="True">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label"
+                                             Binding="{Binding UnreadForMe}"
+                                             Value="0">
+                                    <Setter Property="IsVisible" Value="False" />
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="2">
+                            <Label Text="{Binding Subject}" FontAttributes="Bold" />
+                            <Label Text="{Binding LastPreview}"
+                                   FontSize="12"
+                                   TextColor="Gray"
+                                   LineBreakMode="TailTruncation"/>
+                            <Label Text="{Binding LastActivityAt, StringFormat='Última: {0:dd/MM HH:mm}'}"
+                                   FontSize="10"
+                                   TextColor="Gray"/>
+                        </VerticalStackLayout>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </VerticalStackLayout>
+</ContentPage>

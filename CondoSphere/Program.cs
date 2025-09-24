@@ -7,6 +7,7 @@ using CondoSphere.Infrastructure;
 using CondoSphere.Messaging;
 using CondoSphere.Models;
 using CondoSphere.Services;
+using CondoSphere.Services.Notifications;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -16,9 +17,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using QuestPDF.Infrastructure;
 using System.Text;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -67,6 +70,30 @@ builder.Services.ConfigureApplicationCookie(options =>
 
     // evita que o GDPR CookieConsent bloqueie o cookie de auth
     options.Cookie.IsEssential = true;
+
+
+
+    // Impede redirect HTML para chamadas da API
+    options.Events.OnRedirectToLogin = ctx =>
+    {
+        if (ctx.Request.Path.StartsWithSegments("/api"))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
+        }
+        ctx.Response.Redirect(ctx.RedirectUri);
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToAccessDenied = ctx =>
+    {
+        if (ctx.Request.Path.StartsWithSegments("/api"))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        }
+        ctx.Response.Redirect(ctx.RedirectUri);
+        return Task.CompletedTask;
+    };
 
 });
 
@@ -121,35 +148,66 @@ builder.Services.AddScoped<IForumRepository, ForumRepository>();
 
 builder.Services.AddScoped<IAnnouncementReadService, AnnouncementReadService>();
 
+builder.Services.Configure<TwilioSmsOptions>(builder.Configuration.GetSection("Twilio"));
+builder.Services.AddSingleton<ISmsSender, TwilioSmsSender>();
 
-builder.Services.AddAuthentication()
-    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+builder.Services.AddAuthentication(options =>
+{
+    // SITE MVC usa cookies por omissão
+    options.DefaultScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
+})
+// JWT para a API (esquema nomeado “Bearer”)
+.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromMinutes(1)
-        };
-    });
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.FromMinutes(1),
+
+
+          RoleClaimType = System.Security.Claims.ClaimTypes.Role,
+        NameClaimType = System.Security.Claims.ClaimTypes.NameIdentifier
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = ctx =>
+        {
+            var msg = $"JWT fail: {ctx.Exception.GetType().Name} - {ctx.Exception.Message}";
+            ctx.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+               .CreateLogger("JWT").LogWarning(msg);
+            return Task.CompletedTask;
+        },
+        OnChallenge = ctx =>
+        {
+            var log = ctx.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+               .CreateLogger("JWT");
+            log.LogWarning("JWT challenge: {Error} {Desc}", ctx.Error, ctx.ErrorDescription);
+            return Task.CompletedTask;
+        }
+    };
+});
 
 builder.Services.AddAuthorization();
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("maui", p => p
+    options.AddPolicy("mobile", p => p
         .AllowAnyOrigin()
         .AllowAnyHeader()
         .AllowAnyMethod());
 
     options.AddPolicy("hub", p => p
-        .WithOrigins("https://condosphere-web-app.somee.com") // seu domínio HTTPS
+        .WithOrigins("https://condosphere-web-app.somee.com") 
         .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials());
@@ -163,18 +221,19 @@ builder.Services.ConfigureApplicationCookie(o =>
 });
 
 
-builder.Services.AddControllersWithViews(options =>
-{
-    // Políticas de autorização
-    var policy = new AuthorizationPolicyBuilder()
-        .RequireAuthenticatedUser()
-        .Build();
-    options.Filters.Add(new AuthorizeFilter(policy));
-})
+//builder.Services.AddControllersWithViews(options =>
+//{
+//    // Políticas de autorização
+//    var policy = new AuthorizationPolicyBuilder()
+//        .RequireAuthenticatedUser()
+//        .Build();
+//    options.Filters.Add(new AuthorizeFilter(policy));
+//})
+builder.Services.AddControllersWithViews()
+    .AddViewLocalization()
+    .AddDataAnnotationsLocalization();
 
-
-.AddViewLocalization()
-.AddDataAnnotationsLocalization();
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -258,7 +317,7 @@ app.UseStaticFiles();
 app.UseRouting();
 
 // habilita middleware CORS (sem escolher policy global aqui)
-app.UseCors();
+app.UseCors("mobile");
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -270,11 +329,17 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
     c.SwaggerEndpoint("./v1/swagger.json", "CondoSphere API v1");
 });
+app.MapGet("/swagger/index", ctx =>
+{
+    ctx.Response.Redirect("/swagger", permanent: false);
+    return Task.CompletedTask;
+});
+
 
 // ===== Endpoints com a policy certa =====
 
 // Controllers/API -> policy "maui" (caso MAUI consuma a API)
-app.MapControllers().RequireCors("maui");
+app.MapControllers().RequireCors("mobile");
 
 // Hub SignalR -> policy "hub" + LongPolling (Somee)
 app.MapHub<CondoSphere.Hubs.ChatHub>("/hubs/chat", opt =>
@@ -283,11 +348,14 @@ app.MapHub<CondoSphere.Hubs.ChatHub>("/hubs/chat", opt =>
     opt.LongPolling.PollTimeout = TimeSpan.FromSeconds(25);
 }).RequireCors("hub");
 
-// MVC do site
+//// MVC do site
+//app.MapControllerRoute(
+//    name: "default",
+//    pattern: "{controller=Home}/{action=Index}/{id?}");
+
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
-
+    pattern: "{controller=Home}/{action=Index}/{id?}").RequireAuthorization();
 
 
 

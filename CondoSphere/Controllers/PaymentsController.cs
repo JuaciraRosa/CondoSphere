@@ -13,10 +13,13 @@ using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using Stripe;
 using System.Globalization;
 using System.IdentityModel.Claims;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using PdfUnit = QuestPDF.Infrastructure.Unit;
 
 namespace CondoSphere.Controllers
@@ -84,6 +87,7 @@ namespace CondoSphere.Controllers
         }
 
 
+
         // GET: Payments/Delete/{id}
         [HttpGet]
         public async Task<IActionResult> Delete(int id)
@@ -129,77 +133,235 @@ namespace CondoSphere.Controllers
             ViewBag.StatusList = new SelectList(Enum.GetValues(typeof(PaymentStatusType)));
         }
 
-        private string ResolveDestEmail(Payment payment)
+        private async Task<string?> ResolveDestEmail(Payment payment)
         {
-            // Se o Payment tiver um campo de e-mail do pagador, usa aqui:
-            // if (!string.IsNullOrWhiteSpace(payment.PayerEmail)) return payment.PayerEmail;
+            // Pega o PaymentIntent do Stripe com os dados úteis já expandidos
+            var piSrv = new PaymentIntentService();
+            var intent = await piSrv.GetAsync(
+                payment.ProviderPaymentId,
+                new PaymentIntentGetOptions
+                {
+                    Expand = new List<string> { "latest_charge", "customer" }
+                });
 
-            // fallback: email do utilizador autenticado
-            var claim = User.FindFirst(ClaimTypes.Email) ?? User.FindFirst(ClaimTypes.Name);
-            if (claim != null && !string.IsNullOrWhiteSpace(claim.Value))
-                return claim.Value;
+            // 1) Melhor fonte: o e-mail digitado no checkout (BillingDetails do charge)
+            var charge = intent.LatestCharge;
+            var email =
+                charge?.BillingDetails?.Email      // e-mail do checkout
+                ?? charge?.ReceiptEmail            // e-mail de recibo do charge
+                ?? intent.ReceiptEmail;            // e-mail de recibo do intent
 
-            // último recurso (teste)
-            return "Support@condosphere-web-app.somee.com";
+            // 2) Fallback: se existir Customer, usar o e-mail do cliente
+            if (string.IsNullOrWhiteSpace(email) && !string.IsNullOrWhiteSpace(intent.CustomerId))
+            {
+                var custSrv = new CustomerService();
+                var customer = await custSrv.GetAsync(intent.CustomerId);
+                email = customer?.Email;
+            }
+
+            return string.IsNullOrWhiteSpace(email) ? null : email.Trim();
         }
 
 
 
-        private async Task SendPaymentReceiptAsync(int paymentId)
+        //        private async Task SendPaymentReceiptAsync(int paymentId)
+        //        {
+        //            // 1) Respeita os “switches” do painel
+        //            var s = await _settings.GetCurrentAsync();
+        //            if (!(s.EmailsEnabled && s.PaymentReceiptEmailEnabled)) return;
+
+        //            // 2) Carrega o pagamento
+        //            var payment = await _payments.GetByIdDetailedAsync(paymentId);
+        //            if (payment == null) return;
+
+        //            // 3) Destinatário do e-mail (sem navegar por Unit/Resident/Owner)
+        //            var to = ResolveDestEmail(payment);
+        //            if (string.IsNullOrWhiteSpace(to)) return;
+
+        //            var displayName = User?.Identity?.Name;
+        //            var userName = !string.IsNullOrWhiteSpace(displayName) ? displayName! : to;
+
+        //            // 4) Dados do comprovativo
+        //            var culture = System.Globalization.CultureInfo.GetCultureInfo("pt-PT");
+        //            var amountText = payment.Amount.ToString("C2", culture);
+        //            var paidAtDt = (payment.PaidAt ?? payment.CreatedAt).ToLocalTime();
+        //            var paidAt = paidAtDt.ToString("yyyy-MM-dd HH:mm");
+
+        //            var reference = !string.IsNullOrWhiteSpace(payment.ProviderReference)
+        //                                ? payment.ProviderReference!
+        //                                : payment.ProviderPaymentId;
+
+        //            var methodName = payment.Method.ToString();
+
+        //            // Link da fatura (a mesma do módulo Payments)
+        //            var invoiceUrl = MakePublicInvoiceUrl(payment.Id, TimeSpan.FromDays(7), pdf: true);
+
+        //            var subject = s.PaymentReceiptEmailSubject ?? "Comprovativo de pagamento";
+
+        //            // 5) Corpo (fallback) + ReceiptUrl do provedor (se existir)
+        //            var defaultHtml = $@"
+        //<p>Olá {System.Net.WebUtility.HtmlEncode(userName)},</p>
+        //<p>Recebemos o seu pagamento de <strong>{System.Net.WebUtility.HtmlEncode(amountText)}</strong> em {paidAt}.</p>
+        //<p>Referência: <code>{System.Net.WebUtility.HtmlEncode(reference)}</code> · Método: {System.Net.WebUtility.HtmlEncode(methodName)}</p>"
+        //            + (string.IsNullOrWhiteSpace(payment.ReceiptUrl) ? "" :
+        //               $@"<p>Recibo do provedor: <a href=""{payment.ReceiptUrl}"">{payment.ReceiptUrl}</a></p>")
+        //            + $@"
+        //<p>Pode consultar/guardar a fatura aqui: <a href=""{invoiceUrl}"">Ver fatura</a></p>
+        //<p>Cumprimentos,<br/>{System.Net.WebUtility.HtmlEncode(s.CompanyDisplayName ?? "CondoSphere")}</p>";
+
+        //            // 6) Template configurável (se houver)
+        //            var html = string.IsNullOrWhiteSpace(s.PaymentReceiptEmailHtml)
+        //                ? defaultHtml
+        //                : _settings.RenderTemplate(
+        //                    s.PaymentReceiptEmailHtml,
+        //                    new Dictionary<string, string>
+        //                    {
+        //                        ["User.FullName"] = userName,
+        //                        ["User.Email"] = to,
+        //                        ["Payment.Amount"] = amountText,
+        //                        ["Payment.Date"] = paidAt,
+        //                        ["Payment.Reference"] = reference,
+        //                        ["Payment.Method"] = methodName,
+        //                        ["InvoiceUrl"] = invoiceUrl,
+        //                        ["Company.Name"] = s.CompanyDisplayName ?? "CondoSphere",
+        //                        ["Provider.ReceiptUrl"] = payment.ReceiptUrl ?? ""
+        //                    });
+
+        //            await _email.SendAsync(to, subject, html);
+        //        }
+
+        //        private async Task<(bool sent, string message)> SendPaymentReceiptAsync(int paymentId)
+        //        {
+        //            var s = await _settings.GetCurrentAsync();
+        //            if (!(s.EmailsEnabled && s.PaymentReceiptEmailEnabled))
+        //                return (false, "Envio de e-mails desativado nas definições.");
+
+        //            var payment = await _payments.GetByIdDetailedAsync(paymentId);
+        //            if (payment == null)
+        //                return (false, $"Pagamento #{paymentId} não encontrado.");
+
+        //            var to = await ResolveDestEmail(payment);
+        //            if (string.IsNullOrWhiteSpace(to))
+        //                return (false, "Não foi possível resolver o e-mail do destinatário.");
+
+        //            var displayName = User?.Identity?.Name;
+        //            var userName = !string.IsNullOrWhiteSpace(displayName) ? displayName! : to;
+
+        //            var culture = System.Globalization.CultureInfo.GetCultureInfo("pt-PT");
+        //            var amountText = payment.Amount.ToString("C2", culture);
+        //            var paidAtDt = (payment.PaidAt ?? payment.CreatedAt).ToLocalTime();
+        //            var paidAt = paidAtDt.ToString("yyyy-MM-dd HH:mm");
+
+        //            var reference = !string.IsNullOrWhiteSpace(payment.ProviderReference)
+        //                ? payment.ProviderReference!
+        //                : payment.ProviderPaymentId;
+
+        //            var methodName = payment.Method.ToString();
+        //            var invoiceUrl = MakePublicInvoiceUrl(payment.Id, TimeSpan.FromDays(7), pdf: true);
+        //            var subject = s.PaymentReceiptEmailSubject ?? "Comprovativo de pagamento";
+
+        //            var defaultHtml = $@"
+        ////<p>Olá {System.Net.WebUtility.HtmlEncode(userName)},</p>
+        //<p>Recebemos o seu pagamento de <strong>{System.Net.WebUtility.HtmlEncode(amountText)}</strong> em {paidAt}.</p>
+        //<p>Referência: <code>{System.Net.WebUtility.HtmlEncode(reference)}</code> · Método: {System.Net.WebUtility.HtmlEncode(methodName)}</p>"
+        //            + (string.IsNullOrWhiteSpace(payment.ReceiptUrl) ? "" :
+        //               $@"<p>Recibo do provedor: <a href=""{payment.ReceiptUrl}"">{payment.ReceiptUrl}</a></p>")
+        //            + $@"
+        //<p>Pode consultar/guardar a fatura aqui: <a href=""{invoiceUrl}"">Ver fatura</a></p>
+        //<p>Cumprimentos,<br/>{System.Net.WebUtility.HtmlEncode(s.CompanyDisplayName ?? "CondoSphere")}</p>";
+
+        //            var html = string.IsNullOrWhiteSpace(s.PaymentReceiptEmailHtml)
+        //                ? defaultHtml
+        //                : _settings.RenderTemplate(
+        //                    s.PaymentReceiptEmailHtml,
+        //                    new Dictionary<string, string>
+        //                    {
+        //                        ["User.FullName"] = userName,
+        //                        ["User.Email"] = to,
+        //                        ["Payment.Amount"] = amountText,
+        //                        ["Payment.Date"] = paidAt,
+        //                        ["Payment.Reference"] = reference,
+        //                        ["Payment.Method"] = methodName,
+        //                        ["InvoiceUrl"] = invoiceUrl,
+        //                        ["Company.Name"] = s.CompanyDisplayName ?? "CondoSphere",
+        //                        ["Provider.ReceiptUrl"] = payment.ReceiptUrl ?? ""
+        //                    });
+
+        //            try
+        //            {
+        //                await _email.SendAsync(to, subject, html);
+        //                return (true, $"Comprovativo enviado para {to}.");
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                // se tiver ILogger<PaymentsController>, loga aqui
+        //                return (false, $"Falha ao enviar e-mail: {ex.Message}");
+        //            }
+        //        }
+
+
+        private async Task<(bool sent, string message)> SendPaymentReceiptAsync(int paymentId)
         {
-            // 1) Respeita os “switches” do painel
             var s = await _settings.GetCurrentAsync();
-            if (!(s.EmailsEnabled && s.PaymentReceiptEmailEnabled)) return;
+            if (!(s.EmailsEnabled && s.PaymentReceiptEmailEnabled))
+                return (false, "Envio de e-mails desativado nas definições.");
 
-            // 2) Carrega o pagamento
             var payment = await _payments.GetByIdDetailedAsync(paymentId);
-            if (payment == null) return;
+            if (payment == null)
+                return (false, $"Pagamento #{paymentId} não encontrado.");
 
-            // 3) Destinatário do e-mail (sem navegar por Unit/Resident/Owner)
-            var to = ResolveDestEmail(payment);
-            if (string.IsNullOrWhiteSpace(to)) return;
+            var to = await ResolveDestEmail(payment);
+            if (string.IsNullOrWhiteSpace(to))
+                return (false, "Não foi possível resolver o e-mail do destinatário.");
 
-            var displayName = User?.Identity?.Name;
-            var userName = !string.IsNullOrWhiteSpace(displayName) ? displayName! : to;
-
-            // 4) Dados do comprovativo
             var culture = System.Globalization.CultureInfo.GetCultureInfo("pt-PT");
-            var amountText = payment.Amount.ToString("C2", culture);
+            var amountTxt = payment.Amount.ToString("C2", culture);
             var paidAtDt = (payment.PaidAt ?? payment.CreatedAt).ToLocalTime();
             var paidAt = paidAtDt.ToString("yyyy-MM-dd HH:mm");
 
             var reference = !string.IsNullOrWhiteSpace(payment.ProviderReference)
-                                ? payment.ProviderReference!
-                                : payment.ProviderPaymentId;
+                ? payment.ProviderReference!
+                : payment.ProviderPaymentId;
 
             var methodName = payment.Method.ToString();
-
-            // Link da fatura (a mesma do módulo Payments)
             var invoiceUrl = MakePublicInvoiceUrl(payment.Id, TimeSpan.FromDays(7), pdf: true);
-
             var subject = s.PaymentReceiptEmailSubject ?? "Comprovativo de pagamento";
 
-            // 5) Corpo (fallback) + ReceiptUrl do provedor (se existir)
+            // ===== Corpo padrão (SEM saudação) =====
             var defaultHtml = $@"
-<p>Olá {System.Net.WebUtility.HtmlEncode(userName)},</p>
-<p>Recebemos o seu pagamento de <strong>{System.Net.WebUtility.HtmlEncode(amountText)}</strong> em {paidAt}.</p>
-<p>Referência: <code>{System.Net.WebUtility.HtmlEncode(reference)}</code> · Método: {System.Net.WebUtility.HtmlEncode(methodName)}</p>"
+<p>Recebemos o seu pagamento de <strong>{WebUtility.HtmlEncode(amountTxt)}</strong> em {paidAt}.</p>
+<p>Referência: <code>{WebUtility.HtmlEncode(reference)}</code> · Método: {WebUtility.HtmlEncode(methodName)}</p>"
             + (string.IsNullOrWhiteSpace(payment.ReceiptUrl) ? "" :
                $@"<p>Recibo do provedor: <a href=""{payment.ReceiptUrl}"">{payment.ReceiptUrl}</a></p>")
             + $@"
 <p>Pode consultar/guardar a fatura aqui: <a href=""{invoiceUrl}"">Ver fatura</a></p>
-<p>Cumprimentos,<br/>{System.Net.WebUtility.HtmlEncode(s.CompanyDisplayName ?? "CondoSphere")}</p>";
+<p>Cumprimentos,<br/>{WebUtility.HtmlEncode(s.CompanyDisplayName ?? "CondoSphere")}</p>";
 
-            // 6) Template configurável (se houver)
-            var html = string.IsNullOrWhiteSpace(s.PaymentReceiptEmailHtml)
-                ? defaultHtml
-                : _settings.RenderTemplate(
+            string html;
+
+            if (string.IsNullOrWhiteSpace(s.PaymentReceiptEmailHtml))
+            {
+                html = defaultHtml;
+            }
+            else
+            {
+                // ===== Template customizado: remove qualquer linha de saudação =====
+                // Remove <p> que contenha "Olá" (com ou sem nome) – case-insensitive
+                var tpl = Regex.Replace(
                     s.PaymentReceiptEmailHtml,
+                    @"<p[^>]*>\s*ol[áa][^<]*</p>\s*",
+                    "",
+                    RegexOptions.IgnoreCase);
+
+                // Renderiza sem depender de nome do usuário
+                html = _settings.RenderTemplate(
+                    tpl,
                     new Dictionary<string, string>
                     {
-                        ["User.FullName"] = userName,
+                        // Não passamos nome para evitar "Olá ,"
+                        ["User.FullName"] = "",
                         ["User.Email"] = to,
-                        ["Payment.Amount"] = amountText,
+                        ["Payment.Amount"] = amountTxt,
                         ["Payment.Date"] = paidAt,
                         ["Payment.Reference"] = reference,
                         ["Payment.Method"] = methodName,
@@ -208,19 +370,50 @@ namespace CondoSphere.Controllers
                         ["Provider.ReceiptUrl"] = payment.ReceiptUrl ?? ""
                     });
 
-            await _email.SendAsync(to, subject, html);
+                // Segurança extra: se após render ainda sobrar uma linha com “Olá …”, remove
+                html = Regex.Replace(html, @"<p[^>]*>\s*ol[áa][^<]*</p>\s*", "", RegexOptions.IgnoreCase);
+
+                // E se o template final ficar vazio por algum motivo, usa o padrão
+                if (string.IsNullOrWhiteSpace(html))
+                    html = defaultHtml;
+            }
+
+            try
+            {
+                await _email.SendAsync(to, subject, html);
+                return (true, $"Comprovativo enviado para {to}.");
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Falha ao enviar e-mail: {ex.Message}");
+            }
         }
 
 
 
+
+        //[HttpPost]
+        //[Authorize(Roles = "Administrator,Manager")]
+        //[ValidateAntiForgeryToken]
+        //public async Task<IActionResult> ResendReceipt(int id)
+        //{
+        //    // reutilize a mesma lógica do envio (ou extraia para um método privado)
+        //    await SendPaymentReceiptAsync(id);
+        //    TempData["Success"] = "Comprovativo reenviado.";
+        //    return RedirectToAction(nameof(Details), new { id });
+        //}
+
         [HttpPost]
-        [Authorize(Roles = "Administrator,Manager")]
+        [Authorize(Roles = "Administrator,Manager")] // ajuste para os nomes reais
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResendReceipt(int id)
         {
-            // reutilize a mesma lógica do envio (ou extraia para um método privado)
-            await SendPaymentReceiptAsync(id);
-            TempData["Success"] = "Comprovativo reenviado.";
+            var (sent, message) = await SendPaymentReceiptAsync(id);
+            if (sent)
+                TempData["Success"] = message;
+            else
+                TempData["Error"] = message;
+
             return RedirectToAction(nameof(Details), new { id });
         }
 
@@ -261,6 +454,79 @@ namespace CondoSphere.Controllers
             for (int i = 0; i < a.Length; i++) res |= a[i] ^ b[i];
             return res == 0;
         }
+
+
+
+
+        [HttpPost]
+        [Authorize(Roles = "Administrator,Manager")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Approve(int id)
+        {
+            var payment = await _payments.GetByIdDetailedAsync(id);
+            if (payment == null) return NotFound();
+
+            if (payment.Status != PaymentStatusType.Succeeded)
+            {
+                TempData["Error"] = "Only successful payments can be approved.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+
+            if (payment.Quota == null)
+            {
+                TempData["Error"] = "Related quota not found.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+
+            if (!payment.Quota.IsPaid)
+            {
+                payment.Quota.IsPaid = true;
+                await _quotas.UpdateAsync(payment.Quota);
+            }
+
+            TempData["Success"] = "Payment approved and quota marked as paid.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        //[HttpPost]
+        //[Authorize(Roles = "Administrator,Manager")]
+        //[ValidateAntiForgeryToken]
+        //public async Task<IActionResult> ApproveAndSend(int id)
+        //{
+        //    var result = await Approve(id) as RedirectToActionResult;
+        //    // se aprovou sem erro, envia recibo
+        //    if (TempData["Success"]?.ToString()?.Contains("approved") == true)
+        //    {
+        //        await SendPaymentReceiptAsync(id);
+        //        TempData["Success"] = "Payment approved, quota marked as paid and receipt sent.";
+        //    }
+        //    return RedirectToAction(nameof(Details), new { id });
+        //}
+
+
+        [HttpPost]
+        [Authorize(Roles = "Administrator,Manager")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ApproveAndSend(int id)
+        {
+            _ = await Approve(id) as RedirectToActionResult;
+
+            try
+            {
+                await SendPaymentReceiptAsync(id);
+                TempData["Success"] = "Payment approved, quota marked as paid and receipt sent.";
+            }
+            catch (Exception ex)
+            {
+                // mantém aprovação, mas sinaliza o problema do e-mail
+                TempData["Warning"] = "Payment approved, but the receipt email was not sent: " + ex.Message;
+            }
+
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+
+
 
         /// Gera URL pública com assinatura e expiração.
         /// pdf=false => /Payments/PublicInvoice (HTML)

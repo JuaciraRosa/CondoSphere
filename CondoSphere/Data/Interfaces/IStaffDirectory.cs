@@ -4,5 +4,7 @@
     {
        
         Task<IReadOnlyList<string>> GetAdminAndManagerEmailsAsync(int? condominiumId = null);
+
+        //Task<bool> IsManagerOfCondominiumAsync(string userId, int condominiumId);
     }
 }

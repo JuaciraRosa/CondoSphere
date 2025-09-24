@@ -1,10 +1,11 @@
 ﻿using CondoSphere.Data;
+using CondoSphere.Infrastructure;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 
 namespace CondoSphere.Models
 {
-    public class Unit
+    public class Unit 
     {
         public int Id { get; set; }
 

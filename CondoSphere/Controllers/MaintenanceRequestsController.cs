@@ -32,15 +32,14 @@ namespace CondoSphere.Controllers
         // GET: MaintenanceRequests
         public async Task<IActionResult> Index()
         {
-            var items = await _requests.GetAllDetailedAsync(); // inclui Condominium + SubmittedBy
-            var me = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
+            var items = await _requests.GetAllDetailedAsync();
             if (User.IsInRole("Resident"))
-                items = items.Where(r => r.SubmittedById == me);
-
-
-
+            {
+                var meId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                items = items.Where(r => r.SubmittedById == meId);
+            }
             return View(items);
+
         }
 
         // GET: MaintenanceRequests/Details/5
@@ -56,7 +55,7 @@ namespace CondoSphere.Controllers
         }
 
         // GET: MaintenanceRequests/Create
-        [Authorize(Roles = "Administrator,Manager,Staff")]
+        [Authorize(Roles = "Administrator,Manager,Resident")]
         public async Task<IActionResult> Create()
         {
             await PopulateSelectsAsync();
@@ -65,20 +64,27 @@ namespace CondoSphere.Controllers
                 SubmittedAt = DateTime.UtcNow,
                 Status = RequestStatus.Open
             });
+
         }
 
         // POST: MaintenanceRequests/Create
-      
+
         [HttpPost]
-        [Authorize(Roles = "Administrator,Manager,Staff")]
+        [Authorize(Roles = "Administrator,Manager,Resident")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(MaintenanceRequest model)
         {
             if (User.IsInRole("Resident"))
+            {
+                model.Status = RequestStatus.Open;                          // <- força OPEN
                 model.SubmittedById = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            }
+            if (model.SubmittedAt == default) model.SubmittedAt = DateTime.UtcNow;
 
-            if (model.SubmittedAt == default)
-                model.SubmittedAt = DateTime.UtcNow;
+            // evitar validação de navegações postadas
+            ModelState.Remove("SubmittedBy");
+            ModelState.Remove("Condominium");
+
 
             if (!ModelState.IsValid)
             {
@@ -104,7 +110,7 @@ namespace CondoSphere.Controllers
 
 
         // GET: MaintenanceRequests/Edit/5
-        [Authorize(Roles = "Administrator,Manager,Staff")]
+        [Authorize(Roles = "Administrator,Manager")]
         public async Task<IActionResult> Edit(int id)
         {
             var req = await _requests.GetByIdDetailedAsync(id);
@@ -120,7 +126,7 @@ namespace CondoSphere.Controllers
         // POST: MaintenanceRequests/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Administrator,Manager,Staff")]
+        [Authorize(Roles = "Administrator,Manager")]
         public async Task<IActionResult> Edit(int id, MaintenanceRequest model)
         {
             if (id != model.Id) return NotFound();
@@ -176,7 +182,7 @@ namespace CondoSphere.Controllers
         }
 
         // GET: MaintenanceRequests/Delete/5
-        [Authorize(Roles = "Administrator,Manager,Staff")]
+        [Authorize(Roles = "Administrator,Manager")]
         public async Task<IActionResult> Delete(int id)
         {
             var req = await _requests.GetByIdDetailedAsync(id);
@@ -190,7 +196,7 @@ namespace CondoSphere.Controllers
         }
 
         // POST: MaintenanceRequests/Delete/5
-        [Authorize(Roles = "Administrator,Manager,Staff")]
+        [Authorize(Roles = "Administrator,Manager")]
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)

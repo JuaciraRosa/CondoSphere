@@ -11,5 +11,12 @@ namespace CondoSphere.Data.Interfaces
         Task MarkSucceededAsync(string providerPaymentId, string? receiptUrl);
 
         Task<Payment?> GetByQuotaIdAsync(int quotaId);
+
+
+
+        // NEW: aggregates for dashboard
+        Task<decimal> GetPaidTotalAsync(DateTime fromUtc, DateTime toUtc);
+        Task<int> CountOpenAsync();
+        Task<int[]> CountPaidByMonthAsync(int monthsBack);
     }
 }

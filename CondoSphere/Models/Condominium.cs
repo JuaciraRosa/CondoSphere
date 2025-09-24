@@ -1,9 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+﻿using CondoSphere.Infrastructure;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 
 namespace CondoSphere.Models
 {
-    public class Condominium
+    public class Condominium : ICompanyScoped
     {
         public int Id { get; set; }
 

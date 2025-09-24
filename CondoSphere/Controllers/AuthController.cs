@@ -9,8 +9,12 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages;
+using System.ComponentModel.DataAnnotations;
+using System.Net;
 using System.Security.Claims;
+using System.Text;
 
 namespace CondoSphere.Controllers
 {
@@ -108,6 +112,15 @@ namespace CondoSphere.Controllers
 
 
 
+        // GET: /Auth/Lockout
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult Lockout()
+        {
+            // Opcional: podes mostrar duração/restante via TempData (ver exemplo no POST de Login)
+            return View();
+        }
+
         [HttpGet]
         public async Task<IActionResult> LoginWith2fa(bool rememberMe, string? returnUrl = null)
         {
@@ -200,7 +213,7 @@ namespace CondoSphere.Controllers
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             var urlToken = System.Net.WebUtility.UrlEncode(token);
             var urlEmail = System.Net.WebUtility.UrlEncode(user.Email);
-            var callbackUrl = Url.Action("ResetPassword", "Account",
+            var callbackUrl = Url.Action("ResetPassword", "Auth",
                 new { token = urlToken, email = urlEmail }, protocol: Request.Scheme);
 
             // lê parâmetros globais (templates + switches)
@@ -237,6 +250,152 @@ namespace CondoSphere.Controllers
             TempData["Success"] = "Check your email for password reset instructions.";
             return RedirectToAction(nameof(ForgotPassword));
         }
+
+
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult ResetPassword(string token, string email)
+        {
+            if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(email))
+            {
+                // sem querystring válida → volta p/ forgot
+                TempData["Error"] = "Link inválido ou incompleto. Solicite novamente a recuperação de senha.";
+                return RedirectToAction(nameof(ForgotPassword));
+            }
+
+            // tenta Base64Url; se falhar, usa fallback
+            string fixedToken = token;
+            try { fixedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(fixedToken)); }
+            catch
+            {
+                fixedToken = fixedToken.Replace(" ", "+");
+                fixedToken = WebUtility.UrlDecode(fixedToken);
+            }
+
+            string fixedEmail = email;
+            try { fixedEmail = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(fixedEmail)); }
+            catch { fixedEmail = WebUtility.UrlDecode(fixedEmail); }
+
+            return View(new ResetPasswordViewModel { Token = fixedToken, Email = fixedEmail });
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            // Normaliza token novamente (defensivo)
+            model.Token ??= "";
+            try { model.Token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(model.Token)); }
+            catch
+            {
+                model.Token = model.Token.Replace(" ", "+");
+                model.Token = WebUtility.UrlDecode(model.Token);
+            }
+
+            // 🔒 Validação de e-mail NO SERVIDOR (evita depender do client-side)
+            if (string.IsNullOrWhiteSpace(model.Email) || !new EmailAddressAttribute().IsValid(model.Email))
+            {
+                ModelState.AddModelError(string.Empty, "Link inválido. Solicite novamente a recuperação de senha.");
+                return View(model);
+            }
+
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            // Não revela se existe
+            if (user == null)
+                return RedirectToAction(nameof(ResetPasswordConfirmation));
+
+            var resetResult = await _userManager.ResetPasswordAsync(user, model.Token, model.Password);
+            if (!resetResult.Succeeded)
+            {
+                foreach (var e in resetResult.Errors)
+                    ModelState.AddModelError(string.Empty, e.Description);
+                return View(model);
+            }
+
+            user.MustChangePassword = false;
+            user.TempPasswordExpiresAt = null;
+            if (!user.EmailConfirmed) user.EmailConfirmed = true;
+
+            var updateResult = await _userManager.UpdateAsync(user);
+            if (!updateResult.Succeeded)
+            {
+                foreach (var e in updateResult.Errors)
+                    ModelState.AddModelError(string.Empty, e.Description);
+                return View(model);
+            }
+
+            await _userManager.UpdateSecurityStampAsync(user);
+
+            TempData["Success"] = "Palavra-passe alterada com sucesso.";
+            return RedirectToAction(nameof(ResetPasswordConfirmation));
+        }
+
+        //[HttpGet]
+        //[AllowAnonymous]
+        //public IActionResult ResetPassword(string token, string email)
+        //{
+        //    // tokens em links por email frequentemente chegam com ' ' no lugar de '+'
+        //    // e/ou precisam de URL decode
+        //    var fixedToken = (token ?? "")
+        //        .Replace(" ", "+");                      // corrige espaços
+        //    fixedToken = WebUtility.UrlDecode(fixedToken); // decode final
+
+        //    return View(new ResetPasswordViewModel { Token = fixedToken, Email = email });
+        //}
+
+        //[HttpPost]
+        //[AllowAnonymous]
+        //[ValidateAntiForgeryToken]
+        //public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        //{
+        //    if (!ModelState.IsValid)
+        //        return View(model);
+
+        //    // Normaliza de novo caso o form/cliente tenha alterado o valor
+        //    model.Token = (model.Token ?? "").Replace(" ", "+");
+        //    model.Token = WebUtility.UrlDecode(model.Token);
+
+        //    var user = await _userManager.FindByEmailAsync(model.Email);
+        //    // Para não revelar se o email existe:
+        //    if (user == null)
+        //        return RedirectToAction(nameof(ResetPasswordConfirmation));
+
+        //    var resetResult = await _userManager.ResetPasswordAsync(user, model.Token, model.Password);
+        //    if (!resetResult.Succeeded)
+        //    {
+        //        // Mostra exatamente o porquê (token inválido, expirado, password policy, etc.)
+        //        foreach (var e in resetResult.Errors)
+        //            ModelState.AddModelError(string.Empty, e.Description);
+        //        return View(model);
+        //    }
+
+        //    // Flags pós-reset
+        //    user.MustChangePassword = false;
+        //    user.TempPasswordExpiresAt = null;
+        //    if (!user.EmailConfirmed) user.EmailConfirmed = true;
+
+        //    var updateResult = await _userManager.UpdateAsync(user);
+        //    if (!updateResult.Succeeded)
+        //    {
+        //        foreach (var e in updateResult.Errors)
+        //            ModelState.AddModelError(string.Empty, e.Description);
+        //        return View(model);
+        //    }
+
+        //    // Invalida sessões antigas
+        //    await _userManager.UpdateSecurityStampAsync(user);
+
+        //    TempData["Success"] = "Palavra-passe alterada com sucesso.";
+        //    return RedirectToAction(nameof(ResetPasswordConfirmation));
+        //}
+
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult ResetPasswordConfirmation() => View();
 
 
         [HttpPost]

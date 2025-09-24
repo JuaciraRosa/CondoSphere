@@ -4,14 +4,22 @@
 @{
     ViewData["Title"] = "Payment Details";
 
-    var statusBadge = Model.Status switch
-    {
-        PaymentStatusType.Pending => "bg-warning",
-        PaymentStatusType.Succeeded => "bg-success",
-        PaymentStatusType.Failed => "bg-danger",
-        PaymentStatusType.Canceled => "bg-dark",
-        _ => "bg-secondary"
-    };
+ var awaitingApproval = Model.Status == PaymentStatusType.Succeeded && !(Model.Quota?.IsPaid ?? false);
+
+    var statusText = awaitingApproval
+        ? "Awaiting approval"
+        : Model.Status.ToString();
+
+    var statusBadge = awaitingApproval
+        ? "bg-warning"
+        : Model.Status switch
+        {
+            PaymentStatusType.Pending => "bg-warning",
+            PaymentStatusType.Succeeded => "bg-success",
+            PaymentStatusType.Failed => "bg-danger",
+            PaymentStatusType.Canceled => "bg-dark",
+            _ => "bg-secondary"
+        };
 }
 
 <section class="section">
@@ -22,7 +30,7 @@
             <div class="row gy-3">
                 <div class="col-md-3">
                     <div class="fw-semibold text-muted">Status</div>
-                    <div><span class="badge @statusBadge">@Model.Status</span></div>
+                    <div><span class="badge @statusBadge">@statusText</span></div>
                 </div>
 
                 <div class="col-md-3">
@@ -86,6 +94,37 @@
     @Html.AntiForgeryToken()
     <button type="submit" class="btn btn-outline-secondary btn-sm">Reenviar comprovativo</button>
   </form>
+}
+
+@* --- Manager/Admin actions: approve flow --- *@
+@if (User.IsInRole("Administrator") || User.IsInRole("Manager"))
+{
+    var canApprove = Model.Status == PaymentStatusType.Succeeded && !(Model.Quota?.IsPaid ?? false);
+
+    <div class="mt-3 d-flex flex-wrap gap-2">
+        @if (canApprove)
+        {
+            <form asp-action="Approve" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.Id" />
+                <button type="submit" class="btn btn-success btn-sm">
+                    <i class="bi bi-check2-circle"></i> Approve payment
+                </button>
+            </form>
+
+            <form asp-action="ApproveAndSend" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.Id" />
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-envelope-check"></i> Approve &amp; send receipt
+                </button>
+            </form>
+        }
+        else if (Model.Status == PaymentStatusType.Succeeded && (Model.Quota?.IsPaid ?? false))
+        {
+            <span class="badge bg-success align-self-center">Quota already marked as paid</span>
+        }
+    </div>
 }
 
 

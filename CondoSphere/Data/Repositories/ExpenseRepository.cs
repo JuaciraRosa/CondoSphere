@@ -27,6 +27,13 @@ namespace CondoSphere.Data.Repositories
             await _context.Expenses
                 .Include(e => e.Condominium)
                 .FirstOrDefaultAsync(e => e.Id == id);
+
+
+        public async Task<decimal> GetTotalAsync(DateTime fromUtc, DateTime toUtc)
+    => await _context.Expenses
+        .AsNoTracking()
+        .Where(e => e.Date >= fromUtc && e.Date < toUtc)
+        .SumAsync(e => (decimal?)e.Amount) ?? 0m;
     }
 
 }

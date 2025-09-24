@@ -1,13 +1,24 @@
 ﻿using CondoSphere.Models;
+using CondoSphere.Services.Notifications;
 using System.Globalization;
 using System.Net;
+using System.Net.Mail;
 
 namespace CondoSphere.Messaging
 {
     public class DomainNotificationService
     {
         private readonly IEmailSender _email;
-        public DomainNotificationService(IEmailSender email) => _email = email;
+        private readonly ISmsSender _sms;
+        public DomainNotificationService(IEmailSender email, ISmsSender sms)
+        {
+            _email = email;
+            _sms = sms;
+        }
+
+
+        public Task NotifyResidentAsync(string phoneE164, string text, CancellationToken ct = default)
+        => _sms.SendAsync(phoneE164, text, ct);
 
         public Task PaymentReceivedAsync(string to, int paymentId, decimal amount)
         {
@@ -80,21 +91,25 @@ namespace CondoSphere.Messaging
         /// Envia um comunicado por e-mail. Se 'recipients' for nulo, não faz nada.
         /// </summary>
         public Task SendAnnouncementEmailAsync(
-            string subject,
-            string htmlBody,
-            int? condoId = null,
-            string? attachmentUrl = null,
-            IEnumerable<string>? recipients = null)
+           string subject,
+           string htmlBody,
+           int? condoId = null,
+           string? attachmentUrl = null,
+           IEnumerable<string>? recipients = null)
         {
             if (recipients is null) return Task.CompletedTask;
 
-            // Anexe o link do anexo ao corpo, se quiser algo rápido
-            if (!string.IsNullOrWhiteSpace(attachmentUrl))
-                htmlBody += $@"<p><a href=""{attachmentUrl}"">Anexo</a></p>";
+            var list = recipients
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
-            var tasks = recipients.Select(to => _email.SendAsync(to, subject, htmlBody));
-            return Task.WhenAll(tasks);
+            if (list.Count == 0) return Task.CompletedTask;
+
+            // Envia UM e-mail com todos em BCC (o link do anexo é tratado no SmtpEmailSender)
+            return _email.SendBulkBccAsync(list, subject, htmlBody, attachmentUrl);
         }
+
 
         /// <summary>
         /// Notificação in-app (placeholder). Integre aqui seu mecanismo real de notificação.
@@ -296,88 +311,105 @@ namespace CondoSphere.Messaging
             }
         }
 
+        // == CRIAÇÃO ==
+        public Task AnnouncementCreatedAsync(
+       IEnumerable<string> recipients,
+       Announcement a,
+       string? attachmentUrl)
+        {
+            return AnnouncementCreatedAsync(recipients, a, attachmentUrl, bodyHtml: null);
+        }
 
+        public async Task AnnouncementCreatedAsync(
+            IEnumerable<string> recipients,
+            Announcement a,
+            string? attachmentUrl,
+            string? bodyHtml)
+        {
+            if (recipients is null) return;
 
-public async Task AnnouncementCreatedAsync(
-    IEnumerable<string> recipients,
-    Announcement a,
-    string? attachmentUrl)
-    {
-        // overload simples que reusa a versão com body opcional
-        await AnnouncementCreatedAsync(recipients, a, attachmentUrl, bodyHtml: null);
-    }
+            var list = recipients
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
-    public async Task AnnouncementCreatedAsync(
-        IEnumerable<string> recipients,
-        Announcement a,
-        string? attachmentUrl,
-        string? bodyHtml)
-    {
-        if (recipients == null) return;
+            if (list.Count == 0) return;
 
-        var subject = $"[CondoSphere] Announcement — {a.Title}";
-        var body = $@"
+            var subject = $"[CondoSphere] Announcement — {a.Title}";
+            var body = $@"
 <p>New announcement was posted.</p>
 <p><strong>Title:</strong> {System.Net.WebUtility.HtmlEncode(a.Title ?? "Untitled")}</p>
-{(string.IsNullOrWhiteSpace(bodyHtml) ? "" : bodyHtml)}
-{(string.IsNullOrWhiteSpace(attachmentUrl) ? "" : $@"<p><a href=""{System.Net.WebUtility.HtmlEncode(attachmentUrl)}"" target=""_blank"">Attachment</a></p>")}
-";
+{(string.IsNullOrWhiteSpace(bodyHtml) ? "" : bodyHtml)}";
 
-        foreach (var to in recipients.Where(x => !string.IsNullOrWhiteSpace(x))
-                                     .Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            await SendAsync(to, subject, body);
+            try
+            {
+                await _email.SendBulkBccAsync(list, subject, body, attachmentUrl);
+            }
+            catch (SmtpException)
+            {
+                foreach (var to in list)
+                    await _email.SendAsync(to, subject,
+                        body + (string.IsNullOrWhiteSpace(attachmentUrl) ? "" : $@"<p><a href=""{attachmentUrl}"">Attachment</a></p>"));
+            }
         }
-    }
 
-    public async Task AnnouncementUpdatedAsync(
-        IEnumerable<string> recipients,
-        Announcement a,
-        bool attachmentChanged,
-        string? attachmentUrl,
-        string? bodyHtml = null)
-    {
-        if (recipients == null) return;
 
-        var subject = $"[CondoSphere] Announcement updated — {a.Title}";
-        var attachBlock = attachmentChanged
-            ? (string.IsNullOrWhiteSpace(attachmentUrl)
-                ? "<p><em>Attachment removed.</em></p>"
-                : $@"<p><strong>Attachment updated:</strong> <a href=""{System.Net.WebUtility.HtmlEncode(attachmentUrl)}"" target=""_blank"">Open</a></p>")
-            : (string.IsNullOrWhiteSpace(attachmentUrl) ? "" : $@"<p><a href=""{System.Net.WebUtility.HtmlEncode(attachmentUrl)}"">Attachment</a></p>");
 
-        var body = $@"
+
+
+        public Task AnnouncementUpdatedAsync(
+            IEnumerable<string> recipients,
+            Announcement a,
+            bool attachmentChanged,
+            string? attachmentUrl,
+            string? bodyHtml = null)
+        {
+            if (recipients is null) return Task.CompletedTask;
+
+            var list = recipients
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (list.Count == 0) return Task.CompletedTask;
+
+            var subject = $"[CondoSphere] Announcement updated — {a.Title}";
+            var attachBlock = attachmentChanged
+                ? (string.IsNullOrWhiteSpace(attachmentUrl)
+                    ? "<p><em>Attachment removed.</em></p>"
+                    : "<p><strong>Attachment updated:</strong> see link below.</p>")
+                : "";
+
+            var body = $@"
 <p>An announcement has been updated.</p>
 <p><strong>Title:</strong> {System.Net.WebUtility.HtmlEncode(a.Title ?? "Untitled")}</p>
 {(string.IsNullOrWhiteSpace(bodyHtml) ? "" : bodyHtml)}
 {attachBlock}
 ";
 
-        foreach (var to in recipients.Where(x => !string.IsNullOrWhiteSpace(x))
-                                     .Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            await SendAsync(to, subject, body);
+            // O link de anexo (se houver) será adicionado pelo SmtpEmailSender
+            return _email.SendBulkBccAsync(list, subject, body, attachmentUrl);
         }
-    }
 
-    public async Task AnnouncementDeletedAsync(
-        IEnumerable<string> recipients,
-        Announcement a)
-    {
-        if (recipients == null) return;
+        public Task AnnouncementDeletedAsync(IEnumerable<string> recipients, Announcement a)
+        {
+            if (recipients is null) return Task.CompletedTask;
 
-        var subject = $"[CondoSphere] Announcement canceled — {a.Title}";
-        var body = $@"
+            var list = recipients
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (list.Count == 0) return Task.CompletedTask;
+
+            var subject = $"[CondoSphere] Announcement canceled — {a.Title}";
+            var body = $@"
 <p>The following announcement was canceled/removed.</p>
-<p><strong>Title:</strong> {System.Net.WebUtility.HtmlEncode(a.Title ?? "Untitled")}</p>
-";
+<p><strong>Title:</strong> {System.Net.WebUtility.HtmlEncode(a.Title ?? "Untitled")}</p>";
 
-        foreach (var to in recipients.Where(x => !string.IsNullOrWhiteSpace(x))
-                                     .Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            await SendAsync(to, subject, body);
+            return _email.SendBulkBccAsync(list, subject, body);
         }
-    }
+
 
 
         public async Task ForumNewTopicAsync(IEnumerable<string> recipients, ForumTopic topic, string authorEmail, string topicUrl)

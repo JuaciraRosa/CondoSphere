@@ -42,6 +42,12 @@ namespace CondoSphere.Data.Repositories
                 .FirstOrDefaultAsync();
         }
 
+
+        public async Task<int> CountOpenAsync()
+    => await _context.MaintenanceRequests
+        .AsNoTracking()
+        .CountAsync(r => r.Status == RequestStatus.Open || r.Status == RequestStatus.InProgress);
+
     }
 
 }

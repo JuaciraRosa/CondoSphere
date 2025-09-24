@@ -1,11 +1,12 @@
 ﻿using CondoSphere.Data;
 using CondoSphere.Messaging;
 using CondoSphere.Models;
+using Google.Apis.Calendar.v3.Data;
 using Microsoft.EntityFrameworkCore;
 using Stripe;
 using Stripe.Checkout;
-using System.Security.Claims;
 using System.Globalization;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -83,70 +84,144 @@ namespace CondoSphere.Services
         }
 
         // ---------- 2) Confirma e marca pago usando o PaymentIntentId ----------
+        //public async Task<string> ConfirmAndMarkAsync(string paymentIntentId)
+        //{
+        //    var piService = new PaymentIntentService();
+        //    var intent = await piService.GetAsync(paymentIntentId);
+
+        //    if (intent == null || !string.Equals(intent.Status, "succeeded", StringComparison.OrdinalIgnoreCase))
+        //        throw new InvalidOperationException("PaymentIntent não está pago.");
+
+        //    if (!intent.Metadata.TryGetValue("QuotaId", out var quotaIdStr) ||
+        //        !int.TryParse(quotaIdStr, out var quotaId))
+        //        throw new InvalidOperationException("Metadata 'QuotaId' não encontrado no PaymentIntent.");
+
+        //    var quota = await _db.Quotas
+        //        .Include(q => q.Payment)
+        //        .FirstOrDefaultAsync(q => q.Id == quotaId)
+        //        ?? throw new InvalidOperationException("Quota não encontrada.");
+
+        //    // evita duplicar
+        //    if (quota.Payment != null)
+        //        return quota.Payment.Id.ToString();
+
+        //    // montante (Stripe devolve em cêntimos)
+        //    long cents = intent.AmountReceived != 0 ? intent.AmountReceived : intent.Amount;
+        //    var amount = cents / 100m;
+
+        //    // tenta obter Charge para ReceiptUrl
+        //    string? receiptUrl = null;
+        //    string? chargeId = null;
+        //    try
+        //    {
+        //        var chargeSrv = new ChargeService();
+        //        var list = await chargeSrv.ListAsync(new ChargeListOptions
+        //        {
+        //            PaymentIntent = intent.Id,
+        //            Limit = 1
+        //        });
+        //        var charge = list?.Data?.FirstOrDefault();
+        //        receiptUrl = charge?.ReceiptUrl;
+        //        chargeId = charge?.Id;
+        //    }
+        //    catch { /* opcional: log */ }
+
+        //    var payment = new Payment
+        //    {
+        //        QuotaId = quota.Id,
+        //        Amount = amount,
+        //        Method = PaymentMethodType.Card,
+        //        Status = PaymentStatusType.Succeeded,
+        //        Provider = "stripe",
+        //        ProviderPaymentId = intent.Id,   // PaymentIntent Id
+        //        ProviderReference = chargeId,    // Charge Id (se houver)
+        //        ReceiptUrl = receiptUrl,
+        //        CreatedAt = DateTime.UtcNow,
+        //        PaidAt = DateTime.UtcNow
+        //    };
+
+        //    _db.Payments.Add(payment);
+        //    quota.IsPaid = true;
+        //    quota.Payment = payment;
+
+        //    await _db.SaveChangesAsync();
+        //    await TrySendReceiptEmailAsync(payment.Id);
+        //    return payment.Id.ToString();
+        //}
+
+
+
         public async Task<string> ConfirmAndMarkAsync(string paymentIntentId)
         {
+            // 1) Stripe: recuperar intent e receipt
             var piService = new PaymentIntentService();
             var intent = await piService.GetAsync(paymentIntentId);
 
             if (intent == null || !string.Equals(intent.Status, "succeeded", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("PaymentIntent não está pago.");
 
-            if (!intent.Metadata.TryGetValue("QuotaId", out var quotaIdStr) ||
-                !int.TryParse(quotaIdStr, out var quotaId))
-                throw new InvalidOperationException("Metadata 'QuotaId' não encontrado no PaymentIntent.");
-
-            var quota = await _db.Quotas
-                .Include(q => q.Payment)
-                .FirstOrDefaultAsync(q => q.Id == quotaId)
-                ?? throw new InvalidOperationException("Quota não encontrada.");
-
-            // evita duplicar
-            if (quota.Payment != null)
-                return quota.Payment.Id.ToString();
-
-            // montante (Stripe devolve em cêntimos)
-            long cents = intent.AmountReceived != 0 ? intent.AmountReceived : intent.Amount;
-            var amount = cents / 100m;
-
-            // tenta obter Charge para ReceiptUrl
+            // 2) tentar obter Charge/ReceiptUrl
             string? receiptUrl = null;
             string? chargeId = null;
             try
             {
                 var chargeSrv = new ChargeService();
-                var list = await chargeSrv.ListAsync(new ChargeListOptions
-                {
-                    PaymentIntent = intent.Id,
-                    Limit = 1
-                });
+                var list = await chargeSrv.ListAsync(new ChargeListOptions { PaymentIntent = intent.Id, Limit = 1 });
                 var charge = list?.Data?.FirstOrDefault();
                 receiptUrl = charge?.ReceiptUrl;
                 chargeId = charge?.Id;
             }
             catch { /* opcional: log */ }
 
-            var payment = new Payment
-            {
-                QuotaId = quota.Id,
-                Amount = amount,
-                Method = PaymentMethodType.Card,
-                Status = PaymentStatusType.Succeeded,
-                Provider = "stripe",
-                ProviderPaymentId = intent.Id,   // PaymentIntent Id
-                ProviderReference = chargeId,    // Charge Id (se houver)
-                ReceiptUrl = receiptUrl,
-                CreatedAt = DateTime.UtcNow,
-                PaidAt = DateTime.UtcNow
-            };
+            // 3) Atualiza APENAS o Payment (já criado como Pending em CreateCardIntentAsync)
+            var payment = await _db.Payments
+                .Include(p => p.Quota)
+                .FirstOrDefaultAsync(p => p.ProviderPaymentId == intent.Id);
 
-            _db.Payments.Add(payment);
-            quota.IsPaid = true;
-            quota.Payment = payment;
+            // Pode acontecer de não existir (ex.: fluxo fora do card intent). Cria, mas NÃO marca quota.
+            if (payment == null)
+            {
+                // valor recebido em cêntimos
+                long cents = intent.AmountReceived != 0 ? intent.AmountReceived : intent.Amount;
+                var amount = cents / 100m;
+
+                payment = new Payment
+                {
+                    QuotaId = intent.Metadata.TryGetValue("QuotaId", out var qid) && int.TryParse(qid, out var q)
+                                ? q : 0,
+                    Amount = amount,
+                    Method = PaymentMethodType.Card,
+                    Status = PaymentStatusType.Succeeded,
+                    Provider = "stripe",
+                    ProviderPaymentId = intent.Id,
+                    ProviderReference = chargeId,
+                    ReceiptUrl = receiptUrl,
+                    CreatedAt = DateTime.UtcNow,
+                    PaidAt = DateTime.UtcNow
+                };
+                _db.Payments.Add(payment);
+            }
+            else
+            {
+                payment.Status = PaymentStatusType.Succeeded;
+                payment.PaidAt = DateTime.UtcNow;
+                payment.ReceiptUrl = receiptUrl;
+                payment.ProviderReference = chargeId;
+                _db.Payments.Update(payment);
+            }
+
+            // 🚫 NÃO MARCAR A QUOTA AQUI
+            // if (payment.Quota != null) payment.Quota.IsPaid = true;
 
             await _db.SaveChangesAsync();
-            await TrySendReceiptEmailAsync(payment.Id);
+
+            //  (só após aprovação do gestor)
+            // await TrySendReceiptEmailAsync(payment.Id);
+
             return payment.Id.ToString();
         }
+
+
 
         private async Task TrySendReceiptEmailAsync(int paymentId)
         {
@@ -211,66 +286,70 @@ namespace CondoSphere.Services
         }
 
 
-        // ---------- 3) Webhook (opcional; útil em produção) ----------
-        public async Task HandleWebhookAsync(string json, string signatureHeader)
-        {
-            var secret = _cfg["Stripe:WebhookSecret"];
-            if (string.IsNullOrWhiteSpace(secret))
-                throw new InvalidOperationException("Stripe WebhookSecret not configured.");
+        // ---------- 3) Webhook(opcional; útil em produção) ----------
+        //public async Task HandleWebhookAsync(string json, string signatureHeader)
+        //{
+        //    var secret = _cfg["Stripe:WebhookSecret"];
+        //    if (string.IsNullOrWhiteSpace(secret))
+        //        throw new InvalidOperationException("Stripe WebhookSecret not configured.");
 
-            var stripeEvent = EventUtility.ConstructEvent(json, signatureHeader, secret);
+        //    var stripeEvent = EventUtility.ConstructEvent(json, signatureHeader, secret);
 
-            if (stripeEvent.Type is "payment_intent.succeeded"
-                                or "payment_intent.payment_failed"
-                                or "payment_intent.canceled")
-            {
-                var evtPi = stripeEvent.Data.Object as PaymentIntent;
-                if (evtPi == null) return;
+        //    if (stripeEvent.Type is "payment_intent.succeeded"
+        //                        or "payment_intent.payment_failed"
+        //                        or "payment_intent.canceled")
+        //    {
+        //        var evtPi = stripeEvent.Data.Object as PaymentIntent;
+        //        if (evtPi == null) return;
 
-                var piService = new PaymentIntentService();
-                var pi = await piService.GetAsync(evtPi.Id, new PaymentIntentGetOptions
-                {
-                    Expand = new List<string> { "latest_charge" }
-                });
+        //        var piService = new PaymentIntentService();
+        //        var pi = await piService.GetAsync(evtPi.Id, new PaymentIntentGetOptions
+        //        {
+        //            Expand = new List<string> { "latest_charge" }
+        //        });
 
-                var payment = await _db.Payments
-                    .Include(p => p.Quota)
-                    .FirstOrDefaultAsync(p => p.ProviderPaymentId == pi.Id);
+        //        var payment = await _db.Payments
+        //            .Include(p => p.Quota)
+        //            .FirstOrDefaultAsync(p => p.ProviderPaymentId == pi.Id);
 
-                if (payment == null) return;
+        //        if (payment == null) return;
 
-                var changed = false;
-                if (stripeEvent.Type == "payment_intent.succeeded")
-                {
-                    payment.Status = PaymentStatusType.Succeeded;
-                    payment.PaidAt = DateTime.UtcNow;
-                    payment.ReceiptUrl = pi.LatestCharge?.ReceiptUrl;
-                    if (payment.Quota != null) payment.Quota.IsPaid = true;
-                    changed = true;
-                }
-                else if (stripeEvent.Type == "payment_intent.payment_failed")
-                {
-                    if (payment.Status != PaymentStatusType.Failed)
-                    {
-                        payment.Status = PaymentStatusType.Failed;
-                        changed = true;
-                    }
-                }
-                else if (stripeEvent.Type == "payment_intent.canceled")
-                {
-                    if (payment.Status != PaymentStatusType.Canceled)
-                    {
-                        payment.Status = PaymentStatusType.Canceled;
-                        changed = true;
-                    }
-                }
+        //        var changed = false;
+        //        if (stripeEvent.Type == "payment_intent.succeeded")
+        //        {
+        //            payment.Status = PaymentStatusType.Succeeded;
+        //            payment.PaidAt = DateTime.UtcNow;
+        //            payment.ReceiptUrl = pi.LatestCharge?.ReceiptUrl;
+        //            if (payment.Quota != null) payment.Quota.IsPaid = true;
+        //            changed = true;
+        //        }
+        //        else if (stripeEvent.Type == "payment_intent.payment_failed")
+        //        {
+        //            if (payment.Status != PaymentStatusType.Failed)
+        //            {
+        //                payment.Status = PaymentStatusType.Failed;
+        //                changed = true;
+        //            }
+        //        }
+        //        else if (stripeEvent.Type == "payment_intent.canceled")
+        //        {
+        //            if (payment.Status != PaymentStatusType.Canceled)
+        //            {
+        //                payment.Status = PaymentStatusType.Canceled;
+        //                changed = true;
+        //            }
+        //        }
 
-                if (changed)
-                    await _db.SaveChangesAsync();
-            }
+        //        if (changed)
+        //            await _db.SaveChangesAsync();
+        //    }
 
 
-        }
+        //}
+
+
+
+
 
         private string MakePublicInvoiceUrl(int paymentId, TimeSpan validFor, bool pdf = false)
         {
@@ -368,7 +447,72 @@ namespace CondoSphere.Services
             // devolve os dados esperados pelos controllers antigos
             return (intent.ClientSecret, intent.Id);
         }
+
+        public async Task HandleWebhookAsync(string json, string signatureHeader)
+        {
+            var secret = _cfg["Stripe:WebhookSecret"];
+            if (string.IsNullOrWhiteSpace(secret))
+                throw new InvalidOperationException("Stripe WebhookSecret not configured.");
+
+            var stripeEvent = EventUtility.ConstructEvent(json, signatureHeader, secret);
+
+            // CORRIGIDO: removido ')' extra e ';' no final da linha
+            if (stripeEvent.Type is "payment_intent.succeeded"
+                                or "payment_intent.payment_failed"
+                                or "payment_intent.canceled")
+            {
+                var evtPi = stripeEvent.Data.Object as PaymentIntent;
+                if (evtPi == null) return;
+
+                var piService = new PaymentIntentService();
+                var pi = await piService.GetAsync(evtPi.Id, new PaymentIntentGetOptions
+                {
+                    Expand = new List<string> { "latest_charge" }
+                });
+
+                var payment = await _db.Payments
+                    .Include(p => p.Quota)
+                    .FirstOrDefaultAsync(p => p.ProviderPaymentId == pi.Id);
+
+                if (payment == null) return;
+
+                var changed = false;
+
+                if (stripeEvent.Type == "payment_intent.succeeded")
+                {
+                    payment.Status = PaymentStatusType.Succeeded;
+                    payment.PaidAt = DateTime.UtcNow;
+                    payment.ReceiptUrl = pi.LatestCharge?.ReceiptUrl;
+
+                    // REMOVIDO: não marcar a quota aqui (validação ficará na action Approve)
+                    // if (payment.Quota != null) payment.Quota.IsPaid = true;
+
+                    changed = true;
+                }
+                else if (stripeEvent.Type == "payment_intent.payment_failed")
+                {
+                    if (payment.Status != PaymentStatusType.Failed)
+                    {
+                        payment.Status = PaymentStatusType.Failed;
+                        changed = true;
+                    }
+                }
+                else if (stripeEvent.Type == "payment_intent.canceled")
+                {
+                    if (payment.Status != PaymentStatusType.Canceled)
+                    {
+                        payment.Status = PaymentStatusType.Canceled;
+                        changed = true;
+                    }
+                }
+
+                if (changed)
+                    await _db.SaveChangesAsync();
+            }
+        }
+
     }
+
 
 
 }

@@ -1,0 +1,17 @@
+﻿@{
+    ViewData["Title"] = "Conta bloqueada";
+}
+
+<div class="container py-5" style="max-width:640px;">
+    <h1 class="h4 mb-3">Conta temporariamente bloqueada</h1>
+
+    <p class="mb-3">
+        Por segurança, a sua conta foi temporariamente bloqueada devido a várias tentativas falhadas de início de sessão.
+        Aguarde alguns minutos e tente novamente.
+    </p>
+
+    <div class="d-flex gap-2">
+        <a asp-controller="Auth" asp-action="ForgotPassword" class="btn btn-primary">Recuperar palavra-passe</a>
+        <a asp-controller="Auth" asp-action="Login" class="btn btn-outline-secondary">Voltar ao login</a>
+    </div>
+</div>

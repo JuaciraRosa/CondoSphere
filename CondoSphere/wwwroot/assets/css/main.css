@@ -2890,3 +2890,32 @@ footer, .site-footer {
     margin: 0 auto;
     padding: 0 1.25rem;
 }
+.brand-menu {
+    min-width: 320px
+}
+
+.brand-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,#4361ee,#3a86ff)
+}
+/* realce sutil no hover do nome */
+.sitename {
+    position: relative
+}
+
+    .sitename::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        bottom: -2px;
+        height: 3px;
+        width: 0;
+        background: linear-gradient(90deg,#4361ee,#3a86ff);
+        transition: width .25s ease;
+    }
+
+.logo:hover .sitename::after {
+    width: 100%
+}

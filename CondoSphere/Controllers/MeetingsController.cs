@@ -23,19 +23,22 @@ namespace CondoSphere.Controllers
         private readonly IWebHostEnvironment _env;
         private readonly IOnlineMeetingProviderFactory _providers;
         private readonly DomainNotificationService _notify;
+        private readonly ILogger<MeetingsController> _logger;
 
         public MeetingsController(
             IMeetingRepository meetings,
             ICondominiumRepository condos,
             IWebHostEnvironment env,
             IOnlineMeetingProviderFactory providers,
-            DomainNotificationService notify)
+            DomainNotificationService notify,
+              ILogger<MeetingsController> logger)
         {
             _meetings = meetings;
             _condos = condos;
             _env = env;
             _providers = providers;
             _notify = notify;
+            _logger = logger;
         }
 
         [AllowAnonymous]
@@ -110,16 +113,16 @@ namespace CondoSphere.Controllers
                 attachmentUrl = Url.Action("Download", "Meetings", new { id = meeting.Id }, Request.Scheme);
             }
 
-            // Notify owners
+            // Notify owners por e-mail
             try
             {
                 var emails = await _condos.GetOwnerEmailsAsync(meeting.CondominiumId);
                 if (emails.Count > 0)
                 {
-                    if (attachmentUrl != null)
+                    if (!string.IsNullOrWhiteSpace(attachmentUrl))
                         await _notify.MeetingScheduledAsync(emails, meeting, attachmentUrl);
                     else
-                        await _notify.MeetingScheduledAsync(emails, meeting); // your original method
+                        await _notify.MeetingScheduledAsync(emails, meeting);
 
                     TempData["Success"] = $"Meeting created and {emails.Count} residents notified by email.";
                 }
@@ -133,7 +136,24 @@ namespace CondoSphere.Controllers
                 TempData["Success"] = $"Meeting created. (Warning: failed sending e-mails: {ex.Message})";
             }
 
+            // SMS de TESTE (número hardcoded)
+            // mantém, mas não deixa o fluxo quebrar se falhar
+            try
+            {
+                await _notify.NotifyResidentAsync(
+                    "+351937793133",
+                    "CondoSphere: Foi marcada uma reunião. Verifique o site."
+                );
+            }
+            catch (Exception ex)
+            {
+                // registre se quiser, mas não mude a mensagem de sucesso do e-mail
+                _logger.LogWarning(ex, "Falha ao enviar SMS de teste.");
+            }
+
+            // redireciona normalmente
             return RedirectToAction(nameof(Index));
+
         }
 
 

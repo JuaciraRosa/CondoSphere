@@ -23,5 +23,10 @@ namespace CondoSphere.Services
                           .Distinct()
                           .ToListAsync();
         }
+
+
+    //    public Task<bool> IsManagerOfCondominiumAsync(string userId, int condominiumId)
+    //=> _db.CondominiumManagers
+    //      .AnyAsync(x => x.UserId == userId && x.CondominiumId == condominiumId);
     }
 }

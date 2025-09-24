@@ -46,7 +46,9 @@ namespace CondoSphere.Models
         [Display(Name = "Paid At")]
         public DateTime? PaidAt { get; set; }
 
-    
+        public string? PayerEmail { get; set; }
+
+
 
     }
 }

@@ -2,6 +2,7 @@
 using CondoSphere.Models;
 using Microsoft.EntityFrameworkCore;
 
+
 namespace CondoSphere.Data.Repositories
 {
     public class PaymentRepository : GenericRepository<Payment>, IPaymentRepository
@@ -33,7 +34,7 @@ namespace CondoSphere.Data.Repositories
             p.Status = PaymentStatusType.Succeeded;
             p.PaidAt = DateTime.UtcNow;
             p.ReceiptUrl = receiptUrl;
-            if (p.Quota != null) p.Quota.IsPaid = true;
+            
 
             await _context.SaveChangesAsync();
         }
@@ -42,6 +43,52 @@ namespace CondoSphere.Data.Repositories
     await _context.Payments
         .Include(p => p.Quota)
         .FirstOrDefaultAsync(p => p.QuotaId == quotaId);
-    }
 
+
+        public async Task<decimal> GetPaidTotalAsync(DateTime fromUtc, DateTime toUtc)
+          => await _context.Payments
+              .AsNoTracking()
+              .Where(p =>
+                  p.Status == PaymentStatusType.Succeeded &&          // enum comparison
+                  p.PaidAt.HasValue &&
+                  p.PaidAt.Value >= fromUtc &&
+                  p.PaidAt.Value < toUtc)
+              .SumAsync(p => (decimal?)p.Amount) ?? 0m;
+
+        public async Task<int> CountOpenAsync()
+            => await _context.Payments
+                .AsNoTracking()
+                .CountAsync(p => p.Status != PaymentStatusType.Succeeded); // enum comparison
+
+        public async Task<int[]> CountPaidByMonthAsync(int monthsBack)
+        {
+            if (monthsBack < 1) monthsBack = 1;
+
+            var now = DateTime.UtcNow;
+            var start = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc)
+                            .AddMonths(-(monthsBack - 1));
+            var end = start.AddMonths(monthsBack);
+
+            var grouped = await _context.Payments
+                .AsNoTracking()
+                .Where(p =>
+                    p.Status == PaymentStatusType.Succeeded &&          // enum comparison
+                    p.PaidAt.HasValue &&
+                    p.PaidAt.Value >= start &&
+                    p.PaidAt.Value < end)
+                .GroupBy(p => new { p.PaidAt!.Value.Year, p.PaidAt!.Value.Month })
+                .Select(g => new { g.Key.Year, g.Key.Month, Count = g.Count() })
+                .ToListAsync();
+
+            var result = new int[monthsBack];
+            for (int i = 0; i < monthsBack; i++)
+            {
+                var cursor = start.AddMonths(i);
+                var hit = grouped.FirstOrDefault(x => x.Year == cursor.Year && x.Month == cursor.Month);
+                result[i] = hit?.Count ?? 0;
+            }
+            return result;
+        }
+
+    }
 }

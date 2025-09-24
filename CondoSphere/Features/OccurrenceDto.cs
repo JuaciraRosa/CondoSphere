@@ -1,7 +1,7 @@
 ﻿namespace CondoSphere.Features.Ocurrences
 {
 
-    public class OccurrenceDto
+    public class Occurrence
     {
         public string Id { get; set; } = Guid.NewGuid().ToString("N");
         public int CondominiumId { get; set; }

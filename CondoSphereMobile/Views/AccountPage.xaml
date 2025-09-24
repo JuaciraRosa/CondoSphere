@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CondoSphereMobile.Views.AccountPage"
+            Title="Minha Conta">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="15">
+
+            <!-- Alterar senha -->
+            <Label Text="Alterar Senha" FontSize="20" FontAttributes="Bold"/>
+            <Entry x:Name="CurrentPasswordEntry" Placeholder="Senha atual" IsPassword="True"/>
+            <Entry x:Name="NewPasswordEntry" Placeholder="Nova senha" IsPassword="True"/>
+            <Button Text="Alterar Senha" Clicked="OnChangePasswordClicked"/>
+
+            <BoxView HeightRequest="1" Color="Gray" />
+
+            <Label x:Name="TwoFaStatusLabel"
+             FontAttributes="Bold"
+             Text="Carregando estado do 2FA..." />
+            
+            <!-- 2FA -->
+            <Label Text="Autenticação de Dois Fatores (2FA)" FontSize="20" FontAttributes="Bold"/>
+            <Button x:Name="Activate2FAButton" Text="Ativar 2FA" Clicked="OnSetup2FAClicked"/>
+            <Button  x:Name="Disable2FAButton" Text="Desativar 2FA" Clicked="OnDisable2FAClicked"/>
+
+            <BoxView HeightRequest="1" Color="Gray" />
+
+            <!-- Conta -->
+            <Label Text="Gerenciamento de Conta" FontSize="20" FontAttributes="Bold"/>
+            <Button Text="Desativar Conta" BackgroundColor="OrangeRed" TextColor="White"
+                    Clicked="OnDeactivateClicked"/>
+            <Button Text="Apagar Conta" BackgroundColor="Red" TextColor="White"
+                    Clicked="OnDeleteClicked"/>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

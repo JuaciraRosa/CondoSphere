@@ -161,13 +161,51 @@ namespace CondoSphere.Controllers
             }
         }
 
-        // GET /Quotas/StripeSuccess?id=5&session_id=cs_test_...
+        //// GET /Quotas/StripeSuccess?id=5&session_id=cs_test_...
+        //[Authorize]
+        //[HttpGet]
+
+        //public async Task<IActionResult> StripeSuccess(int id, [FromQuery(Name = "session_id")] string sessionId)
+        //{
+        //    // guard extra: evita placeholder
+        //    if (string.IsNullOrWhiteSpace(sessionId) || sessionId.Contains("{CHECKOUT_SESSION_ID}"))
+        //    {
+        //        TempData["Error"] = "Sessão inválida.";
+        //        return RedirectToAction(nameof(Pay), new { id });
+        //    }
+
+        //    try
+        //    {
+        //        var sessionSrv = new SessionService();
+        //        var ss = await sessionSrv.GetAsync(sessionId);
+
+        //        if (ss.PaymentStatus == "paid" && !string.IsNullOrEmpty(ss.PaymentIntentId))
+        //        {
+        //            await _paymentService.ConfirmAndMarkAsync(ss.PaymentIntentId);
+        //            TempData["Success"] = "Pagamento concluído.";
+        //            return RedirectToAction(nameof(Index));
+        //        }
+
+        //        TempData["Error"] = "Sessão não paga.";
+        //        return RedirectToAction(nameof(Pay), new { id });
+        //    }
+        //    catch (Stripe.StripeException sx)
+        //    {
+        //        TempData["Error"] = sx.Message;
+        //        return RedirectToAction(nameof(Pay), new { id });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        TempData["Error"] = ex.Message;
+        //        return RedirectToAction(nameof(Pay), new { id });
+        //    }
+        //}
+
+        // GET /Quotas/StripeSuccess?id=5&session_id=cs_...
         [Authorize]
         [HttpGet]
-     
         public async Task<IActionResult> StripeSuccess(int id, [FromQuery(Name = "session_id")] string sessionId)
         {
-            // guard extra: evita placeholder
             if (string.IsNullOrWhiteSpace(sessionId) || sessionId.Contains("{CHECKOUT_SESSION_ID}"))
             {
                 TempData["Error"] = "Sessão inválida.";
@@ -181,8 +219,11 @@ namespace CondoSphere.Controllers
 
                 if (ss.PaymentStatus == "paid" && !string.IsNullOrEmpty(ss.PaymentIntentId))
                 {
+                    // mantém o que já tens
                     await _paymentService.ConfirmAndMarkAsync(ss.PaymentIntentId);
-                    TempData["Success"] = "Pagamento concluído.";
+
+                    // só muda a mensagem:
+                    TempData["Success"] = "Pagamento concluído e enviado para validação do gestor.";
                     return RedirectToAction(nameof(Index));
                 }
 
@@ -200,6 +241,7 @@ namespace CondoSphere.Controllers
                 return RedirectToAction(nameof(Pay), new { id });
             }
         }
+
 
         // GET /Quotas/StripeCancel?id=5
         [Authorize]

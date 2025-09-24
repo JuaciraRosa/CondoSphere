@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CondoSphereMobile.Views.QuotasPage"
+             Title="Quotas">
+
+    <VerticalStackLayout Padding="16" Spacing="8">
+        <Label x:Name="ErrorLabel" TextColor="Red" IsVisible="False"/>
+
+        <CollectionView x:Name="ListView" SelectionMode="None">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto" Padding="10" Margin="6" BackgroundColor="#f7f7f7">
+                        <VerticalStackLayout>
+                            <Label Text="{Binding Amount, StringFormat='Valor: {0:C}'}" FontAttributes="Bold"/>
+                            <Label Text="{Binding DueDate, StringFormat='Vencimento: {0:dd/MM/yyyy}'}" FontSize="12" TextColor="Gray"/>
+                            <Label Text="{Binding StatusLabel}" FontSize="12" TextColor="Gray"/>
+                        </VerticalStackLayout>
+
+                        <Button Grid.Column="1"
+                Text="{Binding PayButtonText}"
+                IsEnabled="{Binding CanPay}"
+                Clicked="OnPayClicked"/>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+    </VerticalStackLayout>
+</ContentPage>

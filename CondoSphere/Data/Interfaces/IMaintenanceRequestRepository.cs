@@ -9,6 +9,8 @@ namespace CondoSphere.Data.Interfaces
         Task<MaintenanceRequest?> GetByIdDetailedAsync(int id);
 
         Task<string?> GetRequesterEmailAsync(string userId);
+
+        Task<int> CountOpenAsync();
     }
 
 }

@@ -1,7 +1,10 @@
-﻿@model CondoSphere.Features.Ocurrences.OccurrenceDto
+﻿@using System.Security.Claims
+@model CondoSphere.Features.Ocurrences.Occurrence
 @{
     ViewData["Title"] = "Nova Ocorrência";
     var condoId = ViewBag.CondoId as int?;
+    var isResident = User.IsInRole("Resident");
+    var meEmail = (User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name ?? "").Trim().ToLowerInvariant();
 }
 <h2>Nova Ocorrência</h2>
 <form asp-action="Create" method="post">
@@ -28,10 +31,19 @@
         <label class="form-label">Descrição</label>
         <textarea asp-for="Description" class="form-control" rows="4"></textarea>
     </div>
+   @if (isResident)
+{
+    <input type="hidden" asp-for="CreatedBy" value="@meEmail" />
+}
+else
+{
     <div class="mb-3">
         <label class="form-label">Email</label>
-        <input asp-for="CreatedBy" class="form-control" required />
+        <input asp-for="CreatedBy" class="form-control" />
+        <span asp-validation-for="CreatedBy" class="text-danger"></span>
     </div>
+}
+
     <button class="btn btn-primary">Criar</button>
 </form>
 

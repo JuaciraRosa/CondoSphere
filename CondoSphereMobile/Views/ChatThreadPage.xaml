@@ -1,0 +1,59 @@
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:colors="clr-namespace:Microsoft.Maui.Graphics;assembly=Microsoft.Maui.Graphics"
+    x:Class="CondoSphereMobile.Views.ChatThreadPage"
+    Title="Conversa">
+
+    <Grid RowDefinitions="*,Auto" Padding="8">
+
+        <CollectionView x:Name="MessagesView" Grid.Row="0">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Frame Padding="8" Margin="6" HasShadow="False"
+                           BackgroundColor="{x:Static colors:Colors.LightGray}">
+                        <Frame.Triggers>
+
+                            <!-- Resident -->
+                            <DataTrigger TargetType="Frame"
+                                         Binding="{Binding Role}"
+                                         Value="Resident">
+                                <Setter Property="BackgroundColor"
+                                        Value="{x:Static colors:Colors.LightBlue}" />
+                            </DataTrigger>
+
+                            <!-- Admin -->
+                            <DataTrigger TargetType="Frame"
+                                         Binding="{Binding Role}"
+                                         Value="Admin">
+                                <Setter Property="BackgroundColor"
+                                        Value="{x:Static colors:Colors.LightGreen}" />
+                            </DataTrigger>
+
+                            <!-- Bot -->
+                            <DataTrigger TargetType="Frame"
+                                         Binding="{Binding Role}"
+                                         Value="Bot">
+                                <Setter Property="BackgroundColor"
+                                        Value="{x:Static colors:Colors.LightYellow}" />
+                            </DataTrigger>
+
+                        </Frame.Triggers>
+
+                        <VerticalStackLayout>
+                            <Label Text="{Binding Role}" FontSize="10" TextColor="Gray"/>
+                            <Label Text="{Binding Text}" FontSize="16"/>
+                            <Label Text="{Binding CreatedAt, StringFormat='{0:dd/MM HH:mm}'}"
+                                   FontSize="10" TextColor="Gray"/>
+                        </VerticalStackLayout>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Padding="4">
+            <Entry x:Name="MessageEntry" Placeholder="Escreva uma mensagem..." />
+            <Button Grid.Column="1" Text="Enviar" Clicked="OnSendClicked"/>
+        </Grid>
+    </Grid>
+</ContentPage>

@@ -4,7 +4,7 @@ namespace CondoSphere.Models.Account
 {
     public class ResetPasswordViewModel
     {
-        [Required, EmailAddress]
+        [Required]
         public string Email { get; set; }
 
         [Required, DataType(DataType.Password)]

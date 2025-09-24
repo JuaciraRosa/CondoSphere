@@ -52,106 +52,172 @@
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-..." crossorigin="anonymous" referrerpolicy="no-referrer" />
 
+
+
+
 </head>
 <body class="index-page">
 
     <!-- Header -->
     <header id="header" class="header d-flex align-items-center sticky-top">
     <div class="container position-relative d-flex align-items-center justify-content-between">
-  <a asp-controller="Home" asp-action="Index" class="logo d-flex align-items-center me-auto me-lg-0 text-decoration-none">
+
+<!-- Brand / Logo com dropdown -->
+<div class="dropdown">
+  <a href="#" class="logo d-flex align-items-center me-auto me-lg-0 text-decoration-none"
+     data-bs-toggle="dropdown" aria-expanded="false">
     <h1 class="sitename m-0">CondoSphere</h1>
+    <i class="bi bi-caret-down ms-2 small opacity-75"></i>
   </a>
 
+  <div class="dropdown-menu p-3 shadow brand-menu">
+    <div class="d-flex align-items-center">
+      <div class="brand-dot me-3"></div>
+      <div>
+        <div class="fw-semibold">CondoSphere</div>
+        <div class="text-muted small">Plataforma de gestão condominial</div>
+      </div>
+    </div>
+
+    <hr class="my-2" />
+
+    <div class="small text-muted mb-2">
+      Version <span class="fw-semibold">1.0</span> <span class="fw-semibold">@Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")</span>
+    </div>
+
+    <div class="row g-2">
+      <div class="col-6"><a class="btn w-100 btn-light btn-sm" asp-controller="Dashboard" asp-action="Index"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a></div>
+      <div class="col-6"><a class="btn w-100 btn-light btn-sm" asp-controller="Announcements" asp-action="Index"><i class="bi bi-megaphone me-1"></i> Announcements</a></div>
+      <div class="col-6"><a class="btn w-100 btn-light btn-sm" asp-controller="Meetings" asp-action="Index"><i class="bi bi-people me-1"></i> Meetings</a></div>
+      <div class="col-6"><a class="btn w-100 btn-light btn-sm" asp-controller="Payments" asp-action="Index"><i class="bi bi-receipt me-1"></i> Payments</a></div>
+    </div>
+
+    <div class="mt-2 small text-muted">
+      © @DateTime.UtcNow.Year • CondoSphere
+    </div>
+  </div>
+</div>
+
+
+
 <nav id="navmenu" class="navmenu">
-  <ul>
-    @if (isAuth)
+ <ul>
+  @if (isAuth)
+  {
+    <li><a asp-controller="Dashboard" asp-action="Index">Dashboard</a></li>
+
+    @* ===== ADMIN + MANAGER ===== *@
+    @if (role == "Administrator" || role == "Manager")
     {
-      <li><a asp-controller="Dashboard" asp-action="Index">Dashboard</a></li>
-       
-   
-
-      @* Administrator *@
-      @if (role == "Administrator")
-      {
-        <li><a asp-controller="Users" asp-action="Index">Users</a></li>
-        <li><a asp-controller="Companies" asp-action="Index">Companies</a></li>
-        
-    <li><a asp-controller="SystemSettings" asp-action="Index">Parâmetros Globais</a></li>
-      }
-
-      @* Administrator or Manager *@
-      @if (role == "Administrator" || role == "Manager")
-      {
-        <li><a asp-controller="Condominiums" asp-action="Index">Condominiums</a></li>
-        <li><a asp-controller="Units" asp-action="Create">Create Unit</a></li>
-        <li><a asp-controller="Meetings" asp-action="Index">Meetings</a></li>
-        <li><a asp-controller="Expenses" asp-action="Index">Expenses</a></li>
-        <li><a asp-controller="Quotas" asp-action="Index">Quotas</a></li>
-        <li><a asp-controller="Payments" asp-action="Index">Payments</a></li>
-
-        @* Sem badge para Admin/Manager *@
-        <li><a asp-controller="Announcements" asp-action="Index">Announcements</a></li>
-
-        <li><a asp-controller="Occurrences" asp-action="Index">Occurrences</a></li>
-        <li><a asp-controller="PollsAdmin" asp-action="Index">Polls</a></li>
-        <li><a asp-controller="Reports" asp-action="Index">Reports</a></li>
-        <li><a asp-controller="MaintenanceRequests" asp-action="Index">Maintenance Requests</a></li>
-     <li class="nav-item">
-    <a class="nav-link position-relative" asp-controller="Chat" asp-action="Index">
-      Chat
-      @await Component.InvokeAsync("NewChatBadge", new { days = 3 })
-    </a>
-  </li>
- @if (paymentId.HasValue && (role == "Administrator" || role == "Manager"))
-{
-  <form asp-controller="Payments" asp-action="ResendReceipt"
-        asp-route-id="@paymentId.Value" method="post" class="d-inline">
-    @Html.AntiForgeryToken()
-    <button type="submit" class="btn btn-outline-secondary btn-sm">Resend Receipt</button>
-  </form>
-}
-
-      }
-
-      @* Resident *@
-      @if (role == "Resident")
-      {
-        <li><a asp-controller="Units" asp-action="Index">My Unit</a></li>
-        <li><a asp-controller="Meetings" asp-action="Index">Meetings</a></li>
-        <li>
-          <a asp-controller="Announcements" asp-action="Index">
-            Announcements @await Component.InvokeAsync("NewAnnouncementsBadge", new { days = 3 })
-          </a>
-        </li>
-        <li><a asp-controller="Occurrences" asp-action="Index">Occurrences</a></li>
-        <li><a asp-controller="Polls" asp-action="Index">Voting</a></li>
-        <li><a asp-controller="MaintenanceRequests" asp-action="Index">Maintenance Requests</a></li>
-          <li><a asp-controller="Quotas" asp-action="Index">Quotas</a></li>
-             <li>
-        <a class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Forum" ? "active" : "")"
-           asp-controller="Forum" asp-action="Index">
-          Forum
-        </a>
-      </li>
-      }
-
-      @* Account dropdown *@
+      <!-- Gestão -->
       <li class="dropdown">
-        <a href="#"><span>@($"{user?.Identity?.Name} ({role})")</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
+        <a href="#"><span>Gestão</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
         <ul>
-          <li><a asp-controller="Account" asp-action="Profile">Profile</a></li>
-          <li><a asp-controller="Account" asp-action="ChangePassword">Change Password</a></li>
-          <li><a asp-controller="Account" asp-action="DownloadData">Download My Data (JSON)</a></li>
-          <li>
-            <form asp-controller="Account" asp-action="Deactivate" method="post" style="display:inline;">
-              @Html.AntiForgeryToken()
-              <button type="submit" class="btn btn-link text-danger">Deactivate Account</button>
-            </form>
+          <li><a asp-controller="Condominiums" asp-action="Index">Condominiums</a></li>
+          <li><a asp-controller="Units" asp-action="Index">Units</a></li>
+          <li><a asp-controller="Meetings" asp-action="Index">Meetings</a></li>
+          <li><a asp-controller="MaintenanceRequests" asp-action="Index">Maintenance Requests</a></li>
+
+          @* Só Admin *@
+          @if (role == "Administrator")
+          {
+            <li><a asp-controller="Users" asp-action="Index">Users</a></li>
+            <li><a asp-controller="Companies" asp-action="Index">Companies</a></li>
+            <li><a asp-controller="SystemSettings" asp-action="Index">Parâmetros Globais</a></li>
+          }
+        </ul>
+      </li>
+
+      <!-- Financeiro -->
+      <li class="dropdown">
+        <a href="#"><span>Financeiro</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
+        <ul>
+          <li><a asp-controller="Expenses" asp-action="Index">Expenses</a></li>
+          <li><a asp-controller="Quotas" asp-action="Index">Quotas</a></li>
+          <li><a asp-controller="Payments" asp-action="Index">Payments</a></li>
+          @if (paymentId.HasValue)
+          {
+            <li>
+              <form asp-controller="Payments" asp-action="ResendReceipt"
+                    asp-route-id="@paymentId.Value" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-secondary btn-sm">Resend Receipt</button>
+              </form>
+            </li>
+          }
+        </ul>
+      </li>
+
+      <!-- Comunicações -->
+      <li class="dropdown">
+        <a href="#"><span>Comunicações</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
+        <ul>
+          <li><a asp-controller="Announcements" asp-action="Index">Announcements</a></li>
+          <li><a asp-controller="Occurrences" asp-action="Index">Occurrences</a></li>
+          <li><a asp-controller="PollsAdmin" asp-action="Index">Polls</a></li>
+          <li><a asp-controller="Reports" asp-action="Index">Reports</a></li>
+          <li class="nav-item">
+            <a class="nav-link position-relative" asp-controller="Chat" asp-action="Index">
+              Chat
+              @await Component.InvokeAsync("NewChatBadge", new { days = 3 })
+            </a>
           </li>
         </ul>
       </li>
     }
-  </ul>
+
+    @* ===== RESIDENT ===== *@
+    @if (role == "Resident")
+    {
+      <!-- Minha residência -->
+      <li class="dropdown">
+        <a href="#"><span>Minha residência</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
+        <ul>
+          <li><a asp-controller="Units" asp-action="Index">My Unit</a></li>
+          <li><a asp-controller="Quotas" asp-action="Index">Quotas</a></li>
+           <li><a asp-controller="MyAccount" asp-action="Index">My Account</a></li>
+          <li><a asp-controller="MaintenanceRequests" asp-action="Index">Maintenance Requests</a></li>
+        </ul>
+      </li>
+
+      <!-- Comunidade -->
+      <li class="dropdown">
+        <a href="#"><span>Comunidade</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
+        <ul>
+          <li><a asp-controller="Meetings" asp-action="Index">Meetings</a></li>
+          <li>
+            <a asp-controller="Announcements" asp-action="Index">
+              Announcements @await Component.InvokeAsync("NewAnnouncementsBadge", new { days = 3 })
+            </a>
+          </li>
+          <li><a asp-controller="Occurrences" asp-action="Index">Occurrences</a></li>
+          <li><a asp-controller="Polls" asp-action="Index">Voting</a></li>
+          <li>
+            <a class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Forum" ? "active" : "")"
+               asp-controller="Forum" asp-action="Index">Forum</a>
+          </li>
+        </ul>
+      </li>
+    }
+
+    <!-- Conta -->
+    <li class="dropdown">
+      <a href="#"><span>@($"{user?.Identity?.Name} ({role})")</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
+      <ul>
+        <li><a asp-controller="Account" asp-action="Profile">Profile</a></li>
+        <li><a asp-controller="Account" asp-action="ChangePassword">Change Password</a></li>
+        <li><a asp-controller="Account" asp-action="DownloadData">Download My Data (JSON)</a></li>
+        <li>
+          <form asp-controller="Account" asp-action="Deactivate" method="post" style="display:inline;">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-link text-danger">Deactivate Account</button>
+          </form>
+        </li>
+      </ul>
+    </li>
+  }
+</ul>
+
   <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
 </nav>
 

@@ -7,6 +7,9 @@ namespace CondoSphere.Data.Interfaces
         Task<IEnumerable<Expense>> GetByCondominiumIdAsync(int condominiumId);
         Task<IEnumerable<Expense>> GetAllDetailedAsync();
         Task<Expense?> GetByIdDetailedAsync(int id);
+
+
+        Task<decimal> GetTotalAsync(DateTime fromUtc, DateTime toUtc);
     }
 
 }

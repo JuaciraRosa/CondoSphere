@@ -1,0 +1,47 @@
+﻿@model IEnumerable<CondoSphere.Models.Unit>
+@{
+    ViewData["Title"] = "Minhas unidades";
+}
+
+<section class="section">
+    <div class="container">
+        <div class="card shadow-sm p-4">
+            <h4 class="mb-3"><i class="bi bi-house-door"></i> Minhas unidades</h4>
+
+            @if (Model == null || !Model.Any())
+            {
+                <div class="alert alert-info mb-0">
+                    Ainda não tem unidades associadas à sua conta.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Unidade</th>
+                                <th>Condomínio</th>
+                                <th class="text-end">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var u in Model)
+                            {
+                                <tr>
+                                    <td>@(string.IsNullOrWhiteSpace(u.Number) ? $"#{u.Id}" : u.Number)</td>
+                                    <td>@(u.Condominium?.Name ?? "-")</td>
+                                    <td class="text-end">
+                                        <a asp-action="Statement" asp-route-unitId="@u.Id" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-receipt"></i> Ver conta corrente
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</section>

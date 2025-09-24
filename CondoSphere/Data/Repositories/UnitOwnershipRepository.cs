@@ -36,5 +36,10 @@ namespace CondoSphere.Data.Repositories
         }
 
         public Task SaveChangesAsync() => _ctx.SaveChangesAsync();
+
+        public Task<bool> UserHasAnyUnitInCondoAsync(string userId, int condominiumId)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -7,7 +7,8 @@
     <UserSecretsId>09c3e03e-eb4b-442d-a05d-c0f19e92b8db</UserSecretsId>
   </PropertyGroup>
 
-  <ItemGroup>
+
+	<ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.16.0" />
     <PackageReference Include="Google.Apis" Version="1.71.0" />
     <PackageReference Include="Google.Apis.Auth" Version="1.71.0" />
@@ -48,12 +49,14 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="8.1.4" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
     <PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
+    <PackageReference Include="Twilio" Version="7.13.1" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="App_Data\" />
     <Folder Include="wwwroot\uploads\ann\" />
     <Folder Include="wwwroot\uploads\forum\" />
+    <Folder Include="wwwroot\uploads\meetings\" />
   </ItemGroup>
 
 </Project>

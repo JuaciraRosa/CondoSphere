@@ -47,6 +47,7 @@ namespace CondoSphere.Data
 
         public DbSet<ForumReaction> ForumReactions { get; set; } = default!;
 
+     
 
 
 
@@ -371,9 +372,13 @@ namespace CondoSphere.Data
 
 
             modelBuilder.Entity<ForumReaction>()
-    .HasIndex(r => new { r.PostId, r.UserId, r.Emoji })
-    .IsUnique();
+            .HasIndex(r => new { r.PostId, r.UserId, r.Emoji })
+            .IsUnique();
 
+            modelBuilder.Entity<ChatThread>()
+    .HasIndex(t => new { t.ResidentId, t.Status })
+    .HasFilter("[Status] = 'Open'")
+    .IsUnique();
 
 
 

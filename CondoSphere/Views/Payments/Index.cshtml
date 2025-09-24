@@ -39,37 +39,46 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var item in (Model ?? Enumerable.Empty<Payment>()))
-                        {
-                            var statusBadge = item.Status switch
-                            {
-                                PaymentStatusType.Pending => "bg-warning",
-                                PaymentStatusType.Succeeded => "bg-success",
-                                PaymentStatusType.Failed => "bg-danger",
-                                PaymentStatusType.Canceled => "bg-dark",
-                                _ => "bg-secondary"
-                            };
+                      @foreach (var item in (Model ?? Enumerable.Empty<Payment>()))
+{
+    var awaitingApproval = item.Status == PaymentStatusType.Succeeded && !(item.Quota?.IsPaid ?? false);
 
-                            <tr>
-                                <td>@(item.Quota != null ? $"#{item.Quota.Id} — {item.Quota.DueDate:yyyy-MM}" : $"#{item.QuotaId}")</td>
-                                <td>@item.Amount.ToString("N2")</td>
-                                <td>@item.Method</td>
-                                <td><span class="badge @statusBadge">@item.Status</span></td>
-                                <td>@item.Provider</td>
-                                <td>@item.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
-                                <td>@(item.PaidAt.HasValue ? item.PaidAt.Value.ToString("yyyy-MM-dd HH:mm") : "-")</td>
-                                <td class="text-end">
-                                    @if (!string.IsNullOrEmpty(item.ReceiptUrl))
-                                    {
-                                        <a href="@item.ReceiptUrl" target="_blank" class="btn btn-sm btn-outline-success" title="Receipt">
-                                            <i class="bi bi-receipt"></i>
-                                        </a>
-                                    }
-                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>
-                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
-                                </td>
-                            </tr>
-                        }
+    var statusText = awaitingApproval
+        ? "Awaiting approval"
+        : item.Status.ToString();
+
+    var statusBadge = awaitingApproval
+        ? "bg-warning"
+        : item.Status switch
+        {
+            PaymentStatusType.Pending => "bg-warning",
+            PaymentStatusType.Succeeded => "bg-success",
+            PaymentStatusType.Failed => "bg-danger",
+            PaymentStatusType.Canceled => "bg-dark",
+            _ => "bg-secondary"
+        };
+
+    <tr>
+        <td>@(item.Quota != null ? $"#{item.Quota.Id} — {item.Quota.DueDate:yyyy-MM}" : $"#{item.QuotaId}")</td>
+        <td>@item.Amount.ToString("N2")</td>
+        <td>@item.Method</td>
+        <td><span class="badge @statusBadge">@statusText</span></td>
+        <td>@item.Provider</td>
+        <td>@item.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+        <td>@(item.PaidAt.HasValue ? item.PaidAt.Value.ToString("yyyy-MM-dd HH:mm") : "-")</td>
+        <td class="text-end">
+            @if (!string.IsNullOrEmpty(item.ReceiptUrl))
+            {
+                <a href="@item.ReceiptUrl" target="_blank" class="btn btn-sm btn-outline-success" title="Receipt">
+                    <i class="bi bi-receipt"></i>
+                </a>
+            }
+            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>
+            <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+        </td>
+    </tr>
+}
+
                         @if (Model == null || !Model.Any())
                         {
                             <tr><td colspan="8" class="text-center text-muted py-4">No records found.</td></tr>

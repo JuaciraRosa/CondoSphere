@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CondoSphereMobile.Views.Setup2FAPage"
+              Title="Setup Two-Factor Authentication">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="15">
+
+            <Label Text="Ativar autenticação de dois fatores (2FA)" FontSize="20" FontAttributes="Bold" />
+
+            <Image x:Name="QrImage" HeightRequest="200" WidthRequest="200" HorizontalOptions="Center" />
+
+            <Label Text="Código secreto:" FontAttributes="Bold"/>
+            <Label x:Name="KeyLabel" FontSize="18" TextColor="Blue" />
+
+            <Label Text="Escaneie o QR Code acima no Google/Microsoft Authenticator, ou insira o código manualmente." FontSize="14" />
+
+            <Entry x:Name="CodeEntry" Placeholder="Digite o código do app" Keyboard="Numeric"/>
+
+            <Button Text="Ativar 2FA" Clicked="OnEnableClicked" />
+
+            <Label x:Name="ResultLabel" IsVisible="False" TextColor="Green" FontAttributes="Bold" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
